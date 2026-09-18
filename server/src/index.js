@@ -61,8 +61,51 @@ app.delete('/api/activities/:id', adminAuth, wrap((req) => {
   return { ok: true }
 }))
 
+// Banner 管理
+app.get('/api/banners', wrap(() => store.get().banners))
+app.post('/api/banners', adminAuth, wrap((req) => {
+  const db = store.get()
+  const banner = { id: Date.now(), ...req.body }
+  db.banners.push(banner)
+  store.save()
+  return banner
+}))
+app.put('/api/banners/:id', adminAuth, wrap((req) => {
+  const db = store.get()
+  const b = db.banners.find((x) => String(x.id) === String(req.params.id))
+  if (b) Object.assign(b, req.body)
+  store.save()
+  return b
+}))
+app.delete('/api/banners/:id', adminAuth, wrap((req) => {
+  const db = store.get()
+  db.banners = db.banners.filter((x) => String(x.id) !== String(req.params.id))
+  store.save()
+  return { ok: true }
+}))
+
 // 优惠券
 app.get('/api/coupons', wrap(() => store.get().coupons))
+app.post('/api/coupons', adminAuth, wrap((req) => {
+  const db = store.get()
+  const coupon = { id: Date.now(), used: false, ...req.body }
+  db.coupons.push(coupon)
+  store.save()
+  return coupon
+}))
+app.put('/api/coupons/:id', adminAuth, wrap((req) => {
+  const db = store.get()
+  const c = db.coupons.find((x) => String(x.id) === String(req.params.id))
+  if (c) Object.assign(c, req.body)
+  store.save()
+  return c
+}))
+app.delete('/api/coupons/:id', adminAuth, wrap((req) => {
+  const db = store.get()
+  db.coupons = db.coupons.filter((x) => String(x.id) !== String(req.params.id))
+  store.save()
+  return { ok: true }
+}))
 
 // 报名人
 app.get('/api/participants', wrap(() => store.get().participants))
@@ -110,6 +153,7 @@ app.post('/api/orders', wrap((req) => store.createOrder(req.body)))
 app.post('/api/orders/:id/pay', wrap((req) => store.payOrder(req.params.id)))
 app.post('/api/orders/:id/cancel', wrap((req) => store.cancelOrder(req.params.id)))
 app.post('/api/orders/:id/refund', wrap((req) => store.refundOrder(req.params.id, req.body.reason)))
+app.post('/api/orders/:id/refund-audit', adminAuth, wrap((req) => store.auditRefund(req.params.id, req.body.approve, req.body.reason)))
 app.post('/api/orders/:id/advance', wrap((req) => store.advanceOrder(req.params.id)))
 app.post('/api/orders/:id/review', wrap((req) => store.submitReview(req.params.id, req.body)))
 app.get('/api/orders/:id/refund-calc', wrap((req) => {
@@ -119,6 +163,12 @@ app.get('/api/orders/:id/refund-calc', wrap((req) => {
 
 // 评价
 app.get('/api/reviews', wrap(() => store.get().reviews))
+app.delete('/api/reviews/:id', adminAuth, wrap((req) => {
+  const db = store.get()
+  db.reviews = db.reviews.filter((r) => r.id !== req.params.id)
+  store.save()
+  return { ok: true }
+}))
 
 // 主理人
 app.get('/api/managers', wrap(() => store.get().managers))
@@ -130,6 +180,7 @@ app.post('/api/managers/:id/status', adminAuth, wrap((req) => store.setManagerSt
 
 // 客户与归属
 app.get('/api/customers', wrap(() => store.get().customers))
+app.put('/api/customers/:id', adminAuth, wrap((req) => store.updateCustomer(req.params.id, req.body)))
 app.get('/api/bindings', wrap(() => store.get().bindings))
 app.post('/api/bindings/unbind', adminAuth, wrap((req) => store.unbindCustomer(req.body.customerId, req.body.reason)))
 app.post('/api/bindings/rebind', adminAuth, wrap((req) => store.rebindCustomer(req.body.customerId, req.body.managerId, req.body.reason)))
@@ -160,6 +211,7 @@ app.put('/api/config', adminAuth, wrap((req) => {
 
 // 统计
 app.get('/api/stats/dashboard', wrap(() => store.dashboardStats()))
+app.get('/api/logs', wrap(() => store.getLogs()))
 
 app.use((req, res) => res.status(404).json({ code: 404, message: '接口不存在' }))
 

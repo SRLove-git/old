@@ -143,5 +143,6 @@ export const seed = {
   commissions,
   withdraws,
   bindings,
+  logs: [],
   config
 }

@@ -294,6 +294,7 @@ export function approveWithdraw(id) {
       c.settleTime = '刚刚'
     }
   })
+  addLog('提现审核', `提现单 ${id} 已打款 ¥${record.amount}`)
   save()
   return record
 }
@@ -309,6 +310,7 @@ export function rejectWithdraw(id, reason) {
       c.withdrawId = null
     }
   })
+  addLog('提现审核', `提现单 ${id} 已拒绝，原因：${reason}`)
   save()
   return record
 }
@@ -326,6 +328,7 @@ export function adjustCommission(id, amount, reason) {
   if (!c) return null
   c.commissionAmount = Number(amount)
   c.adjustReason = reason
+  addLog('佣金调整', `佣金单 ${id} 调整为 ¥${amount}，原因：${reason}`)
   save()
   return c
 }
@@ -353,6 +356,7 @@ export function approveManagerApp(id) {
     totalCustomers: 0
   }
   db.managers.push(manager)
+  addLog('主理人审核', `通过 ${app.name} 的主理人申请`)
   save()
   return manager
 }
@@ -362,6 +366,7 @@ export function rejectManagerApp(id, reason) {
   if (!app) return null
   app.status = '已拒绝'
   app.rejectReason = reason
+  addLog('主理人审核', `拒绝 ${app.name} 的申请，原因：${reason}`)
   save()
   return app
 }
@@ -378,6 +383,7 @@ export function setManagerStatus(id, status) {
       if (String(b.managerId) === String(id)) b.status = 2
     })
   }
+  addLog('主理人管理', `${m.name} 状态变更为 ${status === 1 ? '正常' : status === 2 ? '冻结' : '清退'}`)
   save()
   return m
 }
@@ -392,6 +398,7 @@ export function unbindCustomer(customerId, reason) {
     b.unbindTime = '刚刚'
     b.unbindReason = reason
   }
+  addLog('归属管理', `解除客户 ${c.name} 的主理人归属，原因：${reason}`)
   save()
   return c
 }
@@ -416,11 +423,63 @@ export function rebindCustomer(customerId, managerId, reason) {
     bindTime: '刚刚',
     status: 1
   })
+  addLog('归属管理', `客户 ${c.name} 变更归属到主理人 ${managerId}，原因：${reason}`)
+  save()
+  return c
+}
+
+export function addLog(action, detail) {
+  db.logs = db.logs || []
+  db.logs.unshift({
+    id: `LOG${Date.now()}`,
+    action,
+    detail,
+    time: new Date().toLocaleString('zh-CN', { hour12: false })
+  })
+}
+
+export function getLogs() {
+  return db.logs || []
+}
+
+export function auditRefund(orderId, approve, reason) {
+  const order = db.orders.find((o) => o.id === orderId)
+  if (!order) return null
+  if (approve) {
+    order.status = '已退款'
+    order.refundAmount = order.payAmount
+    order.refundReason = reason || '运营审核退款'
+    releaseSchedule(order)
+    const commission = db.commissions.find((c) => c.orderId === orderId)
+    if (commission) commission.status = '已扣回'
+    returnCoupon(order)
+  } else {
+    order.status = '待发货'
+    order.refundRejected = reason || '审核拒绝'
+  }
+  addLog('退款审核', `订单 ${orderId} ${approve ? '同意退款' : '拒绝退款'}`)
+  save()
+  return order
+}
+
+export function updateCustomer(id, data) {
+  const c = db.customers.find((x) => x.id === id)
+  if (!c) return null
+  Object.assign(c, data)
+  addLog('用户管理', `更新客户 ${c.name} 资料`)
   save()
   return c
 }
 
 export function dashboardStats() {
+  const byCategory = {}
+  db.activities.forEach((a) => {
+    byCategory[a.category] = (byCategory[a.category] || 0) + 1
+  })
+  const managerRanking = db.managers
+    .slice()
+    .sort((a, b) => (b.totalCommission || 0) - (a.totalCommission || 0))
+    .map((m) => ({ id: m.id, name: m.name, totalCommission: m.totalCommission, totalCustomers: m.totalCustomers }))
   return {
     activityCount: db.activities.length,
     orderCount: db.orders.length,
@@ -429,6 +488,9 @@ export function dashboardStats() {
     pendingApply: db.managerApplications.filter((a) => a.status === '待审核').length,
     pendingWithdraw: db.withdraws.filter((w) => w.status === '待审核').length,
     totalCommission: db.commissions.reduce((s, c) => s + Number(c.commissionAmount || 0), 0),
+    totalRevenue: db.orders.filter((o) => !['已取消', '已退款'].includes(o.status)).reduce((s, o) => s + Number(o.payAmount || 0), 0),
+    byCategory,
+    managerRanking,
     orderStatus: db.orders.reduce((acc, o) => {
       acc[o.status] = (acc[o.status] || 0) + 1
       return acc
