@@ -1,0 +1,128 @@
+<view class="manager-page">
+  <view class="manager-top">
+    <view>
+      <view class="manager-brand">主理人工作台</view>
+      <view class="manager-hello">{{manager.name}}，您好</view>
+    </view>
+    <button class="badge" bindtap="exit">退出</button>
+  </view>
+
+  <view class="metrics">
+    <view class="metric">
+      <view class="metric-value">¥{{manager.monthPerformance}}</view>
+      <view class="metric-label">本月业绩</view>
+    </view>
+    <view class="metric">
+      <view class="metric-value">¥{{manager.monthCommission}}</view>
+      <view class="metric-label">本月佣金</view>
+    </view>
+    <view class="metric">
+      <view class="metric-value">{{manager.customers}}</view>
+      <view class="metric-label">客户数</view>
+    </view>
+  </view>
+
+  <view class="nav">
+    <view
+      wx:for="{{nav}}"
+      wx:key="id"
+      class="nav-item {{tab === item.id ? 'active' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="setTab"
+    >
+      <text>{{item.emoji}}</text>
+      <text>{{item.name}}</text>
+    </view>
+  </view>
+
+  <view class="content">
+    <view wx:if="{{tab === 'dashboard'}}">
+      <view class="section card">
+        <view class="panel-title">佣金概览</view>
+        <view class="commission-grid">
+          <view class="commission-box"><text>待结算</text><strong>¥{{manager.pending}}</strong></view>
+          <view class="commission-box"><text>可结算</text><strong>¥{{manager.available}}</strong></view>
+          <view class="commission-box"><text>累计佣金</text><strong>¥{{manager.total}}</strong></view>
+        </view>
+        <view class="rate-line">当前分佣比例：{{manager.commissionRate}}%（商品级比例优先，全局默认后台可配置）</view>
+      </view>
+      <view class="section card">
+        <view class="panel-title">最近订单</view>
+        <view wx:for="{{recentOrders}}" wx:key="customerName" class="order-line">
+          {{item.customerName}} · {{item.productName}} · ¥{{item.payAmount}} · 佣金¥{{item.commissionAmount}}
+        </view>
+      </view>
+      <view wx:if="{{withdraws.length > 0}}" class="section card">
+        <view class="panel-title">提现记录</view>
+        <view wx:for="{{withdraws}}" wx:key="id" class="withdraw-row">
+          <view>
+            <view class="withdraw-amount">¥{{item.amount}}</view>
+            <view class="withdraw-meta">{{item.status}} · {{item.payChannel || '微信零钱'}} · {{item.applyTime}}</view>
+            <view wx:if="{{item.rejectReason}}" class="withdraw-meta red">{{item.rejectReason}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{tab === 'customers'}}" class="section card">
+      <view class="panel-title">我的客户（{{customers.length}}人）</view>
+      <view wx:for="{{customers}}" wx:key="id" class="customer-row">
+        <text class="avatar">👤</text>
+        <view class="customer-info">
+          <text class="customer-name">{{item.name}}</text>
+          <text class="customer-source">{{item.phone}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{tab === 'commission'}}" class="section card">
+      <view class="panel-title">佣金明细</view>
+      <view wx:for="{{commissions}}" wx:key="id" class="commission-row">
+        <text class="commission-order">{{item.orderId}}</text>
+        <text class="commission-amount">¥{{item.commissionAmount}}（{{item.commissionRate}}%）</text>
+        <text class="tag tag-gray">{{item.status}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{tab === 'promote'}}" class="section card">
+      <view class="panel-title">我的推广工具</view>
+      <view class="promote-card">
+        <view class="qr">二维码</view>
+        <view class="promote-info">
+          <view class="promote-name">专属推广码</view>
+          <view class="promote-sub">客户扫码即可绑定为您名下客户</view>
+          <button class="small-btn" bindtap="saveQr">保存图片</button>
+        </view>
+      </view>
+      <view class="invite-box">
+        <view>
+          <view class="promote-name">专属邀请码</view>
+          <view class="invite-code">{{manager.inviteCode}}</view>
+        </view>
+        <button class="small-btn" bindtap="copyCode">复制</button>
+      </view>
+      <view class="invite-box">
+        <view>
+          <view class="promote-name">专属推广链接</view>
+          <view class="promote-sub">客户点击即绑定为您名下客户</view>
+        </view>
+        <button class="small-btn" bindtap="copyLink">复制链接</button>
+      </view>
+      <button class="share-btn" bindtap="shareCard">分享活动卡片</button>
+    </view>
+  </view>
+
+  <view wx:if="{{tab === 'dashboard'}}" class="fixed-bottom">
+    <button class="btn btn-primary btn-block" bindtap="openWithdraw">申请提现</button>
+  </view>
+
+  <view wx:if="{{withdrawOpen}}" class="pay-mask" bindtap="closeWithdraw">
+    <view class="pay-modal" catchtap="noop">
+      <view class="modal-title">申请提现</view>
+      <view class="withdraw-sub">可结算余额：¥{{manager.available}}</view>
+      <input class="field-input" type="number" value="{{withdrawAmount}}" bindinput="onAmount" placeholder="最低100元" />
+      <view class="withdraw-tip">本月仅可提现1次，平台承担手续费</view>
+      <button class="btn btn-primary btn-block" bindtap="applyWithdraw">提交申请</button>
+    </view>
+  </view>
+</view>

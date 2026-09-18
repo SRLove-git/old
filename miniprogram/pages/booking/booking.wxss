@@ -1,0 +1,478 @@
+.booking-page {
+  min-height: 100vh;
+  padding-bottom: 170rpx;
+}
+
+.steps {
+  display: flex;
+  background: #ffffff;
+  padding: 22rpx;
+  border-bottom: 1rpx solid #e7e9ec;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  color: #6f747b;
+  font-size: 26rpx;
+  font-weight: 700;
+  padding: 14rpx;
+  border-radius: 999rpx;
+  background: #f1f2f4;
+}
+
+.step.active {
+  background: #c25e3d;
+  color: #ffffff;
+}
+
+.booking-summary {
+  display: flex;
+  padding: 26rpx;
+  background: #ffffff;
+  align-items: center;
+}
+
+.booking-cover {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 58rpx;
+}
+
+.booking-title {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.booking-sku {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-top: 6rpx;
+}
+
+.page-pad {
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+}
+
+.panel {
+  background: #ffffff;
+  margin-top: 20rpx;
+  padding-top: 28rpx;
+  padding-bottom: 32rpx;
+}
+
+.panel-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 22rpx;
+}
+
+.schedule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 2rpx solid #e7e9ec;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.schedule-item.selected {
+  border-color: #c25e3d;
+  background: #fff8f3;
+}
+
+.schedule-item.disabled {
+  opacity: 0.5;
+}
+
+.schedule-date {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.schedule-time {
+  color: #6f747b;
+  margin-top: 6rpx;
+}
+
+.sku-options {
+  display: flex;
+  margin-bottom: 28rpx;
+}
+
+.sku-option {
+  flex: 1;
+  border: 2rpx solid #e7e9ec;
+  border-radius: 20rpx;
+  padding: 22rpx;
+  margin-right: 16rpx;
+  position: relative;
+}
+
+.sku-option:last-child {
+  margin-right: 0;
+}
+
+.sku-option.selected {
+  border-color: #c25e3d;
+  background: #fff8f3;
+}
+
+.sku-name {
+  display: block;
+  font-weight: 700;
+  font-size: 30rpx;
+}
+
+.sku-price-sm {
+  color: #c25e3d;
+  font-weight: 700;
+  font-size: 34rpx;
+}
+
+.hot {
+  position: absolute;
+  top: -2rpx;
+  right: -2rpx;
+  background: #c25e3d;
+  color: #ffffff;
+  font-size: 22rpx;
+  padding: 4rpx 10rpx;
+  border-radius: 0 20rpx 0 20rpx;
+}
+
+.schedule-avatars {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.schedule-avatar {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #fdeee9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  margin-right: 6rpx;
+}
+
+.schedule-avatar-more {
+  color: #6f747b;
+  font-size: 24rpx;
+  margin-left: 4rpx;
+}
+
+.load-more {
+  text-align: center;
+  color: #c25e3d;
+  font-weight: 700;
+  padding: 18rpx 0;
+}
+
+.schedule-right {
+  display: flex;
+  align-items: center;
+}
+
+.remain {
+  color: #c25e3d;
+  font-weight: 700;
+  font-size: 26rpx;
+}
+
+.check {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #e7e9ec;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+}
+
+.schedule-item.selected .check {
+  background: #c25e3d;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.counter-btn {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #f1f2f4;
+  font-size: 50rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.counter-value {
+  font-size: 52rpx;
+  font-weight: 700;
+}
+
+.participant-quick {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 28rpx;
+}
+
+.participant-chip {
+  border: 2rpx solid #e7e9ec;
+  border-radius: 999rpx;
+  padding: 16rpx 24rpx;
+  font-weight: 700;
+}
+
+.participant-chip.selected {
+  border-color: #c25e3d;
+  background: #fff8f3;
+  color: #c25e3d;
+}
+
+.participant-chip.manage {
+  color: #c25e3d;
+}
+
+.required {
+  color: #d74a4a;
+  margin-left: 4rpx;
+}
+
+.refund-note {
+  background: #fff8f3;
+  border-radius: 18rpx;
+  padding: 20rpx;
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-top: 8rpx;
+}
+
+.address-card {
+  position: relative;
+  background: #fff8f3;
+  border: 2rpx solid #f6d6c8;
+  border-radius: 18rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.address-line {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #24272b;
+}
+
+.address-line + .address-line {
+  font-weight: 400;
+  color: #6f747b;
+  margin-top: 8rpx;
+}
+
+.address-edit {
+  position: absolute;
+  right: 24rpx;
+  top: 24rpx;
+  color: #c25e3d;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #e7e9ec;
+  color: #6f747b;
+}
+
+.confirm-row text:last-child {
+  color: #24272b;
+  font-weight: 700;
+  text-align: right;
+}
+
+.confirm-row.total {
+  border-bottom: 0;
+}
+
+.red {
+  color: #c25e3d;
+}
+
+.detail-price {
+  color: #c25e3d;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.coupon-chip {
+  display: flex;
+  align-items: center;
+  border: 2rpx solid #e7e9ec;
+  border-radius: 20rpx;
+  padding: 22rpx;
+  margin-bottom: 14rpx;
+}
+
+.coupon-chip.selected {
+  border-color: #c25e3d;
+  background: #fff8f3;
+}
+
+.coupon-chip.used {
+  opacity: 0.5;
+}
+
+.coupon-chip.disabled {
+  opacity: 0.5;
+}
+
+.coupon-disabled {
+  color: #d74a4a;
+  font-size: 22rpx;
+  margin-top: 4rpx;
+}
+
+.coupon-value {
+  color: #c25e3d;
+  font-size: 42rpx;
+  font-weight: 700;
+  min-width: 100rpx;
+}
+
+.coupon-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.coupon-title {
+  font-weight: 700;
+}
+
+.coupon-desc {
+  color: #6f747b;
+  font-size: 26rpx;
+}
+
+.booking-bottom {
+  display: flex;
+  align-items: center;
+}
+
+.prev {
+  width: 140rpx;
+  color: #6f747b;
+  font-size: 30rpx;
+}
+
+.main-btn {
+  flex: 1;
+}
+
+.pay-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 22, 26, 0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50rpx;
+}
+
+.pay-modal {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 30rpx;
+  padding: 34rpx;
+}
+
+.pay-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pay-amount {
+  font-size: 60rpx;
+  font-weight: 700;
+  text-align: center;
+  margin: 18rpx 0;
+}
+
+.pay-tip {
+  text-align: center;
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-bottom: 26rpx;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.defer-btn {
+  margin-top: 20rpx;
+  color: #6f747b;
+  text-align: center;
+  width: 100%;
+  padding: 22rpx;
+  font-size: 30rpx;
+}
+
+.pay-success {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50rpx;
+  text-align: center;
+}
+
+.success-icon {
+  width: 150rpx;
+  height: 150rpx;
+  border-radius: 50%;
+  background: #2f7d5c;
+  color: #ffffff;
+  font-size: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30rpx;
+}
+
+.success-title {
+  font-size: 42rpx;
+  font-weight: 700;
+}
+
+.success-sub {
+  color: #6f747b;
+  margin: 16rpx 0 36rpx;
+}

@@ -1,0 +1,250 @@
+.profile-hero {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  color: #ffffff;
+  border-radius: 28rpx;
+  padding: 34rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.assets {
+  display: flex;
+  padding: 26rpx 0;
+  margin-bottom: 24rpx;
+}
+
+.asset {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.asset-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #24272b;
+}
+
+.asset-label {
+  color: #6f747b;
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+.avatar {
+  width: 116rpx;
+  height: 116rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 62rpx;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.name {
+  font-size: 42rpx;
+  font-weight: 700;
+}
+
+.phone {
+  opacity: 0.9;
+  margin-top: 4rpx;
+}
+
+.member {
+  font-size: 26rpx;
+  margin-top: 8rpx;
+}
+
+.badge {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999rpx;
+  padding: 12rpx 20rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.menu {
+  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx;
+  border-bottom: 1rpx solid #e7e9ec;
+}
+
+.menu-item:last-child {
+  border-bottom: 0;
+}
+
+.menu-emoji {
+  font-size: 42rpx;
+}
+
+.menu-text {
+  flex: 1;
+  font-weight: 700;
+  font-size: 34rpx;
+}
+
+.arrow {
+  color: #6f747b;
+  font-size: 42rpx;
+}
+
+.profile-card {
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.panel-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  margin-bottom: 22rpx;
+}
+
+.manager-bound {
+  display: flex;
+  align-items: center;
+}
+
+.manager-avatar {
+  width: 86rpx;
+  height: 86rpx;
+  border-radius: 50%;
+  background: #fdeee9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42rpx;
+}
+
+.manager-info {
+  flex: 1;
+}
+
+.manager-name {
+  font-weight: 700;
+  font-size: 32rpx;
+}
+
+.manager-sub,
+.manager-empty {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin: 8rpx 0 20rpx;
+}
+
+.small-btn {
+  border: 2rpx solid #c25e3d;
+  color: #c25e3d;
+  border-radius: 999rpx;
+  padding: 12rpx 22rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 32rpx;
+}
+
+.apply-status {
+  background: #e7f3ee;
+  color: #2f7d5c;
+  border-radius: 18rpx;
+  padding: 20rpx;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.brand-footer {
+  padding: 34rpx 28rpx;
+  text-align: center;
+}
+
+.brand-slogan {
+  color: #6f747b;
+}
+
+.footer-btn {
+  margin-top: 18rpx;
+  background: #fff8f3;
+  color: #9e4428;
+  border-radius: 18rpx;
+  padding: 22rpx;
+  font-weight: 700;
+}
+
+.pay-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 22, 26, 0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50rpx;
+}
+
+.pay-modal {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 30rpx;
+  padding: 34rpx;
+}
+
+.bind-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.bind-sub {
+  color: #6f747b;
+  text-align: center;
+  margin: 14rpx 0 24rpx;
+}
+
+.field-input {
+  width: 100%;
+  min-height: 96rpx;
+  border: 2rpx solid #e7e9ec;
+  border-radius: 18rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.bind-log {
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #e7e9ec;
+  font-size: 26rpx;
+}
+
+.bind-log:last-child {
+  border-bottom: 0;
+}
+
+.bind-log-reason {
+  color: #6f747b;
+  margin-top: 4rpx;
+}

@@ -1,0 +1,155 @@
+.search-input {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 999rpx;
+  padding: 24rpx 28rpx;
+  box-shadow: 0 12rpx 40rpx rgba(26, 34, 45, 0.07);
+}
+
+.search-input input {
+  flex: 1;
+  font-size: 32rpx;
+}
+
+.filter-scroll {
+  width: 100%;
+  white-space: nowrap;
+  margin: 24rpx 0 12rpx;
+}
+
+.filter-row {
+  display: inline-flex;
+}
+
+.chip {
+  background: #ffffff;
+  border: 2rpx solid #e7e9ec;
+  color: #24272b;
+  border-radius: 999rpx;
+  padding: 18rpx 28rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.chip.active {
+  background: #c25e3d;
+  border-color: #c25e3d;
+  color: #ffffff;
+}
+
+.result {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin: 8rpx 0 20rpx;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-card {
+  overflow: hidden;
+}
+
+.cover {
+  position: relative;
+  height: 260rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.cover-emoji {
+  font-size: 104rpx;
+}
+
+.sold,
+.group {
+  position: absolute;
+  bottom: 18rpx;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  border-radius: 999rpx;
+  padding: 8rpx 18rpx;
+  font-size: 24rpx;
+}
+
+.sold {
+  left: 18rpx;
+}
+
+.group {
+  right: 18rpx;
+  background: rgba(194, 94, 61, 0.9);
+}
+
+.card-body {
+  padding: 24rpx;
+}
+
+.card-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 12rpx;
+}
+
+.meta {
+  color: #6f747b;
+  font-size: 26rpx;
+}
+
+.card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18rpx;
+}
+
+.price {
+  font-size: 42rpx;
+}
+
+.member-label {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-left: 8rpx;
+}
+
+.go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: 0;
+  line-height: 1.2;
+  background: #c25e3d;
+  color: #ffffff;
+  border-radius: 999rpx;
+  padding: 16rpx 26rpx;
+  font-weight: 700;
+  font-size: 26rpx;
+}
+
+.empty {
+  text-align: center;
+  padding: 80rpx 30rpx;
+}
+
+.empty-emoji {
+  font-size: 96rpx;
+}
+
+.empty-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-top: 18rpx;
+}
+
+.empty-sub {
+  color: #6f747b;
+  margin: 10rpx 0 28rpx;
+}

@@ -1,0 +1,178 @@
+<view wx:if="{{payDone}}" class="pay-success">
+  <view class="success-icon">✓</view>
+  <view class="success-title">报名成功</view>
+  <view class="success-sub">已为您锁定名额，活动开始前我们会提醒您。</view>
+  <button class="btn btn-primary" bindtap="goAppointments">查看我的预约</button>
+</view>
+
+<view wx:else class="booking-page">
+  <view class="steps">
+    <view class="step {{step >= 1 ? 'active' : ''}}">1 选时间</view>
+    <view class="step {{step >= 2 ? 'active' : ''}}">2 填信息</view>
+    <view class="step {{step >= 3 ? 'active' : ''}}">3 确认支付</view>
+  </view>
+
+  <view class="booking-summary">
+    <view class="booking-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
+    <view>
+      <view class="booking-title">{{activity.title}}</view>
+      <view wx:if="{{skuName}}" class="booking-sku">已选：{{skuName}} · 会员价¥{{memberPrice}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{step === 1}}" class="panel page-pad">
+    <block wx:if="{{activity.hasSku}}">
+      <view class="panel-title">请选择房型</view>
+      <view class="sku-options">
+        <view
+          wx:for="{{activity.skus}}"
+          wx:key="id"
+          class="sku-option {{skuId === item.id ? 'selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectSku"
+        >
+          <text class="sku-name">{{item.name}}</text>
+          <text class="sku-price-sm">¥{{item.memberPrice}}</text>
+          <text wx:if="{{item.hot}}" class="hot">热销</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="panel-title">请选择报名时间</view>
+    <view
+      wx:for="{{visibleSchedules}}"
+      wx:key="id"
+      class="schedule-item {{scheduleId === item.id ? 'selected' : ''}} {{item.remaining <= 0 ? 'disabled' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="selectSchedule"
+    >
+      <view>
+        <view class="schedule-date">{{item.date}} {{item.weekday}}</view>
+        <view class="schedule-time">{{item.time}}</view>
+        <view class="schedule-avatars">
+          <text wx:for="{{item.avatars}}" wx:for-item="avatar" wx:key="*this" class="schedule-avatar">{{avatar}}</text>
+          <text class="schedule-avatar-more">已报名{{item.soldQuota}}人</text>
+        </view>
+      </view>
+      <view class="schedule-right">
+        <text class="remain">{{item.remaining > 0 ? '余' + item.remaining + '人' : '已满'}}</text>
+        <text class="check">✓</text>
+      </view>
+    </view>
+    <view wx:if="{{hasMore}}" class="load-more" bindtap="toggleMore">{{showAll ? '收起' : '加载更多日期'}}</view>
+  </view>
+
+  <view wx:if="{{step === 2}}" class="panel page-pad">
+    <view class="panel-title">{{isGoods ? '购买数量' : '报名人数'}}</view>
+    <view class="counter">
+      <button class="counter-btn" data-delta="-1" bindtap="changeCount">−</button>
+      <text class="counter-value">{{count}}</text>
+      <button class="counter-btn" data-delta="1" bindtap="changeCount">＋</button>
+    </view>
+
+    <block wx:if="{{isGoods}}">
+      <view class="panel-title">收货地址</view>
+      <view wx:if="{{address}}" class="address-card" bindtap="openAddress">
+        <view class="address-line">{{address.name}} {{address.phone}}</view>
+        <view class="address-line">{{address.district}} {{address.detail}}</view>
+        <text class="address-edit">修改 ›</text>
+      </view>
+      <button wx:else class="btn btn-secondary btn-block" bindtap="openAddress">添加收货地址</button>
+    </block>
+
+    <block wx:else>
+      <view class="panel-title">报名人信息</view>
+      <view class="participant-quick">
+        <view
+          wx:for="{{participants}}"
+          wx:key="id"
+          class="participant-chip {{selectedParticipantId === item.id ? 'selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectParticipant"
+        >{{item.name}}</view>
+        <view class="participant-chip manage" data-id="manage" bindtap="selectParticipant">＋ 管理</view>
+      </view>
+
+      <view class="field">
+        <text class="field-label">姓名<text class="required">*</text></text>
+        <input class="field-input" value="{{info.name}}" data-field="name" bindinput="onInput" placeholder="请输入真实姓名" />
+      </view>
+      <view class="field">
+        <text class="field-label">联系电话<text class="required">*</text></text>
+        <input class="field-input" value="{{info.phone}}" data-field="phone" bindinput="onInput" placeholder="用于接收活动通知" />
+      </view>
+      <view wx:if="{{needIdCard}}" class="field">
+        <text class="field-label">身份证号<text class="required">*</text></text>
+        <input class="field-input" value="{{info.idCard}}" data-field="idCard" bindinput="onInput" placeholder="用于购买旅游意外险" />
+      </view>
+      <view wx:if="{{needDiscount}}" class="field">
+        <text class="field-label">优待证<text class="required">*</text></text>
+        <input class="field-input" value="{{info.discount}}" data-field="discount" bindinput="onInput" placeholder="有优待证可享门票优惠" />
+      </view>
+    </block>
+
+    <view class="refund-note">退改规则：{{refundText}}</view>
+  </view>
+
+  <view wx:if="{{step === 3}}" class="panel page-pad">
+    <view class="panel-title">确认订单</view>
+    <view class="confirm-row"><text>活动时间</text><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></view>
+    <view class="confirm-row"><text>{{isGoods ? '购买数量' : '报名人数'}}</text><text>{{count}}{{isGoods ? '件' : '人'}}</text></view>
+    <view class="confirm-row"><text>{{isGoods ? '收货人' : '报名人'}}</text><text>{{isGoods ? address.name : info.name}}</text></view>
+    <view wx:if="{{isGoods}}" class="confirm-row"><text>收货地址</text><text>{{address.district}} {{address.detail}}</text></view>
+    <view class="confirm-row"><text>会员价</text><text>¥{{memberPrice}} × {{count}}</text></view>
+    <view class="panel-title">优惠券</view>
+    <view wx:for="{{couponList}}" wx:key="id" class="coupon-chip {{couponId === item.id ? 'selected' : ''}} {{item.used || !item.usable ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="selectCoupon">
+      <text class="coupon-value">¥{{item.value}}</text>
+      <view class="coupon-info">
+        <text class="coupon-title">{{item.title}}</text>
+        <text class="coupon-desc">{{item.desc}}</text>
+        <text wx:if="{{!item.usable}}" class="coupon-disabled">不适用</text>
+      </view>
+    </view>
+    <view class="coupon-chip {{couponId === null ? 'selected' : ''}}" data-id="" bindtap="selectCoupon">
+      <text class="coupon-value">不用</text>
+      <view class="coupon-info"><text class="coupon-title">不使用优惠券</text></view>
+    </view>
+    <view class="confirm-row"><text>优惠</text><text class="red">-¥{{discount}}</text></view>
+    <view class="confirm-row total"><text>合计</text><text class="detail-price">¥{{total}}</text></view>
+  </view>
+
+  <view class="fixed-bottom booking-bottom">
+    <button wx:if="{{step > 1}}" class="prev" bindtap="prevStep">上一步</button>
+    <button class="btn btn-primary main-btn" bindtap="nextStep">{{step === 3 ? '确认支付 ¥' + total : '下一步'}}</button>
+  </view>
+
+  <view wx:if="{{payOpen}}" class="pay-mask" bindtap="closePay">
+    <view class="pay-modal" catchtap="noop">
+      <view class="pay-title">确认支付</view>
+      <view class="pay-amount">¥{{total}}</view>
+      <view class="pay-tip">支付后名额立即锁定，30分钟内有效</view>
+      <button class="btn btn-wechat btn-block" bindtap="confirmPay">微信支付</button>
+      <button class="defer-btn" bindtap="deferPay">稍后支付（30分钟内有效）</button>
+    </view>
+  </view>
+
+  <view wx:if="{{addressOpen}}" class="pay-mask" bindtap="closeAddress">
+    <view class="pay-modal" catchtap="noop">
+      <view class="modal-title">收货地址</view>
+      <view class="field">
+        <text class="field-label">收货人<text class="required">*</text></text>
+        <input class="field-input" value="{{addressForm.name}}" data-field="name" bindinput="onAddressInput" placeholder="姓名" />
+      </view>
+      <view class="field">
+        <text class="field-label">手机号<text class="required">*</text></text>
+        <input class="field-input" value="{{addressForm.phone}}" data-field="phone" bindinput="onAddressInput" placeholder="联系电话" />
+      </view>
+      <view class="field">
+        <text class="field-label">省市区</text>
+        <input class="field-input" value="{{addressForm.region}}" data-field="region" bindinput="onAddressInput" placeholder="例如：北京市朝阳区" />
+      </view>
+      <view class="field">
+        <text class="field-label">详细地址<text class="required">*</text></text>
+        <input class="field-input" value="{{addressForm.detail}}" data-field="detail" bindinput="onAddressInput" placeholder="街道、门牌号等" />
+      </view>
+      <button class="btn btn-primary btn-block" bindtap="saveAddressNow">保存地址</button>
+    </view>
+  </view>
+</view>

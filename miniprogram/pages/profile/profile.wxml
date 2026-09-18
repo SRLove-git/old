@@ -1,0 +1,133 @@
+<view class="page {{largeMode ? 'large-mode' : ''}}">
+  <view class="profile-hero">
+    <view class="avatar">👵</view>
+    <view class="profile-info">
+      <view class="name">{{user.name}}</view>
+      <view class="phone">{{user.phone}}</view>
+      <view class="member">✓ 岁悦里会员</view>
+    </view>
+    <view class="badge">会员</view>
+  </view>
+
+  <view class="assets card">
+    <view class="asset">
+      <text class="asset-value">¥{{user.balance}}</text>
+      <text class="asset-label">余额</text>
+    </view>
+    <view class="asset">
+      <text class="asset-value">{{user.points}}</text>
+      <text class="asset-label">积分</text>
+    </view>
+    <view class="asset">
+      <text class="asset-value">{{cards.length}}</text>
+      <text class="asset-label">计次卡</text>
+    </view>
+    <view class="asset">
+      <text class="asset-value">{{couponCount}}</text>
+      <text class="asset-label">优惠券</text>
+    </view>
+  </view>
+
+  <view class="menu card">
+    <view class="menu-item" data-url="/pages/orders/orders" bindtap="go">
+      <text class="menu-emoji">📦</text>
+      <text class="menu-text">我的订单</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" data-url="/pages/appointments/appointments" bindtap="go">
+      <text class="menu-emoji">📋</text>
+      <text class="menu-text">我的预约</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" data-url="/pages/coupons/coupons" bindtap="go">
+      <text class="menu-emoji">🎟️</text>
+      <text class="menu-text">我的优惠券</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" data-url="/pages/participants/participants" bindtap="go">
+      <text class="menu-emoji">👥</text>
+      <text class="menu-text">常用报名人</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="showService">
+      <text class="menu-emoji">🎫</text>
+      <text class="menu-text">我的计次卡</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="showService">
+      <text class="menu-emoji">🎧</text>
+      <text class="menu-text">联系客服</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="menu-item" data-url="/pages/manager/manager" bindtap="go">
+      <text class="menu-emoji">📣</text>
+      <text class="menu-text">主理人工作台（演示）</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="profile-card card">
+    <view class="panel-title">我的专属主理人</view>
+    <block wx:if="{{boundManager}}">
+      <view class="manager-bound">
+        <view class="manager-avatar">👩</view>
+        <view class="manager-info">
+          <view class="manager-name">{{boundManager.name}}</view>
+          <view class="manager-sub">邀请码 {{boundManager.inviteCode}} · 有活动问题可联系</view>
+        </view>
+        <button class="small-btn" bindtap="unbind">解绑</button>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="manager-empty">填写主理人邀请码，获得专属服务</view>
+      <button class="btn btn-primary btn-block" bindtap="openBind">绑定主理人</button>
+    </block>
+  </view>
+
+  <view class="profile-card card">
+    <view class="panel-title">显示设置</view>
+    <view class="switch-row">
+      <text>大字模式（更适合长辈）</text>
+      <switch checked="{{largeMode}}" color="#c25e3d" bindchange="toggleLarge" />
+    </view>
+  </view>
+
+  <view class="profile-card card">
+    <view class="panel-title">想一起组织活动？</view>
+    <view class="manager-empty">成为主理人，可推广活动并获得服务佣金</view>
+    <block wx:if="{{isManager}}">
+      <button class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button>
+    </block>
+    <block wx:elif="{{application}}">
+      <view class="apply-status">{{application.status === '待审核' ? '申请已提交，预计1-2个工作日审核' : (application.status === '已拒绝' ? '申请被拒绝' : '申请已通过')}}</view>
+      <view wx:if="{{application.status === '已拒绝'}}" class="manager-empty">拒绝原因：{{application.rejectReason}}</view>
+      <button wx:if="{{application.status === '已拒绝'}}" class="btn btn-secondary btn-block" bindtap="goManagerApply">修改后重新提交</button>
+      <button wx:if="{{application.status === '已通过'}}" class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button>
+    </block>
+    <block wx:else>
+      <button class="btn btn-secondary btn-block" bindtap="goManagerApply">申请成为主理人</button>
+    </block>
+  </view>
+
+  <view wx:if="{{bindLogs.length > 0}}" class="profile-card card">
+    <view class="panel-title">主理人归属记录</view>
+    <view wx:for="{{bindLogs}}" wx:key="id" class="bind-log">
+      <text>{{item.time}} · {{item.action}} · {{item.managerName}}</text>
+      <text class="bind-log-reason">{{item.reason}}</text>
+    </view>
+  </view>
+
+  <view class="brand-footer card">
+    <view class="brand-slogan">岁悦里俱乐部 · 和同龄人一起慢慢玩</view>
+    <button class="footer-btn" bindtap="showService">关注公众号，获取每周活动提醒</button>
+  </view>
+
+  <view wx:if="{{bindOpen}}" class="pay-mask" bindtap="closeBind">
+    <view class="pay-modal" catchtap="noop">
+      <view class="bind-title">绑定主理人</view>
+      <view class="bind-sub">请输入主理人给您的邀请码</view>
+      <input class="field-input" value="{{code}}" bindinput="onCode" placeholder="例如：SYL001" />
+      <button class="btn btn-primary btn-block" bindtap="bindByCode">确认绑定</button>
+    </view>
+  </view>
+</view>

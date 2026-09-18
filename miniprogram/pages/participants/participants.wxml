@@ -1,0 +1,32 @@
+<view class="page">
+  <view wx:for="{{participants}}" wx:key="id" class="participant-row card">
+    <view class="avatar">👤</view>
+    <view class="info">
+      <view class="name">{{item.name}}</view>
+      <view class="phone">{{item.phone || '未填写电话'}}</view>
+    </view>
+    <button class="small-btn" data-id="{{item.id}}" bindtap="openEdit">编辑</button>
+    <button class="small-btn danger" data-id="{{item.id}}" bindtap="remove">删除</button>
+  </view>
+
+  <button class="btn btn-secondary btn-block" bindtap="openAdd">＋ 添加报名人</button>
+
+  <view wx:if="{{editingId}}" class="pay-mask" bindtap="closeModal">
+    <view class="pay-modal" catchtap="noop">
+      <view class="modal-title">{{editingId === 'new' ? '添加报名人' : '编辑报名人'}}</view>
+      <view class="field">
+        <text class="field-label">姓名<text class="required">*</text></text>
+        <input class="field-input" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="真实姓名" />
+      </view>
+      <view class="field">
+        <text class="field-label">联系电话</text>
+        <input class="field-input" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="选填" />
+      </view>
+      <view class="field">
+        <text class="field-label">身份证号</text>
+        <input class="field-input" value="{{form.idCard}}" data-field="idCard" bindinput="onInput" placeholder="研学出行时填写" />
+      </view>
+      <button class="btn btn-primary btn-block" bindtap="save">保存</button>
+    </view>
+  </view>
+</view>

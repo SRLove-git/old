@@ -1,0 +1,67 @@
+.intro {
+  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  color: #ffffff;
+  border-radius: 28rpx;
+  padding: 38rpx 30rpx;
+  margin-bottom: 24rpx;
+}
+
+.intro-title {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.intro-sub {
+  margin-top: 10rpx;
+  opacity: 0.92;
+}
+
+.form-card {
+  padding: 30rpx;
+  margin-bottom: 24rpx;
+}
+
+.required {
+  color: #d74a4a;
+  margin-left: 4rpx;
+}
+
+.tag-select {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tag-chip {
+  border: 2rpx solid #e7e9ec;
+  border-radius: 999rpx;
+  padding: 16rpx 24rpx;
+  font-weight: 700;
+}
+
+.tag-chip.selected {
+  border-color: #c25e3d;
+  background: #fff8f3;
+  color: #c25e3d;
+}
+
+.agree-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #c25e3d;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 28rpx;
+}
+
+.checkbox.checked {
+  background: #c25e3d;
+}

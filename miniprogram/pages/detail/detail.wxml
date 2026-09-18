@@ -1,0 +1,134 @@
+<view wx:if="{{activity}}" class="detail-page">
+  <swiper class="detail-swiper" indicator-dots autoplay circular>
+    <swiper-item wx:for="{{activity.images}}" wx:key="id" wx:for-item="img">
+      <view class="detail-cover" style="background: {{img.tone}}">
+        <text class="detail-cover-emoji">{{img.emoji}}</text>
+        <text class="detail-img-label">{{img.label}}</text>
+        <text class="detail-sold">{{activity.soldCount}}人已报名</text>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <view class="detail-card">
+    <view class="detail-title">{{activity.title}}</view>
+    <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
+    <view class="detail-location">📍 {{activity.city}} <text wx:if="{{activity.minGroup > 0}}" class="tag {{activity.soldCount >= activity.minGroup ? 'tag-green' : 'tag-orange'}}">{{activity.soldCount >= activity.minGroup ? '已成团' : activity.minGroup + '人成团'}}</text></view>
+
+    <view class="price-row">
+      <view>
+        <text class="tag tag-orange">会员价</text>
+        <text class="detail-price">¥{{activity.memberPrice}}</text>
+        <text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text>
+        <text wx:if="{{activity.price > activity.memberPrice}}" class="non-member">非会员 ¥{{activity.price}}</text>
+      </view>
+      <button class="small-btn" bindtap="goProfile">入会省钱</button>
+    </view>
+
+    <view class="member-tip">入会即领券，本单还可再减，见「我的-优惠券」</view>
+
+    <view class="block">
+      <view class="block-label">✨ 活动亮点</view>
+      <view class="highlight">{{activity.highlight}}</view>
+      <view wx:for="{{activity.points}}" wx:key="*this" class="point">· {{item}}</view>
+    </view>
+
+    <view class="block">
+      <view class="block-label">📅 活动时间</view>
+      <view class="schedule-preview">
+        <view>
+          <view class="schedule-date">{{activity.schedules[0].date}} {{activity.schedules[0].weekday}}</view>
+          <view class="schedule-time">{{activity.schedules[0].time}}</view>
+        </view>
+        <button class="small-btn" bindtap="openSku">{{activity.hasSku ? '选房型报名' : '选日期报名'}}</button>
+      </view>
+    </view>
+
+    <view class="block">
+      <view class="block-label">🛡️ 退改规则</view>
+      <view class="refund-text">{{activity.refund}}</view>
+    </view>
+
+    <view class="block">
+      <view class="block-label">👥 已购买的朋友</view>
+      <view wx:for="{{activity.buyers}}" wx:key="time" class="buyer-row">
+        <text class="buyer-avatar">{{item.avatar}}</text>
+        <view class="buyer-info">
+          <text class="buyer-name">{{item.name}}</text>
+          <text class="buyer-time">{{item.time}} 已购买</text>
+        </view>
+        <button class="buyer-go" data-id="{{activity.id}}" catchtap="openSku">去下单</button>
+      </view>
+    </view>
+
+    <view class="tabs">
+      <button class="{{tab === 'detail' ? 'active' : ''}}" data-tab="detail" bindtap="toggleTab">活动详情</button>
+      <button class="{{tab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="toggleTab">大家评价</button>
+      <button class="{{tab === 'recommend' ? 'active' : ''}}" data-tab="recommend" bindtap="toggleTab">相关推荐</button>
+    </view>
+
+    <view wx:if="{{tab === 'detail'}}" class="detail-rich">{{activity.detail}}</view>
+    <view wx:elif="{{tab === 'review'}}" class="review-list">
+      <view wx:for="{{reviews}}" wx:key="id" class="review">
+        <text class="review-avatar">👵</text>
+        <view>
+          <view class="review-name">{{item.name}}</view>
+          <view class="review-text">{{item.content}}</view>
+          <view class="review-time">{{item.time}}</view>
+        </view>
+      </view>
+      <view wx:if="{{reviews.length === 0}}" class="empty-review">暂无评价</view>
+    </view>
+    <view wx:else class="recommend-list">
+      <view wx:for="{{recommend}}" wx:key="id" class="recommend-card" data-id="{{item.id}}" bindtap="goDetailFromRec">
+        <view class="recommend-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+        <view class="recommend-info">
+          <view class="recommend-title">{{item.title}}</view>
+          <view class="recommend-meta">📍 {{item.city}}</view>
+          <view class="recommend-price">¥{{item.memberPrice}} <text class="member-label">会员价</text></view>
+        </view>
+      </view>
+      <view wx:if="{{recommend.length === 0}}" class="empty-review">暂无相关推荐</view>
+    </view>
+
+    <view class="private-flow">
+      <view class="private-title">{{activity.category === 5 ? '购买 / 发货 / 售后，请加助理微信' : '报名后请添加客服小助理'}}</view>
+      <view class="private-sub">{{activity.category === 5 ? '微信号：suiyueli6070' : '微信号：suiyueli6070 · 拉您进活动群'}}</view>
+      <button class="private-btn" bindtap="copyAssistantWechat">复制助理微信号</button>
+    </view>
+  </view>
+
+  <view class="fixed-bottom detail-bottom">
+    <button class="service" bindtap="showService">🎧 客服</button>
+    <button class="btn btn-primary main-btn" bindtap="openSku">{{activity.category === 5 ? '立即购买' : (activity.hasSku ? '选房型报名' : '立即报名')}}</button>
+  </view>
+
+  <view wx:if="{{skuOpen}}" class="sheet-mask" bindtap="closeSku">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <text class="sheet-title">请选择房型</text>
+        <button class="close" bindtap="closeSku">×</button>
+      </view>
+      <view class="sku-summary">
+        <view class="sku-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
+        <view>
+          <view class="sku-price">¥{{selectedSku.memberPrice}}</view>
+          <view class="sku-title">{{activity.title}}</view>
+        </view>
+      </view>
+      <view class="sku-options">
+        <view
+          wx:for="{{activity.skus}}"
+          wx:key="id"
+          class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectSku"
+        >
+          <text class="sku-name">{{item.name}}</text>
+          <text class="sku-price-sm">¥{{item.memberPrice}}</text>
+          <text wx:if="{{item.hot}}" class="hot">热销</text>
+        </view>
+      </view>
+      <button class="btn btn-primary btn-block" bindtap="confirmSku">下一步</button>
+    </view>
+  </view>
+</view>

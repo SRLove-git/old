@@ -1,0 +1,90 @@
+<view wx:if="{{order}}" class="order-detail-page">
+  <view class="status-hero">
+    <view class="status-icon">✓</view>
+    <view class="status-text">{{order.status}}</view>
+    <view class="status-sub">{{refundInfo.reason || '请按时参加活动'}}</view>
+  </view>
+
+  <view class="detail-card page-pad">
+    <view class="order-title">{{order.title}}</view>
+    <view class="order-meta">📅 {{order.schedule.date}} {{order.schedule.weekday}} {{order.schedule.time}}</view>
+    <view class="order-meta">👥 {{order.participants}}</view>
+    <view class="order-meta">🧾 订单号 {{order.id}}</view>
+  </view>
+
+  <view wx:if="{{order.status === '待付款'}}" class="detail-card page-pad">
+    <view class="panel-title">订单待支付</view>
+    <view class="pay-deadline">剩余支付时间：{{payRemain}}（超时自动取消并释放名额）</view>
+  </view>
+
+  <view wx:if="{{order.category === 4}}" class="detail-card page-pad">
+    <view class="panel-title">核销码</view>
+    <view class="code-box">
+      <view class="qr">二维码</view>
+      <view class="code">{{order.code}}</view>
+      <view class="code-tip">到店出示给工作人员核销</view>
+    </view>
+  </view>
+
+  <view class="detail-card page-pad">
+    <view class="confirm-row"><text>实付金额</text><text>¥{{order.payAmount}}</text></view>
+    <view class="confirm-row"><text>优惠券</text><text>{{order.coupon}}</text></view>
+    <view class="confirm-row"><text>下单时间</text><text>{{order.createdAt}}</text></view>
+    <view wx:if="{{order.address}}" class="confirm-row"><text>收货地址</text><text>{{order.address.name}} {{order.address.phone}} {{order.address.district}} {{order.address.detail}}</text></view>
+    <view wx:if="{{order.refundAmount}}" class="confirm-row"><text>退款金额</text><text class="red">¥{{order.refundAmount}}</text></view>
+  </view>
+
+  <view class="fixed-bottom order-bottom">
+    <button class="contact" bindtap="contact">🎧 联系客服</button>
+
+    <block wx:if="{{order.status === '待付款'}}">
+      <button class="btn btn-ghost" bindtap="cancelNow">取消订单</button>
+      <button class="btn btn-primary" bindtap="payNow">去支付</button>
+    </block>
+
+    <block wx:elif="{{order.status === '待发货' || order.status === '待收货'}}">
+      <button wx:if="{{refundInfo.can}}" class="btn btn-danger" bindtap="openRefund">申请退款</button>
+      <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
+    </block>
+
+    <block wx:elif="{{order.status === '已核销'}}">
+      <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
+    </block>
+
+    <block wx:elif="{{order.status === '待评价'}}">
+      <button class="btn btn-primary" bindtap="openReview">{{actionLabel}}</button>
+    </block>
+  </view>
+
+  <view wx:if="{{refundOpen}}" class="pay-mask" bindtap="closeRefund">
+    <view class="pay-modal" catchtap="noop">
+      <view class="modal-title">申请退款</view>
+      <view class="refund-rule">预计可退 ¥{{refundInfo.amount}}（{{refundInfo.reason}}）</view>
+      <view class="field">
+        <text class="field-label">退款原因</text>
+        <picker range="{{reasons}}" value="{{refundIndex}}" bindchange="onReason">
+          <view class="picker-value">{{refundReason}}</view>
+        </picker>
+      </view>
+      <button class="btn btn-primary btn-block" bindtap="submitRefund">确认申请退款</button>
+      <button class="text-btn" bindtap="closeRefund">我再想想</button>
+    </view>
+  </view>
+
+  <view wx:if="{{reviewOpen}}" class="pay-mask" bindtap="closeReview">
+    <view class="pay-modal" catchtap="noop">
+      <view class="modal-title">评价本次活动</view>
+      <view class="stars">
+        <text
+          wx:for="{{[1,2,3,4,5]}}"
+          wx:key="*this"
+          class="star {{item <= reviewRating ? 'on' : ''}}"
+          data-rating="{{item}}"
+          bindtap="onRating"
+        >★</text>
+      </view>
+      <textarea class="field-input review-input" value="{{reviewContent}}" bindinput="onReviewInput" placeholder="说说您的体验（选填）" />
+      <button class="btn btn-primary btn-block" bindtap="submitReview">提交评价</button>
+    </view>
+  </view>
+</view>

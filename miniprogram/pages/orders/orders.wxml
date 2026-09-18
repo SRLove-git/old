@@ -1,0 +1,39 @@
+<view class="page">
+  <scroll-view scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
+    <view class="filter-row">
+      <view
+        wx:for="{{statuses}}"
+        wx:key="*this"
+        class="chip {{filter === item ? 'active' : ''}}"
+        data-status="{{item}}"
+        bindtap="setFilter"
+      >{{item}}</view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{list.length > 0}}" class="order-list">
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="order-card card"
+      data-id="{{item.id}}"
+      bindtap="goOrder"
+    >
+      <view class="order-top">
+        <view class="order-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+        <view class="order-info">
+          <view class="order-title">{{item.title}}</view>
+          <view class="order-meta">📅 {{item.schedule.date}} {{item.schedule.weekday}}</view>
+          <view class="order-meta">👥 {{item.participants}}</view>
+        </view>
+        <text class="status {{item.statusClass}}">{{item.status}}</text>
+      </view>
+      <view class="order-foot">
+        <text class="amount">¥{{item.payAmount}}</text>
+        <text class="go">查看详情</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="empty">暂无订单</view>
+</view>

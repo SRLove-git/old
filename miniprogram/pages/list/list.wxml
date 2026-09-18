@@ -1,0 +1,55 @@
+<view class="page">
+  <view class="search-input">
+    <text>🔍</text>
+    <input value="{{keyword}}" bindinput="onInput" placeholder="搜索活动名称或地点" />
+  </view>
+
+  <scroll-view scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
+    <view class="filter-row">
+      <view class="chip {{cat === 'all' ? 'active' : ''}}" data-id="all" bindtap="setCat">全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="chip {{cat === item.id ? 'active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="setCat"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="result">共 {{total}} 个活动</view>
+
+  <view wx:if="{{list.length > 0}}" class="activity-list">
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="activity-card card"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="cover" style="background: {{item.coverTone}}">
+        <text class="cover-emoji">{{item.cover}}</text>
+        <text class="sold">{{item.soldCount}}人已报名</text>
+        <text wx:if="{{item.minGroup > 0}}" class="group">{{item.soldCount >= item.minGroup ? '已成团' : item.minGroup + '人成团'}}</text>
+      </view>
+      <view class="card-body">
+        <view class="card-title">{{item.title}}</view>
+        <view class="meta">📅 {{item.schedules[0].date}} {{item.schedules[0].weekday}} · 📍 {{item.city}}</view>
+      <view class="card-foot">
+        <view>
+          <text class="price">¥{{item.memberPrice}}</text>
+          <text class="member-label">会员价</text>
+        </view>
+        <button class="go" data-id="{{item.id}}" catchtap="goBooking">立即报名</button>
+      </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="empty">
+    <view class="empty-emoji">🍃</view>
+    <view class="empty-title">没有找到相关活动</view>
+    <view class="empty-sub">换个关键词试试</view>
+    <button class="btn btn-primary" bindtap="clearFilter">清空筛选</button>
+  </view>
+</view>

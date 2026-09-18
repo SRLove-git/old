@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>暖橙温馨卡片风</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; background:#f6f1ec; color:#26221f; width:390px; }
+  .wrap { padding:18px 16px 96px; }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .brand { font-size:23px; font-weight:800; color:#9e4428; }
+  .slogan { font-size:14px; color:#8a7f76; margin-top:3px; }
+  .big { background:#fdeee9; color:#9e4428; border-radius:99px; padding:9px 15px; font-size:15px; font-weight:700; }
+  .search { display:flex; align-items:center; gap:8px; background:#fff; border-radius:99px; padding:15px 18px; margin:18px 0 14px; box-shadow:0 10px 28px rgba(158,68,40,.08); font-size:17px; color:#8a7f76; }
+  .banner { background:linear-gradient(135deg,#c25e3d,#e19a6d); color:#fff; border-radius:24px; padding:22px 20px; }
+  .banner h3 { font-size:21px; font-weight:800; }
+  .banner p { font-size:14px; opacity:.92; margin-top:7px; }
+  .banner button { margin-top:14px; background:#fff; color:#9e4428; border:0; border-radius:99px; padding:11px 22px; font-size:15px; font-weight:800; }
+  .sec { font-size:18px; font-weight:800; margin:22px 0 12px; }
+  .cats { display:flex; gap:8px; }
+  .cat { flex:1; background:#fff; border-radius:18px; padding:14px 4px; text-align:center; box-shadow:0 8px 20px rgba(0,0,0,.04); }
+  .cat .e { font-size:26px; }
+  .cat .n { font-size:13px; font-weight:700; margin-top:6px; }
+  .member { background:#fff8f3; border:1.5px solid #f6d6c8; border-radius:20px; padding:16px; display:flex; justify-content:space-between; align-items:center; margin-top:18px; }
+  .member b { font-size:17px; color:#9e4428; }
+  .member span { font-size:13px; color:#8a7f76; }
+  .member button { background:#c25e3d; color:#fff; border:0; border-radius:99px; padding:11px 18px; font-size:14px; font-weight:800; }
+  .card { background:#fff; border-radius:22px; box-shadow:0 10px 26px rgba(0,0,0,.05); overflow:hidden; margin-bottom:14px; }
+  .cover { height:96px; display:flex; align-items:center; justify-content:center; font-size:44px; color:#fff; position:relative; }
+  .cover span { position:absolute; left:12px; bottom:10px; background:rgba(0,0,0,.32); color:#fff; font-size:12px; border-radius:99px; padding:4px 10px; }
+  .body { padding:14px 16px 16px; }
+  .title { font-size:17px; font-weight:800; line-height:1.35; }
+  .meta { font-size:13px; color:#8a7f76; margin:7px 0 12px; }
+  .foot { display:flex; justify-content:space-between; align-items:center; }
+  .price { font-size:20px; font-weight:800; color:#c25e3d; }
+  .price small { font-size:12px; color:#8a7f76; font-weight:400; }
+  .go { background:#c25e3d; color:#fff; border-radius:99px; padding:9px 18px; font-size:14px; font-weight:800; }
+  .tab { position:fixed; left:0; right:0; bottom:0; height:76px; background:#fff; border-top:1px solid #eee; display:flex; }
+  .tab div { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#8a7f76; font-size:12px; gap:3px; }
+  .tab div.on { color:#c25e3d; font-weight:800; }
+  .tab .e { font-size:22px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand">岁悦里俱乐部</div>
+        <div class="slogan">和同龄人一起，玩得开心又省心</div>
+      </div>
+      <div class="big">大字</div>
+    </div>
+    <div class="search">🔍 <span>搜活动、旅行、课程</span></div>
+    <div class="banner">
+      <h3>本周精选活动</h3>
+      <p>适合零基础，慢慢玩不赶路</p>
+      <button>去看看</button>
+    </div>
+    <div class="sec">按兴趣找活动</div>
+    <div class="cats">
+      <div class="cat"><div class="e">🥾</div><div class="n">同城活动</div></div>
+      <div class="cat"><div class="e">🚌</div><div class="n">研学旅行</div></div>
+      <div class="cat"><div class="e">📚</div><div class="n">岁悦学堂</div></div>
+      <div class="cat"><div class="e">🎁</div><div class="n">商家福利</div></div>
+      <div class="cat"><div class="e">🛍️</div><div class="n">商品文创</div></div>
+    </div>
+    <div class="member">
+      <div><b>免费入会 · 领2张券</b><br><span>会员价更划算，本单最高省¥100</span></div>
+      <button>立即入会</button>
+    </div>
+    <div class="sec">大家都在报名</div>
+    <div class="card">
+      <div class="cover" style="background:linear-gradient(135deg,#c96b2a,#f1b35a)">🍁<span>32人已报名</span></div>
+      <div class="body">
+        <div class="title">秋日徒步 · 香山赏红叶（15人成团）</div>
+        <div class="meta">📅 9月20日 周日 · 📍 北京</div>
+        <div class="foot"><div class="price">¥79 <small>会员价</small></div><div class="go">去看看</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cover" style="background:linear-gradient(135deg,#2b6f9c,#8fc6e7)">🏔️<span>23人已报名</span></div>
+      <div class="body">
+        <div class="title">云南大理 · 苍山洱海5日研学之旅</div>
+        <div class="meta">📅 每周一发团 · 📍 大理</div>
+        <div class="foot"><div class="price">¥2780 <small>会员价</small></div><div class="go">去看看</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="tab">
+    <div class="on"><span class="e">🏠</span>首页</div>
+    <div><span class="e">🔍</span>找活动</div>
+    <div><span class="e">📋</span>我的预约</div>
+    <div><span class="e">👤</span>我的</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<view class="page">
+  <view wx:for="{{coupons}}" wx:key="id" class="coupon-card card {{item.used ? 'used' : ''}}">
+    <view class="coupon-left">¥{{item.value}}</view>
+    <view class="coupon-mid">
+      <view class="coupon-title">{{item.title}}</view>
+      <view class="coupon-desc">{{item.desc}}</view>
+      <view class="coupon-desc">有效期至 {{item.expireAt}}</view>
+    </view>
+    <button class="use" bindtap="goList">{{item.used ? '已使用' : '去使用'}}</button>
+  </view>
+</view>

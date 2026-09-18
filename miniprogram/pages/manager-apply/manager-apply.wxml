@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="intro">
+    <view class="intro-title">一起把好活动带给更多人</view>
+    <view class="intro-sub">审核通过后，您将获得专属推广码、邀请码和分佣权限</view>
+  </view>
+
+  <view class="form-card card">
+    <view class="field">
+      <text class="field-label">姓名<text class="required">*</text></text>
+      <input class="field-input" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="真实姓名" />
+      <text wx:if="{{errors.name}}" class="field-error">{{errors.name}}</text>
+    </view>
+    <view class="field">
+      <text class="field-label">手机号<text class="required">*</text></text>
+      <input class="field-input" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="联系电话" />
+      <text wx:if="{{errors.phone}}" class="field-error">{{errors.phone}}</text>
+    </view>
+    <view class="field">
+      <text class="field-label">社群规模<text class="required">*</text></text>
+      <input class="field-input" value="{{form.scale}}" data-field="scale" bindinput="onInput" placeholder="例如：3个群，约500人" />
+      <text wx:if="{{errors.scale}}" class="field-error">{{errors.scale}}</text>
+    </view>
+    <view class="field">
+      <text class="field-label">擅长领域</text>
+      <view class="tag-select">
+        <view
+          wx:for="{{fieldOptions}}"
+          wx:key="name"
+          class="tag-chip {{item.selected ? 'selected' : ''}}"
+          data-field="{{item.name}}"
+          bindtap="toggleField"
+        >{{item.name}}</view>
+      </view>
+    </view>
+    <view class="field">
+      <text class="field-label">个人简介</text>
+      <textarea class="field-input" value="{{form.intro}}" data-field="intro" bindinput="onInput" placeholder="简单介绍您的运营经验" />
+    </view>
+    <view class="agree-row" bindtap="toggleAgree">
+      <view class="checkbox {{agree ? 'checked' : ''}}">{{agree ? '✓' : ''}}</view>
+      <text>我已阅读并同意《主理人合作协议》</text>
+    </view>
+    <text wx:if="{{errors.agree}}" class="field-error">{{errors.agree}}</text>
+  </view>
+
+  <button class="btn btn-primary btn-block" bindtap="submit">提交申请</button>
+</view>

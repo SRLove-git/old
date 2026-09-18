@@ -1,0 +1,48 @@
+.coupon-card {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  margin-bottom: 22rpx;
+}
+
+.coupon-card.used {
+  opacity: 0.55;
+}
+
+.coupon-left {
+  width: 170rpx;
+  min-height: 160rpx;
+  background: #fff8f3;
+  color: #c25e3d;
+  font-size: 46rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coupon-mid {
+  flex: 1;
+  padding: 24rpx;
+}
+
+.coupon-title {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.coupon-desc {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-top: 8rpx;
+}
+
+.use {
+  margin-right: 20rpx;
+  background: #c25e3d;
+  color: #ffffff;
+  border-radius: 999rpx;
+  padding: 16rpx 22rpx;
+  font-weight: 700;
+  font-size: 26rpx;
+}
