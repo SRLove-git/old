@@ -5,22 +5,23 @@ import { api } from './api.js'
 const view = ref('dashboard')
 const loading = ref(false)
 const error = ref('')
+const sideOpen = ref(false)
 
 const nav = [
-  { key: 'dashboard', name: '数据看板' },
-  { key: 'activities', name: '活动管理' },
-  { key: 'orders', name: '订单/退款' },
-  { key: 'customers', name: '用户管理' },
-  { key: 'coupons', name: '优惠券管理' },
-  { key: 'reviews', name: '评价管理' },
-  { key: 'banners', name: 'Banner管理' },
-  { key: 'applications', name: '主理人审核' },
-  { key: 'managers', name: '主理人管理' },
-  { key: 'bindings', name: '归属管理' },
-  { key: 'commissions', name: '佣金管理' },
-  { key: 'withdraws', name: '提现审核' },
-  { key: 'logs', name: '操作日志' },
-  { key: 'config', name: '规则配置' }
+  { key: 'dashboard', name: '数据看板', icon: '📊' },
+  { key: 'activities', name: '活动管理', icon: '🗓' },
+  { key: 'orders', name: '订单/退款', icon: '🧾' },
+  { key: 'customers', name: '用户管理', icon: '👥' },
+  { key: 'coupons', name: '优惠券管理', icon: '🎟' },
+  { key: 'reviews', name: '评价管理', icon: '💬' },
+  { key: 'banners', name: 'Banner管理', icon: '🖼' },
+  { key: 'applications', name: '主理人审核', icon: '📋' },
+  { key: 'managers', name: '主理人管理', icon: '🧑‍💼' },
+  { key: 'bindings', name: '归属管理', icon: '🔗' },
+  { key: 'commissions', name: '佣金管理', icon: '💰' },
+  { key: 'withdraws', name: '提现审核', icon: '🏦' },
+  { key: 'logs', name: '操作日志', icon: '📝' },
+  { key: 'config', name: '规则配置', icon: '⚙️' }
 ]
 
 const stats = ref(null)
@@ -59,6 +60,35 @@ const couponTypes = { 1: '无门槛', 2: '满减', 3: '品类券', 4: '指定商
 const bindSource = { 1: '扫码', 2: '链接', 3: '邀请码', 4: '手动变更' }
 
 function catName(id) { return categories[id] || '未知' }
+
+const pageTitle = computed(() => nav.find((n) => n.key === view.value)?.name || '')
+
+function toggleSide() { sideOpen.value = !sideOpen.value }
+
+function orderChip(status) {
+  if (['已完成', '已核销'].includes(status)) return 'chip-success'
+  if (status === '退款中') return 'chip-danger'
+  if (['已退款', '已取消'].includes(status)) return 'chip-neutral'
+  return 'chip-warning'
+}
+
+function managerChip(status) {
+  if (status === 1) return 'chip-success'
+  if (status === 2) return 'chip-warning'
+  return 'chip-neutral'
+}
+
+function bindingChip(status) {
+  if (status === 1) return 'chip-success'
+  return 'chip-neutral'
+}
+
+function statusChip(status) {
+  if (['待审核', '待付款', '待发货', '待收货', '待评价'].includes(status)) return 'chip-warning'
+  if (['已通过', '已结算', '可结算', '正常'].includes(status)) return 'chip-success'
+  if (['已拒绝', '已驳回'].includes(status)) return 'chip-danger'
+  return 'chip-neutral'
+}
 
 async function load() {
   loading.value = true
@@ -270,17 +300,32 @@ function exportCsv(filename, rows) {
 
 <template>
   <div class="layout">
-    <aside class="side">
+    <aside class="side" :class="{ open: sideOpen }">
       <div class="logo">岁悦里 · 运营后台</div>
-      <button v-for="n in nav" :key="n.key" class="nav-item" :class="{ on: view === n.key }" @click="switchView(n.key)">{{ n.name }}</button>
+      <button
+        v-for="n in nav"
+        :key="n.key"
+        class="nav-item"
+        :class="{ on: view === n.key }"
+        @click="switchView(n.key); sideOpen = false"
+      >
+        <span class="nav-icon">{{ n.icon }}</span>
+        <span>{{ n.name }}</span>
+      </button>
     </aside>
 
     <main class="main">
+      <header class="topbar">
+        <button class="btn btn-text menu-btn" @click="toggleSide" aria-label="菜单">☰</button>
+        <span class="topbar-title">{{ pageTitle }}</span>
+        <span class="topbar-spacer"></span>
+        <span class="topbar-user"><span class="avatar">管</span>运营管理员</span>
+      </header>
+
       <div v-if="error" class="error">⚠️ {{ error }}</div>
       <div v-if="loading" class="loading">加载中…</div>
 
       <section v-if="view === 'dashboard' && stats">
-        <h1>数据看板</h1>
         <div class="grid">
           <div class="stat card"><b>{{ stats.activityCount }}</b><span>活动数</span></div>
           <div class="stat card"><b>{{ stats.orderCount }}</b><span>订单数</span></div>
@@ -291,20 +336,21 @@ function exportCsv(filename, rows) {
           <div class="stat card"><b>¥{{ stats.totalRevenue }}</b><span>有效营收</span></div>
           <div class="stat card"><b>¥{{ stats.totalCommission.toFixed(2) }}</b><span>累计佣金</span></div>
         </div>
-        <div class="card" style="margin-top:16px">
-          <h3>订单状态分布</h3>
+        <div class="stack">
+        <div class="card">
+          <div class="section-title">订单状态分布</div>
           <div class="tags">
-            <span v-for="(v, k) in stats.orderStatus" :key="k" class="tag tag-gray">{{ k }}：{{ v }}</span>
+            <span v-for="(v, k) in stats.orderStatus" :key="k" class="chip chip-neutral">{{ k }}：{{ v }}</span>
           </div>
         </div>
-        <div class="card" style="margin-top:16px">
-          <h3>商品分类分布</h3>
+        <div class="card">
+          <div class="section-title">商品分类分布</div>
           <div class="tags">
-            <span v-for="(v, k) in stats.byCategory" :key="k" class="tag tag-blue">{{ catName(Number(k)) }}：{{ v }}</span>
+            <span v-for="(v, k) in stats.byCategory" :key="k" class="chip chip-info">{{ catName(Number(k)) }}：{{ v }}</span>
           </div>
         </div>
-        <div class="card" style="margin-top:16px">
-          <h3>主理人排行榜（按累计佣金）</h3>
+        <div class="card">
+          <div class="section-title">主理人排行榜（按累计佣金）</div>
           <table>
             <thead><tr><th>排名</th><th>主理人</th><th>累计佣金</th><th>客户数</th></tr></thead>
             <tbody>
@@ -314,14 +360,13 @@ function exportCsv(filename, rows) {
             </tbody>
           </table>
         </div>
+        </div>
       </section>
 
       <section v-if="view === 'activities'">
         <div class="head">
-          <h1>活动管理</h1>
           <div class="head-actions">
             <input v-model="kw" class="input inline" placeholder="搜索标题/城市" />
-            <button class="btn btn-primary" @click="openActivity(null)">新建活动</button>
           </div>
         </div>
         <div class="card">
@@ -329,18 +374,18 @@ function exportCsv(filename, rows) {
             <thead><tr><th>ID</th><th>标题</th><th>分类</th><th>城市</th><th>会员价</th><th>已报名</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="a in filteredActivities" :key="a.id">
-                <td>{{ a.id }}</td><td>{{ a.title }}</td><td><span class="tag tag-blue">{{ catName(a.category) }}</span></td><td>{{ a.city }}</td><td>¥{{ a.memberPrice }}</td><td>{{ a.soldCount }}</td>
-                <td><span class="tag" :class="a.status === 1 ? 'tag-green' : 'tag-gray'">{{ a.status === 1 ? '上架' : '下架' }}</span></td>
-                <td><button class="btn btn-ghost" @click="openActivity(a)">编辑</button><button class="btn btn-danger" @click="removeActivity(a.id)">删除</button></td>
+                <td>{{ a.id }}</td><td>{{ a.title }}</td><td><span class="chip chip-info">{{ catName(a.category) }}</span></td><td>{{ a.city }}</td><td>¥{{ a.memberPrice }}</td><td>{{ a.soldCount }}</td>
+                <td><span class="chip" :class="a.status === 1 ? 'chip-success' : 'chip-neutral'">{{ a.status === 1 ? '上架' : '下架' }}</span></td>
+                <td><button class="btn btn-text" @click="openActivity(a)">编辑</button><button class="btn btn-text btn-danger-text" @click="removeActivity(a.id)">删除</button></td>
               </tr>
             </tbody>
           </table>
         </div>
+        <button class="fab" @click="openActivity(null)">＋ 新建活动</button>
       </section>
 
       <section v-if="view === 'orders'">
         <div class="head">
-          <h1>订单与退款</h1>
           <div class="head-actions">
             <input v-model="kw" class="input inline" placeholder="搜索订单/标题/客户" />
             <select v-model="orderStatusFilter" class="input inline">
@@ -353,24 +398,23 @@ function exportCsv(filename, rows) {
             <thead><tr><th>订单号</th><th>客户</th><th>标题</th><th>实付</th><th>状态</th><th>主理人</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="o in filteredOrders" :key="o.id">
-                <td>{{ o.id }}</td><td>{{ o.participants }}</td><td>{{ o.title }}</td><td>¥{{ o.payAmount }}</td><td><span class="tag tag-orange">{{ o.status }}</span></td><td>{{ o.managerId || '散客' }}</td>
+                <td>{{ o.id }}</td><td>{{ o.participants }}</td><td>{{ o.title }}</td><td>¥{{ o.payAmount }}</td><td><span class="chip" :class="orderChip(o.status)">{{ o.status }}</span></td><td>{{ o.managerId || '散客' }}</td>
                 <td>
-                  <button v-if="o.status === '待付款'" class="btn btn-primary" @click="orderAction(o.id, 'pay')">支付</button>
-                  <button v-if="o.status === '待付款'" class="btn btn-ghost" @click="orderAction(o.id, 'cancel')">取消</button>
-                  <button v-if="o.status === '待发货' || o.status === '待收货'" class="btn btn-ghost" @click="orderAction(o.id, 'advance')">推进</button>
-                  <button v-if="o.status === '待发货' || o.status === '待收货'" class="btn btn-danger" @click="orderAction(o.id, 'refund-audit', { approve: true, reason: '运营退款' })">退款</button>
-                  <button v-if="o.status === '已退款'" class="btn btn-ghost" @click="orderAction(o.id, 'refund-audit', { approve: false, reason: '撤销退款' })">恢复</button>
+                  <button v-if="o.status === '待付款'" class="btn btn-filled btn-sm" @click="orderAction(o.id, 'pay')">支付</button>
+                  <button v-if="o.status === '待付款'" class="btn btn-outlined btn-sm" @click="orderAction(o.id, 'cancel')">取消</button>
+                  <button v-if="o.status === '待发货' || o.status === '待收货'" class="btn btn-outlined btn-sm" @click="orderAction(o.id, 'advance')">推进</button>
+                  <button v-if="o.status === '待发货' || o.status === '待收货'" class="btn btn-danger btn-sm" @click="orderAction(o.id, 'refund-audit', { approve: true, reason: '运营退款' })">退款</button>
+                  <button v-if="o.status === '已退款'" class="btn btn-outlined btn-sm" @click="orderAction(o.id, 'refund-audit', { approve: false, reason: '撤销退款' })">恢复</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <button class="btn btn-primary" style="margin-top:12px" @click="exportCsv('orders.csv', filteredOrders)">导出订单 CSV</button>
+        <div class="actions-row"><button class="btn btn-tonal" @click="exportCsv('orders.csv', filteredOrders)">导出订单 CSV</button></div>
       </section>
 
       <section v-if="view === 'customers'">
         <div class="head">
-          <h1>用户管理</h1>
           <input v-model="kw" class="input inline" placeholder="搜索姓名/电话" />
         </div>
         <div class="card">
@@ -380,7 +424,7 @@ function exportCsv(filename, rows) {
               <tr v-for="c in filteredCustomers" :key="c.id">
                 <td>{{ c.id }}</td><td>{{ c.name }}</td><td>{{ c.phone }}</td><td>{{ c.member ? '是' : '否' }}</td><td>¥{{ c.balance }}</td><td>{{ c.points }}</td>
                 <td>{{ managers.find(m => String(m.id) === String(c.managerId))?.name || '散客' }}</td>
-                <td><button class="btn btn-ghost" @click="openCustomer(c)">编辑</button><button class="btn btn-ghost" @click="openRebind(c)">改归属</button><button class="btn btn-danger" @click="unbindCustomer(c.id)">解绑</button></td>
+                <td><button class="btn btn-text" @click="openCustomer(c)">编辑</button><button class="btn btn-text" @click="openRebind(c)">改归属</button><button class="btn btn-text btn-danger-text" @click="unbindCustomer(c.id)">解绑</button></td>
               </tr>
             </tbody>
           </table>
@@ -388,29 +432,28 @@ function exportCsv(filename, rows) {
       </section>
 
       <section v-if="view === 'coupons'">
-        <div class="head"><h1>优惠券管理</h1><button class="btn btn-primary" @click="openCoupon(null)">新建优惠券</button></div>
         <div class="card">
           <table>
             <thead><tr><th>ID</th><th>标题</th><th>类型</th><th>面额</th><th>门槛</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="c in coupons" :key="c.id">
                 <td>{{ c.id }}</td><td>{{ c.title }}</td><td>{{ couponTypes[c.type] }}</td><td>¥{{ c.value }}</td><td>满 {{ c.minAmount }}</td><td>{{ c.expireAt }}</td><td>{{ c.used ? '已使用' : '可用' }}</td>
-                <td><button class="btn btn-ghost" @click="openCoupon(c)">编辑</button><button class="btn btn-danger" @click="removeCoupon(c.id)">删除</button></td>
+                <td><button class="btn btn-text" @click="openCoupon(c)">编辑</button><button class="btn btn-text btn-danger-text" @click="removeCoupon(c.id)">删除</button></td>
               </tr>
             </tbody>
           </table>
         </div>
+        <button class="fab" @click="openCoupon(null)">＋ 新建优惠券</button>
       </section>
 
       <section v-if="view === 'reviews'">
-        <h1>评价管理</h1>
         <div class="card">
           <table>
             <thead><tr><th>ID</th><th>活动</th><th>用户</th><th>评分</th><th>内容</th><th>时间</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="r in reviews" :key="r.id">
                 <td>{{ r.id }}</td><td>{{ activities.find(a => String(a.id) === String(r.activityId))?.title || r.activityId }}</td><td>{{ r.name }}</td><td>{{ r.rating }}星</td><td>{{ r.content }}</td><td>{{ r.time }}</td>
-                <td><button class="btn btn-danger" @click="removeReview(r.id)">删除</button></td>
+                <td><button class="btn btn-text btn-danger-text" @click="removeReview(r.id)">删除</button></td>
               </tr>
             </tbody>
           </table>
@@ -418,29 +461,28 @@ function exportCsv(filename, rows) {
       </section>
 
       <section v-if="view === 'banners'">
-        <div class="head"><h1>Banner 管理</h1><button class="btn btn-primary" @click="openBanner(null)">新建 Banner</button></div>
         <div class="card">
           <table>
             <thead><tr><th>ID</th><th>标题</th><th>副标题</th><th>图标</th><th>跳转分类</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="b in banners" :key="b.id">
                 <td>{{ b.id }}</td><td>{{ b.title }}</td><td>{{ b.sub }}</td><td>{{ b.emoji }}</td><td>{{ b.cat ? catName(b.cat) : '个人中心' }}</td>
-                <td><button class="btn btn-ghost" @click="openBanner(b)">编辑</button><button class="btn btn-danger" @click="removeBanner(b.id)">删除</button></td>
+                <td><button class="btn btn-text" @click="openBanner(b)">编辑</button><button class="btn btn-text btn-danger-text" @click="removeBanner(b.id)">删除</button></td>
               </tr>
             </tbody>
           </table>
         </div>
+        <button class="fab" @click="openBanner(null)">＋ 新建 Banner</button>
       </section>
 
       <section v-if="view === 'applications'">
-        <h1>主理人审核</h1>
         <div class="card">
           <table>
             <thead><tr><th>姓名</th><th>电话</th><th>社群规模</th><th>擅长</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="a in applications" :key="a.id">
-                <td>{{ a.name }}</td><td>{{ a.phone }}</td><td>{{ a.scale }}</td><td>{{ (a.fields || []).join('、') }}</td><td><span class="tag tag-orange">{{ a.status }}</span></td>
-                <td v-if="a.status === '待审核'"><button class="btn btn-primary" @click="approveApp(a.id)">通过</button><button class="btn btn-danger" @click="rejectApp(a.id)">拒绝</button></td>
+                <td>{{ a.name }}</td><td>{{ a.phone }}</td><td>{{ a.scale }}</td><td>{{ (a.fields || []).join('、') }}</td><td><span class="chip" :class="statusChip(a.status)">{{ a.status }}</span></td>
+                <td v-if="a.status === '待审核'"><button class="btn btn-filled btn-sm" @click="approveApp(a.id)">通过</button><button class="btn btn-outlined btn-sm" @click="rejectApp(a.id)">拒绝</button></td>
                 <td v-else>{{ a.rejectReason || '已通过' }}</td>
               </tr>
             </tbody>
@@ -449,18 +491,17 @@ function exportCsv(filename, rows) {
       </section>
 
       <section v-if="view === 'managers'">
-        <h1>主理人管理</h1>
         <div class="card">
           <table>
             <thead><tr><th>ID</th><th>姓名</th><th>邀请码</th><th>累计业绩</th><th>累计佣金</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="m in managers" :key="m.id">
                 <td>{{ m.id }}</td><td>{{ m.name }}</td><td>{{ m.inviteCode }}</td><td>¥{{ m.totalPerformance }}</td><td>¥{{ m.totalCommission }}</td>
-                <td><span class="tag tag-green">{{ m.status === 1 ? '正常' : m.status === 2 ? '已冻结' : '已清退' }}</span></td>
+                <td><span class="chip" :class="managerChip(m.status)">{{ m.status === 1 ? '正常' : m.status === 2 ? '已冻结' : '已清退' }}</span></td>
                 <td>
-                  <button v-if="m.status !== 2" class="btn btn-ghost" @click="setManagerStatus(m.id, 2)">冻结</button>
-                  <button v-if="m.status === 2" class="btn btn-ghost" @click="setManagerStatus(m.id, 1)">解冻</button>
-                  <button class="btn btn-danger" @click="setManagerStatus(m.id, 3)">清退</button>
+                  <button v-if="m.status !== 2" class="btn btn-text" @click="setManagerStatus(m.id, 2)">冻结</button>
+                  <button v-if="m.status === 2" class="btn btn-text" @click="setManagerStatus(m.id, 1)">解冻</button>
+                  <button class="btn btn-text btn-danger-text" @click="setManagerStatus(m.id, 3)">清退</button>
                 </td>
               </tr>
             </tbody>
@@ -469,14 +510,13 @@ function exportCsv(filename, rows) {
       </section>
 
       <section v-if="view === 'bindings'">
-        <h1>归属管理</h1>
         <div class="card">
           <table>
             <thead><tr><th>客户</th><th>归属主理人</th><th>绑定来源</th><th>绑定时间</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="b in bindings" :key="b.id">
-                <td>{{ b.customerName }}</td><td>{{ managers.find(m => String(m.id) === String(b.managerId))?.name || '散客' }}</td><td>{{ bindSource[b.bindSource] }}</td><td>{{ b.bindTime }}</td><td><span class="tag" :class="b.status === 1 ? 'tag-green' : 'tag-gray'">{{ b.status === 1 ? '有效' : b.status === 2 ? '已解除' : '已变更' }}</span></td>
-                <td><button class="btn btn-ghost" @click="openRebind({ id: b.customerId, name: b.customerName })">改归属</button><button class="btn btn-danger" @click="unbindCustomer(b.customerId)">解绑</button></td>
+                <td>{{ b.customerName }}</td><td>{{ managers.find(m => String(m.id) === String(b.managerId))?.name || '散客' }}</td><td>{{ bindSource[b.bindSource] }}</td><td>{{ b.bindTime }}</td><td><span class="chip" :class="bindingChip(b.status)">{{ b.status === 1 ? '有效' : b.status === 2 ? '已解除' : '已变更' }}</span></td>
+                <td><button class="btn btn-text" @click="openRebind({ id: b.customerId, name: b.customerName })">改归属</button><button class="btn btn-text btn-danger-text" @click="unbindCustomer(b.customerId)">解绑</button></td>
               </tr>
             </tbody>
           </table>
@@ -485,32 +525,30 @@ function exportCsv(filename, rows) {
 
       <section v-if="view === 'commissions'">
         <div class="head">
-          <h1>佣金管理</h1>
-          <div class="head-actions"><input v-model="kw" class="input inline" placeholder="搜索" /><button class="btn btn-primary" @click="settleAll">一键转可结算</button></div>
+          <div class="head-actions"><input v-model="kw" class="input inline" placeholder="搜索" /><button class="btn btn-tonal" @click="settleAll">一键转可结算</button></div>
         </div>
         <div class="card">
           <table>
             <thead><tr><th>佣金单</th><th>客户</th><th>商品</th><th>比例</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="c in filteredCommissions" :key="c.id">
-                <td>{{ c.id }}</td><td>{{ c.customerName }}</td><td>{{ c.productName }}</td><td>{{ c.commissionRate }}%</td><td>¥{{ c.commissionAmount }}</td><td><span class="tag tag-gray">{{ c.status }}</span></td>
-                <td><button class="btn btn-ghost" @click="openAdjust(c)">调整</button></td>
+                <td>{{ c.id }}</td><td>{{ c.customerName }}</td><td>{{ c.productName }}</td><td>{{ c.commissionRate }}%</td><td>¥{{ c.commissionAmount }}</td><td><span class="chip" :class="statusChip(c.status)">{{ c.status }}</span></td>
+                <td><button class="btn btn-text" @click="openAdjust(c)">调整</button></td>
               </tr>
             </tbody>
           </table>
         </div>
-        <button class="btn btn-primary" style="margin-top:12px" @click="exportCsv('commissions.csv', filteredCommissions)">导出佣金 CSV</button>
+        <div class="actions-row"><button class="btn btn-tonal" @click="exportCsv('commissions.csv', filteredCommissions)">导出佣金 CSV</button></div>
       </section>
 
       <section v-if="view === 'withdraws'">
-        <h1>提现审核</h1>
         <div class="card">
           <table>
             <thead><tr><th>提现单</th><th>主理人</th><th>金额</th><th>状态</th><th>申请时间</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="w in withdraws" :key="w.id">
-                <td>{{ w.id }}</td><td>{{ managers.find(m => String(m.id) === String(w.managerId))?.name || w.managerId }}</td><td>¥{{ w.amount }}</td><td><span class="tag tag-orange">{{ w.status }}</span></td><td>{{ w.applyTime }}</td>
-                <td v-if="w.status === '待审核'"><button class="btn btn-primary" @click="approveWithdraw(w.id)">打款</button><button class="btn btn-danger" @click="rejectWithdraw(w.id)">拒绝</button></td>
+                <td>{{ w.id }}</td><td>{{ managers.find(m => String(m.id) === String(w.managerId))?.name || w.managerId }}</td><td>¥{{ w.amount }}</td><td><span class="chip" :class="statusChip(w.status)">{{ w.status }}</span></td><td>{{ w.applyTime }}</td>
+                <td v-if="w.status === '待审核'"><button class="btn btn-filled btn-sm" @click="approveWithdraw(w.id)">打款</button><button class="btn btn-outlined btn-sm" @click="rejectWithdraw(w.id)">拒绝</button></td>
                 <td v-else>{{ w.rejectReason || w.payTime || '' }}</td>
               </tr>
             </tbody>
@@ -519,22 +557,21 @@ function exportCsv(filename, rows) {
       </section>
 
       <section v-if="view === 'logs'">
-        <h1>操作日志</h1>
         <div class="card">
           <table>
             <thead><tr><th>时间</th><th>操作</th><th>详情</th></tr></thead>
-            <tbody><tr v-for="l in logs" :key="l.id"><td>{{ l.time }}</td><td><span class="tag tag-blue">{{ l.action }}</span></td><td>{{ l.detail }}</td></tr></tbody>
+            <tbody><tr v-for="l in logs" :key="l.id"><td>{{ l.time }}</td><td><span class="chip chip-info">{{ l.action }}</span></td><td>{{ l.detail }}</td></tr></tbody>
           </table>
         </div>
       </section>
 
       <section v-if="view === 'config' && config">
-        <h1>规则配置</h1>
-        <div class="card" style="max-width:480px">
-          <label>全局默认分佣比例（%）</label><input v-model.number="config.globalCommissionRate" type="number" class="input" />
-          <label>最低提现金额（元）</label><input v-model.number="config.minWithdraw" type="number" class="input" />
-          <label>每月提现次数上限</label><input v-model.number="config.withdrawMonthlyLimit" type="number" class="input" />
-          <button class="btn btn-primary" @click="saveConfig">保存配置</button>
+        <div class="card config-card">
+          <div class="section-title">规则配置</div>
+          <label class="field-label">全局默认分佣比例（%）</label><input v-model.number="config.globalCommissionRate" type="number" class="input" />
+          <label class="field-label">最低提现金额（元）</label><input v-model.number="config.minWithdraw" type="number" class="input" />
+          <label class="field-label">每月提现次数上限</label><input v-model.number="config.withdrawMonthlyLimit" type="number" class="input" />
+          <div class="actions-row actions-row-left"><button class="btn btn-filled" @click="saveConfig">保存配置</button></div>
         </div>
       </section>
     </main>
@@ -542,75 +579,75 @@ function exportCsv(filename, rows) {
     <div v-if="activityForm" class="modal">
       <div class="modal-box">
         <h2>{{ activityForm.id ? '编辑活动' : '新建活动' }}</h2>
-        <label>标题</label><input v-model="activityForm.title" class="input" />
-        <label>分类</label>
+        <label class="field-label">标题</label><input v-model="activityForm.title" class="input" />
+        <label class="field-label">分类</label>
         <select v-model.number="activityForm.category" class="input"><option v-for="(n, k) in categories" :key="k" :value="Number(k)">{{ n }}</option></select>
-        <label>城市</label><input v-model="activityForm.city" class="input" />
-        <label>地址</label><input v-model="activityForm.address" class="input" />
-        <label>会员价</label><input v-model.number="activityForm.memberPrice" type="number" class="input" />
-        <label>非会员价</label><input v-model.number="activityForm.price" type="number" class="input" />
-        <label>最低成团人数</label><input v-model.number="activityForm.minGroup" type="number" class="input" />
-        <label>商品级分佣比例（%）</label><input v-model="activityForm.managerCommissionRate" type="number" class="input" placeholder="留空用全局" />
-        <label>状态</label>
+        <label class="field-label">城市</label><input v-model="activityForm.city" class="input" />
+        <label class="field-label">地址</label><input v-model="activityForm.address" class="input" />
+        <label class="field-label">会员价</label><input v-model.number="activityForm.memberPrice" type="number" class="input" />
+        <label class="field-label">非会员价</label><input v-model.number="activityForm.price" type="number" class="input" />
+        <label class="field-label">最低成团人数</label><input v-model.number="activityForm.minGroup" type="number" class="input" />
+        <label class="field-label">商品级分佣比例（%）</label><input v-model="activityForm.managerCommissionRate" type="number" class="input" placeholder="留空用全局" />
+        <label class="field-label">状态</label>
         <select v-model.number="activityForm.status" class="input"><option :value="1">上架</option><option :value="0">下架</option></select>
-        <label>排班 JSON（高级）</label><textarea v-model="activitySchedulesJson" class="input textarea"></textarea>
-        <label>SKU JSON（高级）</label><textarea v-model="activitySkusJson" class="input textarea"></textarea>
-        <div class="modal-actions"><button class="btn btn-ghost" @click="activityForm = null">取消</button><button class="btn btn-primary" @click="saveActivity">保存</button></div>
+        <label class="field-label">排班 JSON（高级）</label><textarea v-model="activitySchedulesJson" class="input textarea"></textarea>
+        <label class="field-label">SKU JSON（高级）</label><textarea v-model="activitySkusJson" class="input textarea"></textarea>
+        <div class="modal-actions"><button class="btn btn-outlined" @click="activityForm = null">取消</button><button class="btn btn-filled" @click="saveActivity">保存</button></div>
       </div>
     </div>
 
     <div v-if="customerForm" class="modal">
       <div class="modal-box">
         <h2>编辑用户：{{ customerForm.name }}</h2>
-        <label>会员</label><select v-model="customerForm.member" class="input"><option :value="true">是</option><option :value="false">否</option></select>
-        <label>余额</label><input v-model.number="customerForm.balance" type="number" class="input" />
-        <label>积分</label><input v-model.number="customerForm.points" type="number" class="input" />
-        <label>手机号</label><input v-model="customerForm.phone" class="input" />
-        <div class="modal-actions"><button class="btn btn-ghost" @click="customerForm = null">取消</button><button class="btn btn-primary" @click="saveCustomer">保存</button></div>
+        <label class="field-label">会员</label><select v-model="customerForm.member" class="input"><option :value="true">是</option><option :value="false">否</option></select>
+        <label class="field-label">余额</label><input v-model.number="customerForm.balance" type="number" class="input" />
+        <label class="field-label">积分</label><input v-model.number="customerForm.points" type="number" class="input" />
+        <label class="field-label">手机号</label><input v-model="customerForm.phone" class="input" />
+        <div class="modal-actions"><button class="btn btn-outlined" @click="customerForm = null">取消</button><button class="btn btn-filled" @click="saveCustomer">保存</button></div>
       </div>
     </div>
 
     <div v-if="couponForm" class="modal">
       <div class="modal-box">
         <h2>{{ couponForm.id ? '编辑优惠券' : '新建优惠券' }}</h2>
-        <label>标题</label><input v-model="couponForm.title" class="input" />
-        <label>类型</label><select v-model.number="couponForm.type" class="input"><option v-for="(n, k) in couponTypes" :key="k" :value="Number(k)">{{ n }}</option></select>
-        <label>面额</label><input v-model.number="couponForm.value" type="number" class="input" />
-        <label>使用门槛</label><input v-model.number="couponForm.minAmount" type="number" class="input" />
-        <label>适用分类（品类券）</label><select v-model="couponForm.scopeCategory" class="input"><option :value="null">无</option><option v-for="(n, k) in categories" :key="k" :value="Number(k)">{{ n }}</option></select>
-        <label>适用商品 ID（指定商品券）</label><input v-model="couponForm.scopeProductId" class="input" />
-        <label>有效期至</label><input v-model="couponForm.expireAt" class="input" />
-        <div class="modal-actions"><button class="btn btn-ghost" @click="couponForm = null">取消</button><button class="btn btn-primary" @click="saveCoupon">保存</button></div>
+        <label class="field-label">标题</label><input v-model="couponForm.title" class="input" />
+        <label class="field-label">类型</label><select v-model.number="couponForm.type" class="input"><option v-for="(n, k) in couponTypes" :key="k" :value="Number(k)">{{ n }}</option></select>
+        <label class="field-label">面额</label><input v-model.number="couponForm.value" type="number" class="input" />
+        <label class="field-label">使用门槛</label><input v-model.number="couponForm.minAmount" type="number" class="input" />
+        <label class="field-label">适用分类（品类券）</label><select v-model="couponForm.scopeCategory" class="input"><option :value="null">无</option><option v-for="(n, k) in categories" :key="k" :value="Number(k)">{{ n }}</option></select>
+        <label class="field-label">适用商品 ID（指定商品券）</label><input v-model="couponForm.scopeProductId" class="input" />
+        <label class="field-label">有效期至</label><input v-model="couponForm.expireAt" class="input" />
+        <div class="modal-actions"><button class="btn btn-outlined" @click="couponForm = null">取消</button><button class="btn btn-filled" @click="saveCoupon">保存</button></div>
       </div>
     </div>
 
     <div v-if="bannerForm" class="modal">
       <div class="modal-box">
         <h2>{{ bannerForm.id ? '编辑 Banner' : '新建 Banner' }}</h2>
-        <label>标题</label><input v-model="bannerForm.title" class="input" />
-        <label>副标题</label><input v-model="bannerForm.sub" class="input" />
-        <label>图标（emoji）</label><input v-model="bannerForm.emoji" class="input" />
-        <label>渐变背景</label><input v-model="bannerForm.tone" class="input" />
-        <label>跳转分类（0=个人中心）</label><input v-model.number="bannerForm.cat" type="number" class="input" />
-        <div class="modal-actions"><button class="btn btn-ghost" @click="bannerForm = null">取消</button><button class="btn btn-primary" @click="saveBanner">保存</button></div>
+        <label class="field-label">标题</label><input v-model="bannerForm.title" class="input" />
+        <label class="field-label">副标题</label><input v-model="bannerForm.sub" class="input" />
+        <label class="field-label">图标（emoji）</label><input v-model="bannerForm.emoji" class="input" />
+        <label class="field-label">渐变背景</label><input v-model="bannerForm.tone" class="input" />
+        <label class="field-label">跳转分类（0=个人中心）</label><input v-model.number="bannerForm.cat" type="number" class="input" />
+        <div class="modal-actions"><button class="btn btn-outlined" @click="bannerForm = null">取消</button><button class="btn btn-filled" @click="saveBanner">保存</button></div>
       </div>
     </div>
 
     <div v-if="rebindTarget" class="modal">
       <div class="modal-box">
         <h2>修改归属：{{ rebindTarget.name }}</h2>
-        <label>新主理人</label>
+        <label class="field-label">新主理人</label>
         <select v-model="rebindManagerId" class="input"><option v-for="m in managers" :key="m.id" :value="String(m.id)">{{ m.name }}</option></select>
-        <div class="modal-actions"><button class="btn btn-ghost" @click="rebindTarget = null">取消</button><button class="btn btn-primary" @click="confirmRebind">确认变更</button></div>
+        <div class="modal-actions"><button class="btn btn-outlined" @click="rebindTarget = null">取消</button><button class="btn btn-filled" @click="confirmRebind">确认变更</button></div>
       </div>
     </div>
 
     <div v-if="adjustTarget" class="modal">
       <div class="modal-box">
         <h2>调整佣金：{{ adjustTarget.id }}</h2>
-        <label>调整后金额</label><input v-model="adjustAmount" type="number" class="input" />
-        <label>调整原因</label><input v-model="adjustReason" class="input" placeholder="必填" />
-        <div class="modal-actions"><button class="btn btn-ghost" @click="adjustTarget = null">取消</button><button class="btn btn-primary" @click="confirmAdjust">确认调整</button></div>
+        <label class="field-label">调整后金额</label><input v-model="adjustAmount" type="number" class="input" />
+        <label class="field-label">调整原因</label><input v-model="adjustReason" class="input" placeholder="必填" />
+        <div class="modal-actions"><button class="btn btn-outlined" @click="adjustTarget = null">取消</button><button class="btn btn-filled" @click="confirmAdjust">确认调整</button></div>
       </div>
     </div>
   </div>
