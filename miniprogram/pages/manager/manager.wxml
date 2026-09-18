@@ -48,7 +48,7 @@
       </view>
       <view class="section card">
         <view class="panel-title">最近订单</view>
-        <view wx:for="{{recentOrders}}" wx:key="customerName" class="order-line">
+        <view wx:for="{{recentOrders}}" wx:key="id" class="order-line">
           {{item.customerName}} · {{item.productName}} · ¥{{item.payAmount}} · 佣金¥{{item.commissionAmount}}
         </view>
       </view>

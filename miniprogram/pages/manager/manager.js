@@ -32,6 +32,7 @@ Page({
     await store.ready()
     const dash = await store.loadManagerDashboard(DEMO_MANAGER_ID)
     const recentOrders = (dash.commissions || []).slice(0, 3).map((c) => ({
+      id: c.id,
       customerName: c.customerName,
       productName: c.productName,
       payAmount: c.payAmount,

@@ -45,7 +45,19 @@ const activities = [
   { id: 6, category: 3, city: '北京', title: '声乐合唱 · 快乐课堂（10节）', cover: '🎤', coverTone: 'linear-gradient(135deg,#b04a6b,#e29abb)', price: 99, memberPrice: 79, originalPrice: 129, minGroup: 10, maxGroup: 30, soldCount: 17, highlight: '专业声乐老师，零基础也能唱', points: ['小班教学', '结课合唱展示'], time: '每周五 14:00-15:30', address: '东城区老年活动中心', hasSku: false, schedules: makeSchedules(1, 4, 30, '14:00-15:30'), refundRule: { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 4, participantFields: { idCard: false, discount: false }, detail: '一起唱歌，心情好。' },
   { id: 7, category: 4, city: '北京', title: '肩颈理疗 · 到店体验套餐', cover: '💆', coverTone: 'linear-gradient(135deg,#2f7d5c,#7cc79a)', price: 128, memberPrice: 98, originalPrice: 168, minGroup: 0, maxGroup: 200, soldCount: 76, highlight: '专业理疗师，按需到店核销', points: ['到店出示核销码', '提前1天电话预约'], time: '到店核销 · 3个月内有效', address: '合作门店', hasSku: false, schedules: makeSchedules(0, 3, 200, '到店时间请提前预约'), refundRule: { type: 'always' }, managerCommissionRate: null, limitPerUser: 1, participantFields: { idCard: false, discount: false }, detail: '45分钟肩颈舒缓。' },
   { id: 8, category: 5, city: '全国', title: '岁悦里定制保温杯 · 便携款', cover: '🥤', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', price: 69, memberPrice: 59, originalPrice: 89, minGroup: 0, maxGroup: 500, soldCount: 128, highlight: '大容量，单手开盖', points: ['500ml容量', '316不锈钢内胆', '全国包邮'], time: '下单后48小时内发货', address: '全国发货', hasSku: false, schedules: makeSchedules(0, 1, 500, '随时购买'), refundRule: { type: 'day', fullDays: 0, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 3, participantFields: { idCard: false, discount: false }, detail: '出门带上热水，保温约12小时。' }
-]
+].map((a) => ({
+  ...a,
+  images: [
+    { id: `img-${a.id}-1`, tone: a.coverTone, emoji: a.cover, label: '实景展示' },
+    { id: `img-${a.id}-2`, tone: a.coverTone, emoji: '🏞️', label: '行程/环境' },
+    { id: `img-${a.id}-3`, tone: a.coverTone, emoji: '🏨', label: '住宿/服务' }
+  ],
+  buyers: [
+    { avatar: '👵', name: '张**', time: '2小时前' },
+    { avatar: '👴', name: '李**', time: '5小时前' },
+    { avatar: '👩', name: '王**', time: '1天前' }
+  ]
+}))
 
 const managers = [
   { id: 1001, name: '李秀兰', phone: '138****2035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }

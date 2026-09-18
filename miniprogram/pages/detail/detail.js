@@ -32,6 +32,10 @@ Page({
       wx.showToast({ title: '活动不存在', icon: 'none' })
       return
     }
+    if (!activity.images || !activity.images.length) {
+      activity.images = [{ id: `img-${activity.id}-1`, tone: activity.coverTone, emoji: activity.cover, label: '活动图片' }]
+    }
+    if (!activity.buyers) activity.buyers = []
     const reviews = store.getReviews(id)
     const sameCat = store.getActivities().filter(
       (a) => String(a.id) !== String(id) && a.category === activity.category
