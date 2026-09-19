@@ -248,6 +248,7 @@ const applicationColumns = [
   { title: '电话', dataIndex: 'phone', width: 140 },
   { title: '社群规模', dataIndex: 'scale', width: 100 },
   { title: '擅长', slotName: 'fields', ellipsis: true, tooltip: true },
+  { title: '缴费', slotName: 'paid', width: 90 },
   { title: '状态', slotName: 'status', width: 100 },
   { title: '操作', slotName: 'actions', width: 160 }
 ]
@@ -917,6 +918,10 @@ function exportCsv(filename, rows) {
                 size="middle"
               >
                 <template #fields="{ record }">{{ (record.fields || []).join('、') }}</template>
+                <template #paid="{ record }">
+                  <span v-if="record.paidAmount > 0" class="muted">¥{{ record.paidAmount }}</span>
+                  <span v-else class="muted">免费</span>
+                </template>
                 <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
                 <template #actions="{ record }">
                   <template v-if="record.status === '待审核'">

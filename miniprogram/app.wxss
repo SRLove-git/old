@@ -1,6 +1,36 @@
+/* 岁悦里 · Arco Design 设计令牌
+ * 主色统一为暖陶土棕（与运营后台一致），语义色沿用 Arco 默认绿/橙/红。
+ */
 page {
-  background: #f5f6f8;
-  color: #24272b;
+  /* 品牌主色 */
+  --color-primary: #c25e3d;
+  --color-primary-hover: #d07052;
+  --color-primary-active: #a64c2f;
+  --color-primary-light: #fde9df;
+  --color-primary-light-border: #f0bba6;
+  --color-primary-text: #9e4f2f;
+
+  /* 语义色 */
+  --color-success: #00b42a;
+  --color-success-light: #e8ffea;
+  --color-warning: #ff7d00;
+  --color-warning-light: #fff3e8;
+  --color-danger: #f53f3f;
+  --color-danger-light: #ffece8;
+  --color-info: #3b6fa0;
+  --color-info-light: #e8f1fa;
+
+  /* 中性色 */
+  --color-text-1: #24272b;
+  --color-text-2: #4e5969;
+  --color-text-3: #6f747b;
+  --color-text-4: #c9cdd4;
+  --color-bg: #f5f6f8;
+  --color-fill: #f1f2f4;
+  --color-border: #e7e9ec;
+
+  background: var(--color-bg);
+  color: var(--color-text-1);
   font-size: 32rpx;
   line-height: 1.5;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -51,7 +81,7 @@ textarea {
 .card {
   background: #ffffff;
   border-radius: 32rpx;
-  box-shadow: 0 12rpx 40rpx rgba(26, 34, 45, 0.08);
+  box-shadow: 0 6rpx 20rpx rgba(29, 33, 41, 0.06);
 }
 
 .btn {
@@ -66,24 +96,28 @@ textarea {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
+  background: var(--color-primary);
   color: #ffffff;
-  box-shadow: 0 12rpx 28rpx rgba(255, 106, 61, 0.28);
+  box-shadow: 0 10rpx 24rpx rgba(194, 94, 61, 0.22);
+}
+
+.btn-primary:active {
+  background: var(--color-primary-active);
 }
 
 .btn-secondary {
   background: #ffffff;
-  color: #ff6a3d;
-  border: 2rpx solid #ff6a3d;
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
 }
 
 .btn-ghost {
-  background: #ffefe6;
-  color: #e4572a;
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
 }
 
 .btn-danger {
-  background: #d74a4a;
+  background: var(--color-danger);
   color: #ffffff;
 }
 
@@ -99,16 +133,16 @@ textarea {
 .title {
   font-size: 38rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 28rpx;
 }
 
 .price {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
 }
 
@@ -122,18 +156,18 @@ textarea {
 }
 
 .tag-green {
-  background: #e5f6ee;
-  color: #2f9e6e;
+  background: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .tag-orange {
-  background: #ffefe6;
-  color: #e4572a;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 .tag-gray {
-  background: #f1f2f4;
-  color: #6f747b;
+  background: var(--color-fill);
+  color: var(--color-text-3);
 }
 
 .field {
@@ -149,7 +183,7 @@ textarea {
 .field-input {
   width: 100%;
   min-height: 96rpx;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 18rpx;
   padding: 22rpx 24rpx;
   background: #ffffff;
@@ -157,7 +191,7 @@ textarea {
 
 .field-error {
   display: block;
-  color: #d74a4a;
+  color: var(--color-danger);
   font-size: 26rpx;
   margin-top: 8rpx;
 }
@@ -178,7 +212,7 @@ textarea {
   right: 0;
   bottom: 0;
   background: #ffffff;
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
   padding: 18rpx 24rpx;
   z-index: 50;
 }
