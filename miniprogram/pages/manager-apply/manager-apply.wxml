@@ -4,6 +4,12 @@
     <view class="intro-sub">审核通过后，您将获得专属推广码、邀请码和分佣权限</view>
   </view>
 
+  <view wx:if="{{fee > 0}}" class="fee-card card">
+    <text class="fee-label">主理人申请费用</text>
+    <text class="fee-value">¥{{fee}}</text>
+    <text class="fee-sub">审核通过后作为首年入驻服务费，不通过原路退还</text>
+  </view>
+
   <view class="form-card card">
     <view class="field">
       <text class="field-label">姓名<text class="required">*</text></text>
@@ -44,4 +50,13 @@
   </view>
 
   <button class="btn btn-primary btn-block" bindtap="submit">提交申请</button>
+
+  <view wx:if="{{payOpen}}" class="pay-mask" bindtap="closePay">
+    <view class="pay-modal" catchtap="noop">
+      <view class="pay-title">支付主理人申请费用</view>
+      <view class="pay-amount">¥{{fee}}</view>
+      <view class="pay-tip">支付后提交申请，审核通过即成为主理人</view>
+      <button class="btn btn-wechat btn-block" bindtap="confirmPay">微信支付</button>
+    </view>
+  </view>
 </view>

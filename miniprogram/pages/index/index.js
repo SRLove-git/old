@@ -12,7 +12,8 @@ Page({
     cities: ['全部', '北京', '大理', '敦煌'],
     cityOpen: false,
     viewMode: 'recommend',
-    filing: {}
+    filing: {},
+    liveHint: '直播、回放不错过'
   },
 
   async onLoad() {
@@ -29,6 +30,7 @@ Page({
       city: cities.length > 1 ? cities[1] : (cities[0] || '全部')
     })
     this.buildGroups()
+    this.buildLiveHint()
   },
 
   async onShow() {
@@ -43,6 +45,7 @@ Page({
       filing: store.getFiling()
     })
     this.buildGroups()
+    this.buildLiveHint()
     this.checkPendingBind()
   },
 
@@ -75,6 +78,16 @@ Page({
       })
       .filter((g) => g.activities.length > 0)
     this.setData({ groups })
+  },
+
+  buildLiveHint() {
+    const lives = store.getLives() || []
+    const liveCount = lives.filter((l) => l.status === 'live').length
+    const scheduled = lives.filter((l) => l.status === 'scheduled').length
+    let hint = '直播、回放不错过'
+    if (liveCount > 0) hint = `${liveCount} 场直播中，点击进入`
+    else if (scheduled > 0) hint = `${scheduled} 场直播预告`
+    this.setData({ liveHint: hint })
   },
 
   setMode(e) {
@@ -129,6 +142,10 @@ Page({
 
   goList() {
     wx.switchTab({ url: '/pages/list/list' })
+  },
+
+  goLives() {
+    wx.navigateTo({ url: '/pages/lives/lives' })
   },
 
   goCategory(e) {

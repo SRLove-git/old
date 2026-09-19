@@ -126,6 +126,63 @@ const bindings = [
   { id: 'B2', customerId: 'u3', customerName: '李建国', managerId: 1001, bindSource: 2, bindTime: '2026-08-22 15:30', status: 1 }
 ]
 
+const lives = [
+  {
+    id: 'live1',
+    title: '岁悦学堂 · 手机摄影直播课',
+    cover: '📷',
+    coverTone: 'linear-gradient(135deg,#3b6fa0,#7fb3d5)',
+    hostName: '陈老师',
+    hostAvatar: '🧑‍🏫',
+    managerId: null,
+    status: 'live',
+    startAt: '2026-09-19 19:30',
+    endAt: '2026-09-19 20:30',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    replayUrl: '',
+    description: '零基础手机摄影入门，直播手把手教学，可实时提问互动。',
+    activityId: 5,
+    viewers: 128,
+    createdAt: '2026-09-19 10:00'
+  },
+  {
+    id: 'live2',
+    title: '主理人私域 · 秋季养生茶话会',
+    cover: '🍵',
+    coverTone: 'linear-gradient(135deg,#2f7d5c,#7cc79a)',
+    hostName: '李秀兰',
+    hostAvatar: '👵',
+    managerId: 1001,
+    status: 'scheduled',
+    startAt: '2026-09-20 15:00',
+    endAt: '2026-09-20 16:00',
+    streamUrl: '',
+    replayUrl: '',
+    description: '仅限李秀兰主理人的私域客户观看，分享秋季养生小知识。',
+    activityId: null,
+    viewers: 0,
+    createdAt: '2026-09-19 09:00'
+  },
+  {
+    id: 'live3',
+    title: '大理研学行前说明会 · 回放',
+    cover: '🏔️',
+    coverTone: 'linear-gradient(135deg,#2b6f9c,#8fc6e7)',
+    hostName: '王建国',
+    hostAvatar: '👴',
+    managerId: null,
+    status: 'ended',
+    startAt: '2026-09-18 19:00',
+    endAt: '2026-09-18 20:00',
+    streamUrl: '',
+    replayUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    description: '大理5日研学行前说明，讲解行程安排与注意事项。',
+    activityId: 3,
+    viewers: 86,
+    createdAt: '2026-09-18 15:00'
+  }
+]
+
 const banners = [
   { id: 1, title: '香山赏红叶 · 本周出发', sub: '15人成团 · 会员价¥79起', tone: 'linear-gradient(135deg,#c96b2a,#f1b35a)', emoji: '🍁', cat: 1 },
   { id: 2, title: '大理5日研学 · 慢慢游', sub: '全程领队 · 会员价¥2780起', tone: 'linear-gradient(135deg,#2b6f9c,#8fc6e7)', emoji: '🏔️', cat: 2 },
@@ -137,6 +194,7 @@ const config = {
   minWithdraw: 100,
   withdrawMonthlyLimit: 1,
   withdrawTaxRate: 20,
+  managerApplyFee: 199,
   assistant: {
     name: '小助理',
     wechat: 'suiyueli6070',
@@ -167,6 +225,7 @@ export const seed = {
   commissions,
   withdraws,
   bindings,
+  lives,
   logs: [],
   config
 }

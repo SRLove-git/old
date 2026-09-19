@@ -31,6 +31,15 @@
     <text class="search-placeholder">搜活动、旅行、课程</text>
   </view>
 
+  <view class="live-entry card" bindtap="goLives">
+    <view class="live-entry-emoji">📺</view>
+    <view class="live-entry-text">
+      <view class="live-entry-title">私域直播</view>
+      <view class="live-entry-sub">{{liveHint}}</view>
+    </view>
+    <text class="live-entry-arrow">›</text>
+  </view>
+
   <view class="section-title">按兴趣找活动</view>
   <view class="category-grid">
     <view

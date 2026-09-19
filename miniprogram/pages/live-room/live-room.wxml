@@ -1,0 +1,56 @@
+<view class="page {{largeMode ? 'large-mode' : ''}}">
+  <view wx:if="{{loading}}" class="loading">加载中…</view>
+
+  <block wx:elif="{{live}}">
+    <view class="room-cover" style="background: {{live.coverTone}}">
+      <view class="room-title">{{live.title}}</view>
+      <view class="room-host">🧑‍🏫 {{live.hostName}}</view>
+      <view class="room-meta">{{live.startAt}} - {{live.endAt}} · 👀 {{live.viewers}} 人观看</view>
+    </view>
+
+    <view wx:if="{{live.status === 'live' && live.streamUrl}}" class="player-wrap">
+      <video class="player" src="{{live.streamUrl}}" autoplay controls></video>
+      <view class="player-tip">● 直播中</view>
+    </view>
+
+    <view wx:elif="{{live.status === 'live'}}" class="state-box">
+      <view class="state-emoji">📡</view>
+      <view class="state-title">直播即将开始</view>
+      <view class="state-sub">主播正在准备中，请稍候</view>
+    </view>
+
+    <view wx:elif="{{live.status === 'scheduled'}}" class="state-box">
+      <view class="state-emoji">⏰</view>
+      <view class="state-title">直播预告</view>
+      <view class="state-sub">{{countdown || live.startAt}}</view>
+      <button class="btn btn-primary remind-btn" bindtap="remind">开播提醒我</button>
+    </view>
+
+    <view wx:else class="state-box">
+      <view class="state-emoji">🎬</view>
+      <view class="state-title">本场直播已结束</view>
+      <view wx:if="{{live.replayUrl}}" class="state-sub">下方可观看回放</view>
+      <view wx:else class="state-sub">暂无回放</view>
+    </view>
+
+    <view wx:if="{{live.status === 'ended' && live.replayUrl}}" class="player-wrap">
+      <video class="player" src="{{live.replayUrl}}" controls></video>
+      <view class="player-tip">回放</view>
+    </view>
+
+    <view class="card info-card">
+      <view class="info-title">直播简介</view>
+      <view class="info-desc">{{live.description || '暂无简介'}}</view>
+      <view wx:if="{{live.managerId}}" class="tag tag-orange">私域 · {{live.managerName || live.hostName}}</view>
+    </view>
+
+    <view wx:if="{{activity}}" class="card activity-card" bindtap="goActivity">
+      <view class="activity-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
+      <view class="activity-info">
+        <view class="activity-title">{{activity.title}}</view>
+        <view class="activity-price">¥{{activity.memberPrice}} 起</view>
+        <view class="activity-link">查看活动 ›</view>
+      </view>
+    </view>
+  </block>
+</view>

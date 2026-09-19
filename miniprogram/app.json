@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/lives/lives",
+    "pages/live-room/live-room",
     "pages/list/list",
     "pages/detail/detail",
     "pages/booking/booking",

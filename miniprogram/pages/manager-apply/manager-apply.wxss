@@ -16,6 +16,32 @@
   opacity: 0.92;
 }
 
+.fee-card {
+  padding: 28rpx 30rpx;
+  margin-bottom: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.fee-label {
+  color: #6f747b;
+  font-size: 26rpx;
+}
+
+.fee-value {
+  color: #ff6a3d;
+  font-size: 56rpx;
+  font-weight: 700;
+  margin: 8rpx 0;
+}
+
+.fee-sub {
+  color: #6f747b;
+  font-size: 24rpx;
+}
+
 .form-card {
   padding: 30rpx;
   margin-bottom: 24rpx;
@@ -64,4 +90,44 @@
 
 .checkbox.checked {
   background: #ff6a3d;
+}
+
+.pay-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 22, 26, 0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50rpx;
+}
+
+.pay-modal {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 30rpx;
+  padding: 34rpx;
+  text-align: center;
+}
+
+.pay-title {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.pay-amount {
+  color: #ff6a3d;
+  font-size: 64rpx;
+  font-weight: 700;
+  margin: 18rpx 0;
+}
+
+.pay-tip {
+  color: #6f747b;
+  font-size: 26rpx;
+  margin-bottom: 26rpx;
 }

@@ -17,6 +17,7 @@ function normalizeActivities(db) {
     if (!a.sellType) a.sellType = 'date'
     if (a.sellType === 'sku') a.hasSku = true
   })
+  if (!Array.isArray(db.lives)) db.lives = clone(seed.lives)
 }
 
 export function init() {
@@ -422,7 +423,21 @@ export function adjustCommission(id, amount, reason) {
 }
 
 export function applyManager(form) {
-  const app = { id: `APP${Date.now()}`, ...form, status: '待审核', submittedAt: '刚刚' }
+  const fee = Number(db.config.managerApplyFee ?? 0)
+  if (fee > 0 && !form.paid) {
+    const err = new Error('请先支付主理人申请费用')
+    err.status = 400
+    throw err
+  }
+  const app = {
+    id: `APP${Date.now()}`,
+    ...form,
+    paid: fee > 0 ? true : Boolean(form.paid),
+    paidAmount: fee,
+    paidAt: fee > 0 ? '刚刚' : '',
+    status: '待审核',
+    submittedAt: '刚刚'
+  }
   db.managerApplications.unshift(app)
   save()
   return app
@@ -584,6 +599,67 @@ export function dashboardStats() {
       return acc
     }, {})
   }
+}
+
+function enrichLive(live) {
+  const manager = live.managerId ? findManager(live.managerId) : null
+  return {
+    ...live,
+    private: live.managerId != null,
+    managerName: manager ? manager.name : null
+  }
+}
+
+export function listLives(userId) {
+  const all = (get().lives || []).map(enrichLive)
+  if (!userId) return all
+  const user = db.customers.find((c) => String(c.id) === String(userId))
+  const managerId = user ? user.managerId : null
+  const isManager = db.managers.some((m) => String(m.id) === String(userId))
+  return all.filter((l) => !l.managerId || String(l.managerId) === String(managerId) || isManager)
+}
+
+export function createLive(data) {
+  const live = {
+    id: `live${Date.now()}`,
+    title: String((data && data.title) || '未命名直播').trim(),
+    cover: (data && data.cover) || '📺',
+    coverTone: (data && data.coverTone) || 'linear-gradient(135deg,#c25e3d,#e19a6d)',
+    hostName: (data && data.hostName) || '岁悦里',
+    hostAvatar: (data && data.hostAvatar) || '🧑‍🏫',
+    managerId: (data && data.managerId != null && data.managerId !== '') ? Number(data.managerId) : null,
+    status: (data && data.status) || 'scheduled',
+    startAt: (data && data.startAt) || '',
+    endAt: (data && data.endAt) || '',
+    streamUrl: (data && data.streamUrl) || '',
+    replayUrl: (data && data.replayUrl) || '',
+    description: (data && data.description) || '',
+    activityId: (data && data.activityId != null && data.activityId !== '') ? Number(data.activityId) : null,
+    viewers: Number((data && data.viewers) || 0),
+    createdAt: new Date().toLocaleString('zh-CN', { hour12: false })
+  }
+  db.lives = db.lives || []
+  db.lives.unshift(live)
+  save()
+  return enrichLive(live)
+}
+
+export function updateLive(id, data) {
+  const live = (db.lives || []).find((l) => String(l.id) === String(id))
+  if (!live) return null
+  const next = { ...live, ...(data || {}), id: live.id }
+  if (data && data.managerId != null) next.managerId = data.managerId === '' ? null : Number(data.managerId)
+  if (data && data.activityId != null) next.activityId = data.activityId === '' ? null : Number(data.activityId)
+  if (data && data.viewers != null) next.viewers = Number(data.viewers)
+  db.lives = (db.lives || []).map((l) => String(l.id) === String(id) ? next : l)
+  save()
+  return enrichLive(next)
+}
+
+export function deleteLive(id) {
+  db.lives = (db.lives || []).filter((l) => String(l.id) !== String(id))
+  save()
+  return { ok: true }
 }
 
 const MEMBER_LEVELS = {

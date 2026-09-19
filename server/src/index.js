@@ -219,6 +219,12 @@ app.put('/api/config', adminAuth, wrap((req) => {
 app.get('/api/stats/dashboard', wrap(() => store.dashboardStats()))
 app.get('/api/logs', wrap(() => store.getLogs()))
 
+// 私域直播
+app.get('/api/lives', wrap((req) => store.listLives(req.query.userId || null)))
+app.post('/api/lives', adminAuth, wrap((req) => store.createLive(req.body)))
+app.put('/api/lives/:id', adminAuth, wrap((req) => store.updateLive(req.params.id, req.body)))
+app.delete('/api/lives/:id', adminAuth, wrap((req) => store.deleteLive(req.params.id)))
+
 app.use((req, res) => res.status(404).json({ code: 404, message: '接口不存在' }))
 
 store.init()

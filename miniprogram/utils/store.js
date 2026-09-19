@@ -12,6 +12,7 @@ let cache = {
   addresses: [],
   orders: [],
   reviews: [],
+  lives: [],
   managers: [],
   user: {},
   cards: [],
@@ -151,6 +152,12 @@ async function ready() {
     cache.participants = participants
     cache.reviews = reviews
     cache.managers = managers
+    cache.lives = []
+    try {
+      cache.lives = await api.get(`/lives?userId=${CURRENT_USER_ID}`)
+    } catch (e) {
+      // 后端未部署直播接口时静默降级为空列表，不影响其它功能
+    }
     loaded = true
     return cache
   } finally {
@@ -182,6 +189,14 @@ function getActivity(id) {
 
 function getReviews(activityId) {
   return cache.reviews.filter((r) => String(r.activityId) === String(activityId))
+}
+
+function getLives() {
+  return cache.lives
+}
+
+function getLive(id) {
+  return cache.lives.find((l) => String(l.id) === String(id))
 }
 
 function getManagers() {
@@ -328,6 +343,8 @@ module.exports = {
   getActivities,
   getActivity,
   getReviews,
+  getLives,
+  getLive,
   getManagers,
   getDefaultAddress,
   money,

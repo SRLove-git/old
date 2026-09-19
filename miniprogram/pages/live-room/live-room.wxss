@@ -1,0 +1,59 @@
+.loading { text-align: center; color: #6f747b; padding: 120rpx 0; }
+
+.room-cover { padding: 40rpx 32rpx; border-radius: 24rpx; color: #ffffff; }
+.room-title { font-size: 40rpx; font-weight: 700; line-height: 1.4; }
+.room-host { font-size: 28rpx; margin-top: 12rpx; opacity: 0.95; }
+.room-meta { font-size: 26rpx; margin-top: 8rpx; opacity: 0.9; }
+
+.player-wrap {
+  position: relative;
+  margin-top: 24rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  background: #000000;
+}
+.player { width: 100%; height: 420rpx; display: block; }
+.player-tip {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  border-radius: 999rpx;
+  padding: 6rpx 18rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.state-box { text-align: center; padding: 80rpx 32rpx; }
+.state-emoji { font-size: 96rpx; }
+.state-title { font-size: 36rpx; font-weight: 700; color: #24272b; margin-top: 20rpx; }
+.state-sub { font-size: 28rpx; color: #6f747b; margin-top: 12rpx; }
+.remind-btn { width: 320rpx; margin: 36rpx auto 0; }
+
+.info-card { margin-top: 24rpx; padding: 28rpx; }
+.info-title { font-size: 32rpx; font-weight: 700; color: #24272b; margin-bottom: 12rpx; }
+.info-desc { font-size: 28rpx; color: #4a4f55; line-height: 1.7; }
+.info-card .tag { margin-top: 16rpx; }
+
+.activity-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 24rpx;
+  padding: 20rpx;
+}
+.activity-cover {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  flex-shrink: 0;
+}
+.activity-info { flex: 1; min-width: 0; }
+.activity-title { font-size: 30rpx; font-weight: 700; color: #24272b; }
+.activity-price { font-size: 28rpx; color: #ff6a3d; font-weight: 700; margin-top: 8rpx; }
+.activity-link { font-size: 26rpx; color: #6f747b; margin-top: 6rpx; }

@@ -10,6 +10,8 @@ Page({
       intro: ''
     },
     agree: false,
+    fee: 0,
+    payOpen: false,
     errors: {},
     fieldOptions: [
       { name: '徒步', selected: false },
@@ -19,6 +21,12 @@ Page({
       { name: '摄影', selected: false },
       { name: '合唱', selected: false }
     ]
+  },
+
+  async onLoad() {
+    await store.ready()
+    const config = store.get().config || {}
+    this.setData({ fee: Number(config.managerApplyFee ?? 0) })
   },
 
   onInput(e) {
@@ -57,7 +65,27 @@ Page({
       wx.showToast({ title: '请补全必填信息', icon: 'none' })
       return
     }
-    await store.submitManagerApply(form)
+    if (this.data.fee > 0) {
+      this.setData({ payOpen: true })
+    } else {
+      await this.doSubmit()
+    }
+  },
+
+  closePay() {
+    this.setData({ payOpen: false })
+  },
+
+  noop() {},
+
+  async confirmPay() {
+    this.setData({ payOpen: false })
+    await this.doSubmit()
+  },
+
+  async doSubmit() {
+    const { form } = this.data
+    await store.submitManagerApply({ ...form, paid: true })
     wx.showToast({ title: '申请已提交，请等待审核', icon: 'none' })
     setTimeout(() => {
       wx.navigateBack()

@@ -476,3 +476,28 @@
   font-size: 36rpx;
   font-weight: 700;
 }
+
+.live-entry {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+  margin-top: 22rpx;
+  padding: 24rpx;
+}
+
+.live-entry-emoji {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #ff6a3d, #ff9345);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  flex-shrink: 0;
+}
+
+.live-entry-text { flex: 1; min-width: 0; }
+.live-entry-title { font-size: 34rpx; font-weight: 700; color: #24272b; }
+.live-entry-sub { font-size: 26rpx; color: #6f747b; margin-top: 6rpx; }
+.live-entry-arrow { font-size: 40rpx; color: #c8cdd3; font-weight: 700; }

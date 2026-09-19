@@ -25,6 +25,7 @@ npm start        # 或 npm run dev（文件变化自动重启）
 - `GET /api/commissions`，`POST /api/commissions/settle`，`POST /api/commissions/:id/adjust` 佣金
 - `GET /api/withdraws`，`POST /api/withdraws`，`POST /api/withdraws/:id/{approve,reject}` 提现
 - `GET/PUT /api/config` 全局分佣比例等配置
+- `GET/POST/PUT/DELETE /api/lives` 私域直播（`GET` 可选 `?userId=` 过滤该用户可见的私域直播）
 - `GET /api/stats/dashboard` 数据看板
 
 修改类接口需要 `x-admin-token: admin-token` 请求头。
