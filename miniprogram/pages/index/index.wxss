@@ -406,6 +406,22 @@
   font-weight: 700;
 }
 
+.filing {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eeeeee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.filing-text {
+  color: #9a9fa6;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
 .city-mask {
   position: fixed;
   top: 0;

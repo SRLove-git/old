@@ -135,6 +135,9 @@ async function load() {
       if (!config.value.assistant) {
         config.value.assistant = { name: '小助理', wechat: 'suiyueli6070', phone: '400-800-6070', avatar: '🧑‍💼', intro: '' }
       }
+      if (!config.value.filing) {
+        config.value.filing = { companyName: '', icp: '', police: '' }
+      }
     }
   } catch (e) {
     error.value = e.message
@@ -650,6 +653,12 @@ function exportCsv(filename, rows) {
           <label class="field-label">客服电话</label><input v-model="config.assistant.phone" class="input" placeholder="例如：400-800-6070" />
           <label class="field-label">头像（emoji）</label><input v-model="config.assistant.avatar" class="input" placeholder="例如：🧑‍💼" />
           <label class="field-label">一句话介绍</label><input v-model="config.assistant.intro" class="input" placeholder="例如：报名咨询、活动群、售后都可以找我" />
+        </div>
+        <div class="card config-card mt-16">
+          <div class="section-title">备案信息</div>
+          <label class="field-label">公司名称</label><input v-model="config.filing.companyName" class="input" placeholder="例如：北京岁悦里科技有限公司" />
+          <label class="field-label">ICP备案号</label><input v-model="config.filing.icp" class="input" placeholder="例如：京ICP备2025001234号-1" />
+          <label class="field-label">公安备案号（可选）</label><input v-model="config.filing.police" class="input" placeholder="例如：京公网安备11010102001234号" />
         </div>
         <div class="actions-row actions-row-left"><button class="btn btn-filled" @click="saveConfig">保存全部配置</button></div>
       </section>

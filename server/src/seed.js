@@ -142,6 +142,11 @@ const config = {
     phone: '400-800-6070',
     avatar: '🧑‍💼',
     intro: '报名咨询、活动群、售后都可以找我'
+  },
+  filing: {
+    companyName: '北京岁悦里科技有限公司',
+    icp: '京ICP备2025001234号-1',
+    police: ''
   }
 }
 

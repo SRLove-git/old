@@ -11,7 +11,8 @@ Page({
     city: '北京',
     cities: ['全部', '北京', '大理', '敦煌'],
     cityOpen: false,
-    viewMode: 'recommend'
+    viewMode: 'recommend',
+    filing: {}
   },
 
   async onLoad() {
@@ -23,6 +24,7 @@ Page({
       banners: store.get().banners,
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
+      filing: store.getFiling(),
       cities,
       city: cities.length > 1 ? cities[1] : (cities[0] || '全部')
     })
@@ -37,7 +39,8 @@ Page({
     this.setData({
       largeMode: store.get().largeMode,
       coupons: store.get().coupons,
-      boundManager: store.get().boundManager
+      boundManager: store.get().boundManager,
+      filing: store.getFiling()
     })
     this.buildGroups()
     this.checkPendingBind()

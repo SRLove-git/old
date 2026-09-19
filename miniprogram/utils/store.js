@@ -71,6 +71,15 @@ function getAssistant() {
   }
 }
 
+function getFiling() {
+  const f = (cache.config && cache.config.filing) || {}
+  return {
+    companyName: f.companyName || '',
+    icp: f.icp || '',
+    police: f.police || ''
+  }
+}
+
 function couponApplicable(coupon, activity, amount) {
   if (!coupon || coupon.used) return false
   if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
@@ -315,6 +324,7 @@ module.exports = {
   get,
   getCategory,
   getAssistant,
+  getFiling,
   getActivities,
   getActivity,
   getReviews,
