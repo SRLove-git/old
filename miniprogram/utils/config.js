@@ -1,6 +1,6 @@
 // 后端服务地址。
-// - 开发者工具模拟器调试：用 http://127.0.0.1:3000 即可
-// - 真机「远程调试/预览」：必须改成电脑的局域网 IP（手机和电脑同一 WiFi）
-const API_BASE = 'http://10.103.14.220:3000'
+// - 已部署：https://api.syljoy.com/old-api（服务器 8.138.153.108，nginx 反代到本地后端 3001）
+// - 本地联调（开发者工具模拟器）：改回 http://127.0.0.1:3000 即可
+const API_BASE = 'https://api.syljoy.com/old-api'
 
 module.exports = { API_BASE }

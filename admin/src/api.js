@@ -1,4 +1,4 @@
-const BASE = '/api'
+const BASE = `${import.meta.env.BASE_URL}api`
 const TOKEN = 'admin-token'
 
 async function request(path, options = {}) {
