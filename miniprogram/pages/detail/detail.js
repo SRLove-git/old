@@ -5,6 +5,7 @@ Page({
     id: null,
     activity: null,
     category: {},
+    merchant: null,
     tab: 'detail',
     reviews: [],
     recommend: [],
@@ -36,6 +37,11 @@ Page({
       activity.images = [{ id: `img-${activity.id}-1`, tone: activity.coverTone, emoji: activity.cover, label: '活动图片' }]
     }
     if (!activity.buyers) activity.buyers = []
+    activity.detailBlocks = (activity.detailBlocks && activity.detailBlocks.length
+      ? activity.detailBlocks
+      : [{ type: 'text', text: activity.detail || '' }]
+    ).map((b, i) => ({ ...b, _key: `${activity.id}-${i}` }))
+    const merchant = store.getManagers().find((m) => String(m.id) === String(activity.managerId)) || null
     const reviews = store.getReviews(id)
     const sameCat = store.getActivities().filter(
       (a) => String(a.id) !== String(id) && a.category === activity.category
@@ -50,6 +56,7 @@ Page({
     this.setData({
       activity,
       category: store.getCategory(activity.category),
+      merchant,
       reviews,
       recommend,
       rankLabel,
@@ -121,12 +128,11 @@ Page({
   },
 
   onShareAppMessage() {
-    const state = store.get()
     const activity = this.data.activity
-    const suffix = state.boundManager ? `&ref=${state.boundManager.id}` : ''
+    const ref = activity && activity.managerId ? `&ref=${activity.managerId}` : ''
     return {
       title: activity ? activity.title : '岁悦里俱乐部',
-      path: `/pages/detail/detail?id=${this.data.id}${suffix}`
+      path: `/pages/detail/detail?id=${this.data.id}${ref}`
     }
   }
 })

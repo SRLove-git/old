@@ -47,6 +47,13 @@ const activities = [
   { id: 8, category: 5, city: '全国', title: '岁悦里定制保温杯 · 便携款', cover: '🥤', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', price: 69, memberPrice: 59, originalPrice: 89, minGroup: 0, maxGroup: 500, soldCount: 128, highlight: '大容量，单手开盖', points: ['500ml容量', '316不锈钢内胆', '全国包邮'], time: '下单后48小时内发货', address: '全国发货', hasSku: false, schedules: makeSchedules(0, 1, 500, '随时购买'), refundRule: { type: 'day', fullDays: 0, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 3, participantFields: { idCard: false, discount: false }, detail: '出门带上热水，保温约12小时。' }
 ].map((a) => ({
   ...a,
+  managerId: a.id <= 4 ? 1001 : 1002,
+  detailBlocks: [
+    { type: 'text', text: a.detail },
+    { type: 'image', emoji: a.cover, tone: a.coverTone, caption: '活动实景' },
+    { type: 'image', emoji: '🏞️', tone: a.coverTone, caption: '行程/环境展示' },
+    { type: 'video', emoji: '🎬', tone: a.coverTone, caption: '活动视频', url: '' }
+  ],
   images: [
     { id: `img-${a.id}-1`, tone: a.coverTone, emoji: a.cover, label: '实景展示' },
     { id: `img-${a.id}-2`, tone: a.coverTone, emoji: '🏞️', label: '行程/环境' },

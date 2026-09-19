@@ -13,6 +13,14 @@
     <view class="detail-title">{{activity.title}}</view>
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="detail-location">📍 {{activity.city}} <text wx:if="{{activity.minGroup > 0}}" class="tag {{activity.soldCount >= activity.minGroup ? 'tag-green' : 'tag-orange'}}">{{activity.soldCount >= activity.minGroup ? '已成团' : activity.minGroup + '人成团'}}</text></view>
+    <view wx:if="{{merchant}}" class="merchant-row">
+      <text class="merchant-icon">🏪</text>
+      <view class="merchant-info">
+        <text class="merchant-label">所属商户</text>
+        <text class="merchant-name">{{merchant.name}}</text>
+      </view>
+      <text class="merchant-tag">专属服务</text>
+    </view>
 
     <view class="price-row">
       <view>
@@ -66,7 +74,25 @@
       <button class="{{tab === 'recommend' ? 'active' : ''}}" data-tab="recommend" bindtap="toggleTab">相关推荐</button>
     </view>
 
-    <view wx:if="{{tab === 'detail'}}" class="detail-rich">{{activity.detail}}</view>
+    <view wx:if="{{tab === 'detail'}}" class="detail-rich">
+      <block wx:for="{{activity.detailBlocks}}" wx:key="_key" wx:for-item="block">
+        <text wx:if="{{block.type === 'text'}}" class="detail-text">{{block.text}}</text>
+        <view wx:elif="{{block.type === 'image'}}" class="detail-media" style="background: {{block.tone}}">
+          <text class="detail-media-emoji">{{block.emoji}}</text>
+          <text class="detail-media-caption">{{block.caption}}</text>
+        </view>
+        <view wx:elif="{{block.type === 'video'}}" class="detail-media detail-video" style="background: {{block.tone}}">
+          <block wx:if="{{block.url}}">
+            <video src="{{block.url}}" class="detail-video-player" controls></video>
+          </block>
+          <block wx:else>
+            <view class="detail-video-play">▶</view>
+            <text class="detail-media-emoji">{{block.emoji}}</text>
+            <text class="detail-media-caption">{{block.caption}}</text>
+          </block>
+        </view>
+      </block>
+    </view>
     <view wx:elif="{{tab === 'review'}}" class="review-list">
       <view wx:for="{{reviews}}" wx:key="id" class="review">
         <text class="review-avatar">👵</text>
@@ -98,6 +124,7 @@
   </view>
 
   <view class="fixed-bottom detail-bottom">
+    <button class="share-btn" open-type="share">🔗 分销</button>
     <button class="service" bindtap="showService">🎧 客服</button>
     <button class="btn btn-primary main-btn" bindtap="openSku">{{activity.category === 5 ? '立即购买' : (activity.hasSku ? '选房型报名' : '立即报名')}}</button>
   </view>

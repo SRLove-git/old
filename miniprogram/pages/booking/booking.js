@@ -200,12 +200,28 @@ Page({
       this.setData({ step: 2 })
     } else if (step === 2) {
       if (isGoods) {
-        if (!address || !address.name || !address.detail) {
-          wx.showToast({ title: '请填写收货地址', icon: 'none' })
+        if (!address || !address.name || !address.phone || !address.detail) {
+          wx.showToast({ title: '请填写完整收货信息', icon: 'none' })
+          return
+        }
+        if (!/^1\d{10}$/.test(address.phone)) {
+          wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
           return
         }
       } else {
-        if (!info.name || !info.phone || (needIdCard && !info.idCard) || (needDiscount && !info.discount)) {
+        if (!info.name) {
+          wx.showToast({ title: '请填写姓名', icon: 'none' })
+          return
+        }
+        if (!info.phone) {
+          wx.showToast({ title: '请填写手机号码', icon: 'none' })
+          return
+        }
+        if (!/^1\d{10}$/.test(info.phone)) {
+          wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
+          return
+        }
+        if ((needIdCard && !info.idCard) || (needDiscount && !info.discount)) {
           wx.showToast({ title: '请先填写完整报名信息', icon: 'none' })
           return
         }
