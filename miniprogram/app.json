@@ -11,7 +11,8 @@
     "pages/coupons/coupons",
     "pages/participants/participants",
     "pages/manager-apply/manager-apply",
-    "pages/manager/manager"
+    "pages/manager/manager",
+    "pages/member-code/member-code"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

@@ -73,9 +73,9 @@ const managers = [
 ]
 
 const customers = [
-  { id: 'u1', name: '张桂芳', phone: '138****6688', member: true, balance: 0, points: 120, managerId: null, isManager: false },
-  { id: 'u2', name: '刘淑华', phone: '136****2031', member: true, balance: 0, points: 60, managerId: 1001, isManager: false },
-  { id: 'u3', name: '李建国', phone: '135****8820', member: true, balance: 0, points: 40, managerId: 1001, isManager: false }
+  { id: 'u1', name: '张桂芳', phone: '138****6688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
+  { id: 'u2', name: '刘淑华', phone: '136****2031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
+  { id: 'u3', name: '李建国', phone: '135****8820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false }
 ]
 
 const coupons = [

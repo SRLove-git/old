@@ -562,8 +562,39 @@ export function dashboardStats() {
   }
 }
 
+const MEMBER_LEVELS = {
+  1: '普通会员',
+  2: '银卡会员',
+  3: '金卡会员',
+  4: '铂金会员',
+  5: '钻石会员'
+}
+
+function memberLevelOf(user) {
+  if (user.memberLevel) return Number(user.memberLevel)
+  const points = Number(user.points || 0)
+  if (points >= 500) return 5
+  if (points >= 200) return 4
+  if (points >= 80) return 3
+  return 2
+}
+
+function memberIdentity(user) {
+  const seq = String(user.id || '').replace(/\D/g, '') || '1'
+  const year = new Date().getFullYear()
+  const memberLevel = memberLevelOf(user)
+  return {
+    memberId: user.memberId || `8808${year}${seq.padStart(4, '0')}`,
+    memberLevel,
+    memberLevelName: MEMBER_LEVELS[memberLevel] || '会员',
+    memberSince: user.memberSince || `${year}年9月`,
+    memberExpireAt: user.memberExpireAt || '长期有效'
+  }
+}
+
 export function getUserProfile(userId) {
-  const user = db.customers.find((c) => c.id === userId) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
+  const raw = db.customers.find((c) => c.id === userId) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
+  const user = { ...raw, ...memberIdentity(raw) }
   const cards = db.cards.filter((c) => c.userId === userId)
   const boundManager = user.managerId ? findManager(user.managerId) : null
   const addresses = db.addresses.filter((a) => a.userId === userId)

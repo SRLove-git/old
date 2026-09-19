@@ -1,12 +1,12 @@
 <view class="page {{largeMode ? 'large-mode' : ''}}">
-  <view class="profile-hero">
+  <view class="profile-hero" bindtap="goMemberCode">
     <view class="avatar">👵</view>
     <view class="profile-info">
       <view class="name">{{user.name}}</view>
       <view class="phone">{{user.phone}}</view>
-      <view class="member">✓ 岁悦里会员</view>
+      <view class="member">✓ {{user.memberLevelName || '岁悦里会员'}}</view>
     </view>
-    <view class="badge">会员</view>
+    <view class="badge">会员码 ›</view>
   </view>
 
   <view class="assets card">
@@ -29,6 +29,11 @@
   </view>
 
   <view class="menu card">
+    <view class="menu-item" bindtap="goMemberCode">
+      <text class="menu-emoji">💳</text>
+      <text class="menu-text">我的会员码</text>
+      <text class="arrow">›</text>
+    </view>
     <view class="menu-item" data-url="/pages/orders/orders" bindtap="go">
       <text class="menu-emoji">📦</text>
       <text class="menu-text">我的订单</text>

@@ -1,0 +1,191 @@
+.member-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f7f2ea 0%, #f5f6f8 320rpx);
+  padding: 28rpx 24rpx 60rpx;
+}
+
+.member-card {
+  position: relative;
+  border-radius: 36rpx;
+  padding: 34rpx 30rpx;
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 22rpx 48rpx rgba(26, 34, 45, 0.22);
+}
+
+.member-card::before {
+  content: '';
+  position: absolute;
+  top: -120rpx;
+  right: -100rpx;
+  width: 360rpx;
+  height: 360rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.member-card.level-1 {
+  background: linear-gradient(135deg, #6b7280, #9aa3b0);
+}
+
+.member-card.level-2 {
+  background: linear-gradient(135deg, #5b6472, #a5adb9);
+}
+
+.member-card.level-3 {
+  background: linear-gradient(135deg, #8a6d3b, #d0a94e);
+}
+
+.member-card.level-4 {
+  background: linear-gradient(135deg, #343d49, #8f9aa8);
+}
+
+.member-card.level-5 {
+  background: linear-gradient(135deg, #15213c, #3f5b83);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.brand-logo {
+  font-size: 42rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.brand-sub {
+  opacity: 0.88;
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+.level-badge {
+  background: rgba(255, 255, 255, 0.22);
+  border: 2rpx solid rgba(255, 255, 255, 0.55);
+  border-radius: 999rpx;
+  padding: 10rpx 22rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 44rpx;
+}
+
+.card-user {
+  flex: 1;
+  margin-right: 24rpx;
+}
+
+.card-name {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.card-title {
+  font-size: 30rpx;
+  margin-top: 8rpx;
+  opacity: 0.92;
+}
+
+.card-phone {
+  font-size: 26rpx;
+  margin-top: 6rpx;
+  opacity: 0.8;
+}
+
+.qr-box {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 20rpx;
+  background: #ffffff;
+  padding: 10rpx;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+
+.qr-canvas {
+  width: 180rpx;
+  height: 180rpx;
+}
+
+.member-no-label {
+  margin-top: 36rpx;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  opacity: 0.78;
+}
+
+.member-no {
+  font-size: 40rpx;
+  font-weight: 700;
+  letter-spacing: 6rpx;
+  margin-top: 8rpx;
+  font-family: Menlo, Monaco, Consolas, monospace;
+}
+
+.card-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 26rpx;
+  padding-top: 22rpx;
+  border-top: 2rpx solid rgba(255, 255, 255, 0.25);
+  font-size: 24rpx;
+  opacity: 0.88;
+}
+
+.show-tip {
+  text-align: center;
+  color: #6f747b;
+  font-size: 26rpx;
+  margin: 24rpx 8rpx 30rpx;
+}
+
+.benefits {
+  padding: 28rpx;
+}
+
+.benefits-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eeeeee;
+}
+
+.benefit:last-child {
+  border-bottom: 0;
+}
+
+.benefit-emoji {
+  font-size: 40rpx;
+  margin-right: 18rpx;
+}
+
+.benefit-text {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #24272b;
+}
+
+.join-card {
+  margin-top: 24rpx;
+  padding: 28rpx;
+}
+
+.join-text {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 22rpx;
+}

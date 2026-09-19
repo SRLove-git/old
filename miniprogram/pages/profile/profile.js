@@ -51,6 +51,10 @@ Page({
     }
   },
 
+  goMemberCode() {
+    wx.navigateTo({ url: '/pages/member-code/member-code' })
+  },
+
   openBind() {
     this.setData({ bindOpen: true, code: '' })
   },
