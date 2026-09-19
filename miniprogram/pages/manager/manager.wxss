@@ -4,7 +4,7 @@
 }
 
 .manager-top {
-  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #ffffff;
   padding: 30rpx;
   display: flex;
@@ -36,7 +36,7 @@
   grid-template-columns: repeat(3, 1fr);
   padding: 24rpx;
   background: #ffffff;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .metric {
@@ -47,11 +47,11 @@
 .metric-value {
   font-size: 34rpx;
   font-weight: 700;
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .metric-label {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
@@ -61,7 +61,7 @@
   grid-template-columns: repeat(5, 1fr);
   background: #ffffff;
   padding: 20rpx;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .nav-item {
@@ -70,15 +70,15 @@
   align-items: center;
   padding: 16rpx 0;
   border-radius: 18rpx;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-weight: 700;
   font-size: 26rpx;
   width: 20%;
 }
 
 .nav-item.active {
-  background: #ffefe6;
-  color: #ff6a3d;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .content {
@@ -112,7 +112,7 @@
 
 .commission-box text {
   display: block;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
@@ -123,7 +123,7 @@
 
 .order-line {
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
   font-size: 28rpx;
 }
 
@@ -136,7 +136,7 @@
   display: flex;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
   font-size: 28rpx;
 }
 
@@ -151,7 +151,7 @@
 }
 
 .customer-source {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 4rpx;
 }
@@ -160,15 +160,15 @@
   width: 58rpx;
   height: 58rpx;
   border-radius: 50%;
-  background: #ffefe6;
+  background: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .small-btn {
-  border: 2rpx solid #ff6a3d;
-  color: #ff6a3d;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
   border-radius: 999rpx;
   padding: 12rpx 20rpx;
   font-size: 26rpx;
@@ -176,26 +176,26 @@
 }
 
 .small-btn.danger {
-  border-color: #d74a4a;
-  color: #d74a4a;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .commission-order {
   flex: 1;
-  color: #6f747b;
+  color: var(--color-text-3);
 }
 
 .commission-amount {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
 }
 
 .rate-line {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 18rpx;
   padding-top: 18rpx;
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
 }
 
 .withdraw-row {
@@ -203,7 +203,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 18rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .withdraw-row:last-child {
@@ -213,17 +213,17 @@
 .withdraw-amount {
   font-size: 34rpx;
   font-weight: 700;
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .withdraw-meta {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 4rpx;
 }
 
 .withdraw-meta.red {
-  color: #d74a4a;
+  color: var(--color-danger);
 }
 
 .promote-card {
@@ -235,13 +235,13 @@
 .qr {
   width: 200rpx;
   height: 200rpx;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6f747b;
-  background: #f1f2f4;
+  color: var(--color-text-3);
+  background: var(--color-fill);
 }
 
 .promote-info {
@@ -254,7 +254,7 @@
 }
 
 .promote-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin: 8rpx 0 16rpx;
 }
@@ -263,7 +263,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
   padding-top: 24rpx;
   margin-bottom: 24rpx;
 }
@@ -276,7 +276,7 @@
 
 .share-btn {
   width: 100%;
-  background: #ff6a3d;
+  background: var(--color-primary);
   color: #ffffff;
   border-radius: 24rpx;
   padding: 24rpx;
@@ -288,7 +288,7 @@
   display: flex;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .promote-activity:last-child {
@@ -324,7 +324,7 @@
 }
 
 .promote-activity-price {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 6rpx;
 }
@@ -336,23 +336,23 @@
 }
 
 .promote-commission-rate {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 30rpx;
   font-weight: 700;
 }
 
 .promote-commission-amount {
-  color: #2f9e6e;
+  color: var(--color-success);
   font-size: 24rpx;
   margin-top: 4rpx;
 }
 
 .promote-activity-tip {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 18rpx;
   padding-top: 16rpx;
-  border-top: 1rpx dashed #e7e9ec;
+  border-top: 1rpx dashed var(--color-border);
   line-height: 1.5;
 }
 
@@ -385,12 +385,12 @@
 }
 
 .withdraw-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin-bottom: 20rpx;
 }
 
 .withdraw-tip {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   text-align: center;
   margin: 14rpx 0 24rpx;
@@ -409,14 +409,14 @@
   align-items: center;
   padding: 12rpx 0;
   font-size: 28rpx;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .withdraw-calc-row + .withdraw-calc-row {
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
 }
 
 .withdraw-calc-row.strong {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
 }

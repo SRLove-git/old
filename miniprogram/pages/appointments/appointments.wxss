@@ -10,8 +10,8 @@
 
 .chip {
   background: #ffffff;
-  border: 2rpx solid #e7e9ec;
-  color: #24272b;
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text-1);
   border-radius: 999rpx;
   padding: 18rpx 28rpx;
   font-size: 30rpx;
@@ -19,8 +19,8 @@
 }
 
 .chip.active {
-  background: #ff6a3d;
-  border-color: #ff6a3d;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #ffffff;
 }
 
@@ -60,7 +60,7 @@
 }
 
 .order-meta {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 8rpx;
 }
@@ -71,33 +71,33 @@
   font-size: 24rpx;
   font-weight: 700;
   white-space: nowrap;
-  background: #f1f2f4;
-  color: #6f747b;
+  background: var(--color-fill);
+  color: var(--color-text-3);
 }
 
 .status.out,
 .status.done,
 .status.verified {
-  background: #e5f6ee;
-  color: #2f9e6e;
+  background: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .status.pending,
 .status.refunding,
 .status.shipping {
-  background: #ffefe6;
-  color: #e4572a;
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
 }
 
 .status.review {
-  background: #eef2fb;
-  color: #3b6fa0;
+  background: var(--color-info-light);
+  color: var(--color-info);
 }
 
 .status.refunded,
 .status.cancelled {
-  background: #f1f2f4;
-  color: #6f747b;
+  background: var(--color-fill);
+  color: var(--color-text-3);
 }
 
 .order-foot {
@@ -106,17 +106,17 @@
   align-items: center;
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
 }
 
 .amount {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 38rpx;
 }
 
 .go {
-  background: #ff6a3d;
+  background: var(--color-primary);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 14rpx 24rpx;
@@ -140,6 +140,6 @@
 }
 
 .empty-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin: 10rpx 0 28rpx;
 }

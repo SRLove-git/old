@@ -7,22 +7,22 @@
   display: flex;
   background: #ffffff;
   padding: 22rpx;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .step {
   flex: 1;
   text-align: center;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   font-weight: 700;
   padding: 14rpx;
   border-radius: 999rpx;
-  background: #f1f2f4;
+  background: var(--color-fill);
 }
 
 .step.active {
-  background: #ff6a3d;
+  background: var(--color-primary);
   color: #ffffff;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .booking-sku {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 6rpx;
 }
@@ -76,15 +76,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 20rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
 }
 
 .schedule-item.selected {
-  border-color: #ff6a3d;
-  background: #fff4ec;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .schedule-item.disabled {
@@ -97,7 +97,7 @@
 }
 
 .schedule-time {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin-top: 6rpx;
 }
 
@@ -108,7 +108,7 @@
 
 .sku-option {
   flex: 1;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 20rpx;
   padding: 22rpx;
   margin-right: 16rpx;
@@ -120,8 +120,8 @@
 }
 
 .sku-option.selected {
-  border-color: #ff6a3d;
-  background: #fff4ec;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .sku-name {
@@ -131,7 +131,7 @@
 }
 
 .sku-price-sm {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 34rpx;
 }
@@ -140,7 +140,7 @@
   position: absolute;
   top: -2rpx;
   right: -2rpx;
-  background: #ff6a3d;
+  background: var(--color-primary);
   color: #ffffff;
   font-size: 22rpx;
   padding: 4rpx 10rpx;
@@ -157,7 +157,7 @@
   width: 44rpx;
   height: 44rpx;
   border-radius: 50%;
-  background: #ffefe6;
+  background: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,14 +166,14 @@
 }
 
 .schedule-avatar-more {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-left: 4rpx;
 }
 
 .load-more {
   text-align: center;
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
   padding: 18rpx 0;
 }
@@ -184,7 +184,7 @@
 }
 
 .remain {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 26rpx;
 }
@@ -193,7 +193,7 @@
   width: 44rpx;
   height: 44rpx;
   border-radius: 50%;
-  background: #e7e9ec;
+  background: var(--color-border);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -202,7 +202,7 @@
 }
 
 .schedule-item.selected .check {
-  background: #ff6a3d;
+  background: var(--color-primary);
 }
 
 .counter {
@@ -215,7 +215,7 @@
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
-  background: #f1f2f4;
+  background: var(--color-fill);
   font-size: 50rpx;
   font-weight: 700;
   display: flex;
@@ -235,40 +235,40 @@
 }
 
 .participant-chip {
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 999rpx;
   padding: 16rpx 24rpx;
   font-weight: 700;
 }
 
 .participant-chip.selected {
-  border-color: #ff6a3d;
-  background: #fff4ec;
-  color: #ff6a3d;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .participant-chip.manage {
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .required {
-  color: #d74a4a;
+  color: var(--color-danger);
   margin-left: 4rpx;
 }
 
 .refund-note {
-  background: #fff4ec;
+  background: var(--color-primary-light);
   border-radius: 18rpx;
   padding: 20rpx;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 8rpx;
 }
 
 .address-card {
   position: relative;
-  background: #fff4ec;
-  border: 2rpx solid #ffd9c6;
+  background: var(--color-primary-light);
+  border: 2rpx solid var(--color-primary-light-border);
   border-radius: 18rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
@@ -277,12 +277,12 @@
 .address-line {
   font-size: 30rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .address-line + .address-line {
   font-weight: 400;
-  color: #6f747b;
+  color: var(--color-text-3);
   margin-top: 8rpx;
 }
 
@@ -290,7 +290,7 @@
   position: absolute;
   right: 24rpx;
   top: 24rpx;
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 26rpx;
   font-weight: 700;
 }
@@ -299,12 +299,12 @@
   display: flex;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
-  color: #6f747b;
+  border-bottom: 1rpx solid var(--color-border);
+  color: var(--color-text-3);
 }
 
 .confirm-row text:last-child {
-  color: #24272b;
+  color: var(--color-text-1);
   font-weight: 700;
   text-align: right;
 }
@@ -314,11 +314,11 @@
 }
 
 .red {
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .detail-price {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 40rpx;
   font-weight: 700;
 }
@@ -326,15 +326,15 @@
 .coupon-chip {
   display: flex;
   align-items: center;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 20rpx;
   padding: 22rpx;
   margin-bottom: 14rpx;
 }
 
 .coupon-chip.selected {
-  border-color: #ff6a3d;
-  background: #fff4ec;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .coupon-chip.used {
@@ -346,13 +346,13 @@
 }
 
 .coupon-disabled {
-  color: #d74a4a;
+  color: var(--color-danger);
   font-size: 22rpx;
   margin-top: 4rpx;
 }
 
 .coupon-value {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 42rpx;
   font-weight: 700;
   min-width: 100rpx;
@@ -368,7 +368,7 @@
 }
 
 .coupon-desc {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
@@ -379,7 +379,7 @@
 
 .prev {
   width: 140rpx;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 30rpx;
 }
 
@@ -423,7 +423,7 @@
 
 .pay-tip {
   text-align: center;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-bottom: 26rpx;
 }
@@ -437,7 +437,7 @@
 
 .defer-btn {
   margin-top: 20rpx;
-  color: #6f747b;
+  color: var(--color-text-3);
   text-align: center;
   width: 100%;
   padding: 22rpx;
@@ -458,7 +458,7 @@
   width: 150rpx;
   height: 150rpx;
   border-radius: 50%;
-  background: #2f9e6e;
+  background: var(--color-success);
   color: #ffffff;
   font-size: 80rpx;
   display: flex;
@@ -473,6 +473,6 @@
 }
 
 .success-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin: 16rpx 0 36rpx;
 }

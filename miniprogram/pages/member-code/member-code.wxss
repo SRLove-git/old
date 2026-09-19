@@ -1,6 +1,6 @@
 .member-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f7f2ea 0%, #f5f6f8 320rpx);
+  background: linear-gradient(180deg, #f7f2ea 0%, var(--color-bg) 320rpx);
   padding: 28rpx 24rpx 60rpx;
 }
 
@@ -142,7 +142,7 @@
 
 .show-tip {
   text-align: center;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin: 24rpx 8rpx 30rpx;
 }
@@ -176,7 +176,7 @@
 .benefit-text {
   font-size: 30rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .join-card {

@@ -1,5 +1,5 @@
 .intro {
-  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #ffffff;
   border-radius: 28rpx;
   padding: 38rpx 30rpx;
@@ -26,19 +26,19 @@
 }
 
 .fee-label {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
 .fee-value {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 56rpx;
   font-weight: 700;
   margin: 8rpx 0;
 }
 
 .fee-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
 }
 
@@ -48,7 +48,7 @@
 }
 
 .required {
-  color: #d74a4a;
+  color: var(--color-danger);
   margin-left: 4rpx;
 }
 
@@ -58,16 +58,16 @@
 }
 
 .tag-chip {
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 999rpx;
   padding: 16rpx 24rpx;
   font-weight: 700;
 }
 
 .tag-chip.selected {
-  border-color: #ff6a3d;
-  background: #fff4ec;
-  color: #ff6a3d;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .agree-row {
@@ -79,7 +79,7 @@
 .checkbox {
   width: 40rpx;
   height: 40rpx;
-  border: 2rpx solid #ff6a3d;
+  border: 2rpx solid var(--color-primary);
   border-radius: 8rpx;
   display: flex;
   align-items: center;
@@ -89,7 +89,7 @@
 }
 
 .checkbox.checked {
-  background: #ff6a3d;
+  background: var(--color-primary);
 }
 
 .pay-mask {
@@ -120,14 +120,14 @@
 }
 
 .pay-amount {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 64rpx;
   font-weight: 700;
   margin: 18rpx 0;
 }
 
 .pay-tip {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-bottom: 26rpx;
 }

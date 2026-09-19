@@ -1,4 +1,4 @@
-.loading { text-align: center; color: #6f747b; padding: 120rpx 0; }
+.loading { text-align: center; color: var(--color-text-3); padding: 120rpx 0; }
 
 .room-cover { padding: 40rpx 32rpx; border-radius: 24rpx; color: #ffffff; }
 .room-title { font-size: 40rpx; font-weight: 700; line-height: 1.4; }
@@ -27,12 +27,12 @@
 
 .state-box { text-align: center; padding: 80rpx 32rpx; }
 .state-emoji { font-size: 96rpx; }
-.state-title { font-size: 36rpx; font-weight: 700; color: #24272b; margin-top: 20rpx; }
-.state-sub { font-size: 28rpx; color: #6f747b; margin-top: 12rpx; }
+.state-title { font-size: 36rpx; font-weight: 700; color: var(--color-text-1); margin-top: 20rpx; }
+.state-sub { font-size: 28rpx; color: var(--color-text-3); margin-top: 12rpx; }
 .remind-btn { width: 320rpx; margin: 36rpx auto 0; }
 
 .info-card { margin-top: 24rpx; padding: 28rpx; }
-.info-title { font-size: 32rpx; font-weight: 700; color: #24272b; margin-bottom: 12rpx; }
+.info-title { font-size: 32rpx; font-weight: 700; color: var(--color-text-1); margin-bottom: 12rpx; }
 .info-desc { font-size: 28rpx; color: #4a4f55; line-height: 1.7; }
 .info-card .tag { margin-top: 16rpx; }
 
@@ -54,6 +54,6 @@
   flex-shrink: 0;
 }
 .activity-info { flex: 1; min-width: 0; }
-.activity-title { font-size: 30rpx; font-weight: 700; color: #24272b; }
-.activity-price { font-size: 28rpx; color: #ff6a3d; font-weight: 700; margin-top: 8rpx; }
-.activity-link { font-size: 26rpx; color: #6f747b; margin-top: 6rpx; }
+.activity-title { font-size: 30rpx; font-weight: 700; color: var(--color-text-1); }
+.activity-price { font-size: 28rpx; color: var(--color-primary); font-weight: 700; margin-top: 8rpx; }
+.activity-link { font-size: 26rpx; color: var(--color-text-3); margin-top: 6rpx; }

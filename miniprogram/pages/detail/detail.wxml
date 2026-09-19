@@ -24,7 +24,7 @@
 
     <view class="price-row">
       <view>
-        <text class="tag tag-orange">会员价</text>
+        <text class="tag tag-primary">会员价</text>
         <text class="detail-price">¥{{activity.memberPrice}}</text>
         <text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text>
         <text wx:if="{{activity.price > activity.memberPrice}}" class="non-member">非会员 ¥{{activity.price}}</text>

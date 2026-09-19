@@ -20,7 +20,7 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "岁悦里俱乐部",
-    "backgroundColor": "#f7f8fa",
+    "backgroundColor": "#f5f6f8",
     "backgroundTextStyle": "light"
   },
   "tabBar": {

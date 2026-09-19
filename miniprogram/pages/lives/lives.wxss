@@ -1,6 +1,6 @@
 .head { padding: 8rpx 4rpx 24rpx; }
-.title { font-size: 44rpx; font-weight: 700; color: #24272b; }
-.sub { font-size: 28rpx; color: #6f747b; margin-top: 8rpx; }
+.title { font-size: 44rpx; font-weight: 700; color: var(--color-text-1); }
+.sub { font-size: 28rpx; color: var(--color-text-3); margin-top: 8rpx; }
 
 .live-list { display: flex; flex-direction: column; gap: 24rpx; }
 .live-card { overflow: hidden; }
@@ -27,8 +27,8 @@
   color: #ffffff;
   background: rgba(0, 0, 0, 0.35);
 }
-.live-badge.live { background: #d74a4a; }
-.live-badge.scheduled { background: #e0a41c; }
+.live-badge.live { background: var(--color-danger); }
+.live-badge.scheduled { background: var(--color-warning); }
 .live-badge.ended { background: #8a9199; }
 
 .private-badge {
@@ -44,14 +44,14 @@
 }
 
 .live-body { padding: 24rpx; }
-.live-title { font-size: 34rpx; font-weight: 700; color: #24272b; line-height: 1.4; }
-.live-host { font-size: 28rpx; color: #6f747b; margin-top: 12rpx; }
-.live-time { font-size: 26rpx; color: #6f747b; margin-top: 6rpx; }
+.live-title { font-size: 34rpx; font-weight: 700; color: var(--color-text-1); line-height: 1.4; }
+.live-host { font-size: 28rpx; color: var(--color-text-3); margin-top: 12rpx; }
+.live-time { font-size: 26rpx; color: var(--color-text-3); margin-top: 6rpx; }
 .live-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; }
-.live-viewers { font-size: 26rpx; color: #6f747b; }
-.live-arrow { font-size: 28rpx; color: #ff6a3d; font-weight: 700; }
+.live-viewers { font-size: 26rpx; color: var(--color-text-3); }
+.live-arrow { font-size: 28rpx; color: var(--color-primary); font-weight: 700; }
 
-.empty { text-align: center; padding: 120rpx 40rpx; color: #6f747b; }
+.empty { text-align: center; padding: 120rpx 40rpx; color: var(--color-text-3); }
 .empty-emoji { font-size: 96rpx; }
-.empty-title { font-size: 34rpx; font-weight: 700; margin-top: 20rpx; color: #24272b; }
+.empty-title { font-size: 34rpx; font-weight: 700; margin-top: 20rpx; color: var(--color-text-1); }
 .empty-sub { font-size: 28rpx; margin-top: 10rpx; }

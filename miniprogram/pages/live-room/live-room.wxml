@@ -41,7 +41,7 @@
     <view class="card info-card">
       <view class="info-title">直播简介</view>
       <view class="info-desc">{{live.description || '暂无简介'}}</view>
-      <view wx:if="{{live.managerId}}" class="tag tag-orange">私域 · {{live.managerName || live.hostName}}</view>
+      <view wx:if="{{live.managerId}}" class="tag tag-primary">私域 · {{live.managerName || live.hostName}}</view>
     </view>
 
     <view wx:if="{{activity}}" class="card activity-card" bindtap="goActivity">

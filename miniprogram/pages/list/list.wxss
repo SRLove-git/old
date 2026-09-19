@@ -24,8 +24,8 @@
 
 .chip {
   background: #ffffff;
-  border: 2rpx solid #e7e9ec;
-  color: #24272b;
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text-1);
   border-radius: 999rpx;
   padding: 18rpx 28rpx;
   font-size: 30rpx;
@@ -33,14 +33,14 @@
 }
 
 .chip.active {
-  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   border-color: transparent;
   color: #ffffff;
-  box-shadow: 0 8rpx 18rpx rgba(255, 106, 61, 0.24);
+  box-shadow: 0 8rpx 18rpx rgba(194, 94, 61, 0.24);
 }
 
 .result {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin: 8rpx 0 20rpx;
 }
@@ -99,7 +99,7 @@
 }
 
 .meta {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
@@ -115,7 +115,7 @@
 }
 
 .member-label {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-left: 8rpx;
 }
@@ -127,13 +127,13 @@
   width: auto;
   min-height: 0;
   line-height: 1.2;
-  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 16rpx 26rpx;
   font-weight: 700;
   font-size: 26rpx;
-  box-shadow: 0 8rpx 18rpx rgba(255, 106, 61, 0.24);
+  box-shadow: 0 8rpx 18rpx rgba(194, 94, 61, 0.24);
 }
 
 .empty {
@@ -152,7 +152,7 @@
 }
 
 .empty-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin: 10rpx 0 28rpx;
 }
 
@@ -166,18 +166,18 @@
   flex: 1;
   text-align: center;
   background: #ffffff;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 999rpx;
   padding: 16rpx 8rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .filter-item.on {
-  border-color: #ff6a3d;
-  color: #ff6a3d;
-  background: #fff4ec;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .status-badge {
@@ -192,11 +192,11 @@
 }
 
 .status-badge.open {
-  background: #2f9e6e;
+  background: var(--color-success);
 }
 
 .status-badge.grouped {
-  background: #ff6a3d;
+  background: var(--color-primary);
 }
 
 .status-badge.full,
@@ -205,14 +205,14 @@
 }
 
 .time-row {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 28rpx;
   font-weight: 700;
   margin-bottom: 8rpx;
 }
 
 .addr-row {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-bottom: 4rpx;
 }

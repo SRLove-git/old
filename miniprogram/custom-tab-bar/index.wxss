@@ -1,3 +1,10 @@
+:host {
+  --color-primary: #c25e3d;
+  --color-primary-light: #fde9df;
+  --color-text-3: #6f747b;
+  --color-border: #e7e9ec;
+}
+
 .tab-bar {
   position: fixed;
   left: 0;
@@ -5,7 +12,7 @@
   bottom: 0;
   height: 120rpx;
   background: #ffffff;
-  border-top: 1rpx solid #e7e9ec;
+  border-top: 1rpx solid var(--color-border);
   display: flex;
   padding-bottom: 0;
   z-index: 100;
@@ -17,13 +24,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   font-weight: 700;
 }
 
 .tab-item.active {
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .tab-emoji {
@@ -31,7 +38,7 @@
 }
 
 .tab-item.active .tab-emoji {
-  background: #ffefe6;
+  background: var(--color-primary-light);
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
   transform: translateY(-4rpx);

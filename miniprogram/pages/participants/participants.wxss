@@ -9,7 +9,7 @@
   width: 78rpx;
   height: 78rpx;
   border-radius: 50%;
-  background: #ffefe6;
+  background: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,13 +26,13 @@
 }
 
 .phone {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
 .small-btn {
-  border: 2rpx solid #ff6a3d;
-  color: #ff6a3d;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
   border-radius: 999rpx;
   padding: 12rpx 20rpx;
   font-size: 26rpx;
@@ -40,8 +40,8 @@
 }
 
 .small-btn.danger {
-  border-color: #d74a4a;
-  color: #d74a4a;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .pay-mask {
@@ -73,6 +73,6 @@
 }
 
 .required {
-  color: #d74a4a;
+  color: var(--color-danger);
   margin-left: 4rpx;
 }

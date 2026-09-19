@@ -1,7 +1,7 @@
 .profile-hero {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   color: #ffffff;
   border-radius: 28rpx;
   padding: 34rpx 28rpx;
@@ -24,11 +24,11 @@
 .asset-value {
   font-size: 36rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .asset-label {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 6rpx;
 }
@@ -80,7 +80,7 @@
   display: flex;
   align-items: center;
   padding: 28rpx;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .menu-item:last-child {
@@ -98,7 +98,7 @@
 }
 
 .arrow {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 42rpx;
 }
 
@@ -122,7 +122,7 @@
   width: 86rpx;
   height: 86rpx;
   border-radius: 50%;
-  background: #ffefe6;
+  background: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,14 +140,14 @@
 
 .manager-sub,
 .manager-empty {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin: 8rpx 0 20rpx;
 }
 
 .small-btn {
-  border: 2rpx solid #ff6a3d;
-  color: #ff6a3d;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
   border-radius: 999rpx;
   padding: 12rpx 22rpx;
   font-size: 26rpx;
@@ -163,8 +163,8 @@
 }
 
 .apply-status {
-  background: #e5f6ee;
-  color: #2f9e6e;
+  background: var(--color-success-light);
+  color: var(--color-success);
   border-radius: 18rpx;
   padding: 20rpx;
   font-weight: 700;
@@ -178,13 +178,13 @@
 }
 
 .brand-slogan {
-  color: #6f747b;
+  color: var(--color-text-3);
 }
 
 .footer-btn {
   margin-top: 18rpx;
-  background: #fff4ec;
-  color: #e4572a;
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
   border-radius: 18rpx;
   padding: 22rpx;
   font-weight: 700;
@@ -218,7 +218,7 @@
 }
 
 .bind-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   text-align: center;
   margin: 14rpx 0 24rpx;
 }
@@ -226,7 +226,7 @@
 .field-input {
   width: 100%;
   min-height: 96rpx;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 18rpx;
   padding: 22rpx 24rpx;
   margin-bottom: 24rpx;
@@ -236,7 +236,7 @@
   display: flex;
   flex-direction: column;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
   font-size: 26rpx;
 }
 
@@ -245,6 +245,6 @@
 }
 
 .bind-log-reason {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin-top: 4rpx;
 }

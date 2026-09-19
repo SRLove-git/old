@@ -23,18 +23,18 @@
 .region-city {
   font-size: 36rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .region-arrow {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 30rpx;
   margin-left: 8rpx;
 }
 
 .region-tip {
   margin-left: auto;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
 }
 
@@ -73,18 +73,18 @@
 .brand {
   font-size: 46rpx;
   font-weight: 700;
-  color: #e4572a;
+  color: var(--color-primary-text);
 }
 
 .slogan {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 4rpx;
 }
 
 .badge {
-  background: #ffefe6;
-  color: #e4572a;
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
   border-radius: 999rpx;
   padding: 16rpx 24rpx;
   font-size: 28rpx;
@@ -102,7 +102,7 @@
 }
 
 .search-placeholder {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 32rpx;
 }
 
@@ -136,8 +136,8 @@
 }
 
 .member-card {
-  background: linear-gradient(135deg, #fff4ec 0%, #ffe4d3 100%);
-  border: 2rpx solid #ffd9c6;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+  border: 2rpx solid var(--color-primary-light-border);
   border-radius: 32rpx;
   padding: 28rpx;
   display: flex;
@@ -149,24 +149,24 @@
 .member-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #e4572a;
+  color: var(--color-primary-text);
 }
 
 .member-sub {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 6rpx;
 }
 
 .member-btn {
-  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 22rpx 28rpx;
   font-weight: 700;
   font-size: 30rpx;
   white-space: nowrap;
-  box-shadow: 0 10rpx 24rpx rgba(255, 106, 61, 0.28);
+  box-shadow: 0 10rpx 24rpx rgba(194, 94, 61, 0.28);
 }
 
 .home-coupons {
@@ -186,7 +186,7 @@
 
 .home-coupon {
   flex: 1;
-  background: #fff4ec;
+  background: var(--color-primary-light);
   border-radius: 18rpx;
   padding: 20rpx;
   margin-right: 16rpx;
@@ -199,13 +199,13 @@
 }
 
 .home-coupon-value {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 40rpx;
   font-weight: 700;
 }
 
 .home-coupon-name {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 24rpx;
   margin-top: 4rpx;
 }
@@ -229,7 +229,7 @@
 
 .mode-toggle {
   display: flex;
-  background: #f1f2f4;
+  background: var(--color-fill);
   border-radius: 999rpx;
   padding: 4rpx;
 }
@@ -238,12 +238,12 @@
   padding: 10rpx 26rpx;
   font-size: 26rpx;
   font-weight: 700;
-  color: #6f747b;
+  color: var(--color-text-3);
   border-radius: 999rpx;
 }
 
 .mode-item.on {
-  background: #ff6a3d;
+  background: var(--color-primary);
   color: #ffffff;
 }
 
@@ -261,7 +261,7 @@
 .group-name {
   font-size: 32rpx;
   font-weight: 700;
-  color: #24272b;
+  color: var(--color-text-1);
 }
 
 .more-btn {
@@ -271,19 +271,19 @@
   gap: 8rpx;
   margin: 4rpx 0 30rpx;
   padding: 24rpx;
-  background: #f1f2f4;
-  color: #6f747b;
+  background: var(--color-fill);
+  color: var(--color-text-3);
   border-radius: 18rpx;
   font-size: 30rpx;
   font-weight: 700;
 }
 
 .more-btn:active {
-  background: #e7e9ec;
+  background: var(--color-border);
 }
 
 .more-arrow {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 34rpx;
   line-height: 1;
 }
@@ -343,7 +343,7 @@
 }
 
 .meta {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 22rpx;
   white-space: nowrap;
   overflow: hidden;
@@ -362,7 +362,7 @@
 }
 
 .member-label {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 22rpx;
   margin-left: 6rpx;
 }
@@ -374,13 +374,13 @@
   width: auto;
   min-height: 0;
   line-height: 1.2;
-  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 10rpx 18rpx;
   font-weight: 700;
   font-size: 22rpx;
-  box-shadow: 0 6rpx 14rpx rgba(255, 106, 61, 0.24);
+  box-shadow: 0 6rpx 14rpx rgba(194, 94, 61, 0.24);
 }
 
 .brand-footer {
@@ -392,18 +392,18 @@
 .brand-logo {
   font-size: 42rpx;
   font-weight: 700;
-  color: #e4572a;
+  color: var(--color-primary-text);
 }
 
 .brand-slogan {
-  color: #6f747b;
+  color: var(--color-text-3);
   margin-top: 10rpx;
 }
 
 .footer-btn {
   margin-top: 20rpx;
-  background: #fff4ec;
-  color: #e4572a;
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
   border-radius: 18rpx;
   padding: 22rpx;
   font-weight: 700;
@@ -460,19 +460,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 28rpx 22rpx;
-  border-bottom: 1rpx solid #e7e9ec;
+  border-bottom: 1rpx solid var(--color-border);
   font-size: 34rpx;
   font-weight: 700;
 }
 
 .city-item.selected {
-  color: #ff6a3d;
-  background: #fff4ec;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
   border-radius: 18rpx;
 }
 
 .city-check {
-  color: #ff6a3d;
+  color: var(--color-primary);
   font-size: 36rpx;
   font-weight: 700;
 }
@@ -489,7 +489,7 @@
   width: 96rpx;
   height: 96rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #ff6a3d, #ff9345);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -498,6 +498,6 @@
 }
 
 .live-entry-text { flex: 1; min-width: 0; }
-.live-entry-title { font-size: 34rpx; font-weight: 700; color: #24272b; }
-.live-entry-sub { font-size: 26rpx; color: #6f747b; margin-top: 6rpx; }
+.live-entry-title { font-size: 34rpx; font-weight: 700; color: var(--color-text-1); }
+.live-entry-sub { font-size: 26rpx; color: var(--color-text-3); margin-top: 6rpx; }
 .live-entry-arrow { font-size: 40rpx; color: #c8cdd3; font-weight: 700; }

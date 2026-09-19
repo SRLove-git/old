@@ -125,7 +125,7 @@ Page({
       content: `您将绑定 ${manager.name} 为专属服务主理人。绑定后，这位主理人可获得您后续消费的部分服务佣金。`,
       confirmText: '同意绑定',
       cancelText: '暂不绑定',
-      confirmColor: '#ff6a3d',
+      confirmColor: '#c25e3d',
       success: (res) => {
         if (res.confirm) {
           store.confirmPendingBind().then((bound) => {

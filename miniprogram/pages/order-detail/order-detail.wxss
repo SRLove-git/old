@@ -4,7 +4,7 @@
 }
 
 .status-hero {
-  background: linear-gradient(135deg, #2f9e6e, #4b9a78);
+  background: linear-gradient(135deg, var(--color-success), var(--color-success));
   color: #ffffff;
   padding: 48rpx 30rpx;
   text-align: center;
@@ -53,7 +53,7 @@
 }
 
 .order-meta {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 28rpx;
   margin-top: 12rpx;
 }
@@ -70,7 +70,7 @@
 }
 
 .red {
-  color: #ff6a3d;
+  color: var(--color-primary);
 }
 
 .code-box {
@@ -82,13 +82,13 @@
   width: 220rpx;
   height: 220rpx;
   margin: 0 auto 20rpx;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6f747b;
-  background: #f1f2f4;
+  color: var(--color-text-3);
+  background: var(--color-fill);
 }
 
 .code {
@@ -98,7 +98,7 @@
 }
 
 .code-tip {
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 26rpx;
   margin-top: 10rpx;
 }
@@ -107,8 +107,8 @@
   display: flex;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #e7e9ec;
-  color: #6f747b;
+  border-bottom: 1rpx solid var(--color-border);
+  color: var(--color-text-3);
 }
 
 .confirm-row:last-child {
@@ -116,7 +116,7 @@
 }
 
 .confirm-row text:last-child {
-  color: #24272b;
+  color: var(--color-text-1);
   font-weight: 700;
   text-align: right;
 }
@@ -128,7 +128,7 @@
 
 .contact {
   width: 170rpx;
-  color: #6f747b;
+  color: var(--color-text-3);
   font-size: 30rpx;
 }
 
@@ -158,7 +158,7 @@
 }
 
 .refund-rule {
-  background: #fff4ec;
+  background: var(--color-primary-light);
   border-radius: 18rpx;
   padding: 22rpx;
   margin-bottom: 24rpx;
@@ -179,12 +179,12 @@
 
 .star {
   font-size: 60rpx;
-  color: #e7e9ec;
+  color: var(--color-border);
   margin: 0 8rpx;
 }
 
 .star.on {
-  color: #f5a623;
+  color: var(--color-warning);
 }
 
 .review-input {
@@ -194,13 +194,13 @@
 
 .picker-value {
   min-height: 96rpx;
-  border: 2rpx solid #e7e9ec;
+  border: 2rpx solid var(--color-border);
   border-radius: 18rpx;
   padding: 22rpx 24rpx;
 }
 
 .text-btn {
-  color: #6f747b;
+  color: var(--color-text-3);
   padding: 22rpx;
   text-align: center;
 }
