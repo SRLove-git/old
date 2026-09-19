@@ -102,6 +102,10 @@
         </view>
       </view>
     </view>
+    <view class="more-btn" data-id="{{group.id}}" bindtap="goMore">
+      <text>查看更多</text>
+      <text class="more-arrow">›</text>
+    </view>
   </block>
 
   <view class="brand-footer card">

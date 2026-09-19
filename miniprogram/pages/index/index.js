@@ -134,6 +134,12 @@ Page({
     wx.switchTab({ url: '/pages/list/list' })
   },
 
+  goMore(e) {
+    const id = Number(e.currentTarget.dataset.id)
+    wx.setStorageSync('pendingCat', id)
+    wx.switchTab({ url: '/pages/list/list' })
+  },
+
   goBanner(e) {
     const cat = Number(e.currentTarget.dataset.cat)
     if (!cat) {

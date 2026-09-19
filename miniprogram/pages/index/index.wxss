@@ -262,6 +262,30 @@
   color: #24272b;
 }
 
+.more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin: 4rpx 0 30rpx;
+  padding: 24rpx;
+  background: #f1f2f4;
+  color: #6f747b;
+  border-radius: 18rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.more-btn:active {
+  background: #e7e9ec;
+}
+
+.more-arrow {
+  color: #c25e3d;
+  font-size: 34rpx;
+  line-height: 1;
+}
+
 .activity-card {
   width: 48.5%;
   margin-bottom: 18rpx;
