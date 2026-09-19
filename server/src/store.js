@@ -335,7 +335,20 @@ export function submitReview(orderId, review) {
 }
 
 export function applyWithdraw(managerId, amount) {
-  const record = { id: `WD${Date.now()}`, managerId, amount, status: '待审核', applyTime: '刚刚', payChannel: '微信零钱' }
+  const taxRate = Number(db.config.withdrawTaxRate ?? 20)
+  const tax = Number((amount * taxRate / 100).toFixed(2))
+  const actualAmount = Number((amount - tax).toFixed(2))
+  const record = {
+    id: `WD${Date.now()}`,
+    managerId,
+    amount,
+    taxRate,
+    tax,
+    actualAmount,
+    status: '待审核',
+    applyTime: '刚刚',
+    payChannel: '微信零钱'
+  }
   db.withdraws.unshift(record)
   db.commissions.forEach((c) => {
     if (c.status === '可结算' && String(c.managerId) === String(managerId)) {
@@ -649,5 +662,27 @@ export function getManagerDashboard(managerId) {
   const customers = db.customers.filter((c) => String(c.managerId) === String(managerId))
   const commissions = db.commissions.filter((c) => String(c.managerId) === String(managerId))
   const withdraws = db.withdraws.filter((w) => String(w.managerId) === String(managerId))
-  return { manager, customers, commissions, withdraws }
+  const activities = db.activities.map((a) => {
+    const rate = resolveRate(a, manager)
+    const basePrice = Number(a.memberPrice || a.price || 0)
+    return {
+      id: a.id,
+      title: a.title,
+      cover: a.cover,
+      coverTone: a.coverTone,
+      category: a.category,
+      city: a.city,
+      memberPrice: a.memberPrice,
+      price: a.price,
+      commissionRate: rate,
+      commissionAmount: Number((basePrice * rate / 100).toFixed(2))
+    }
+  })
+  const config = {
+    minWithdraw: Number(db.config.minWithdraw ?? 100),
+    withdrawMonthlyLimit: Number(db.config.withdrawMonthlyLimit ?? 1),
+    withdrawTaxRate: Number(db.config.withdrawTaxRate ?? 20),
+    globalCommissionRate: Number(db.config.globalCommissionRate ?? 8)
+  }
+  return { manager, customers, commissions, withdraws, activities, config }
 }

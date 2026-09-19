@@ -10,8 +10,12 @@ Page({
     withdraws: [],
     customers: [],
     recentOrders: [],
+    activities: [],
+    config: {},
     withdrawOpen: false,
     withdrawAmount: '',
+    withdrawTax: 0,
+    withdrawActual: 0,
     nav: [
       { id: 'dashboard', name: '看板', emoji: '📊' },
       { id: 'customers', name: '客户', emoji: '👥' },
@@ -43,6 +47,8 @@ Page({
       commissions: dash.commissions || [],
       withdraws: dash.withdraws || [],
       customers: (dash.customers || []).map((c) => ({ id: c.id, name: c.name, phone: c.phone })),
+      activities: dash.activities || [],
+      config: dash.config || {},
       recentOrders
     })
   },
@@ -52,7 +58,7 @@ Page({
   },
 
   openWithdraw() {
-    this.setData({ withdrawOpen: true, withdrawAmount: '' })
+    this.setData({ withdrawOpen: true, withdrawAmount: '', withdrawTax: 0, withdrawActual: 0 })
   },
 
   closeWithdraw() {
@@ -62,17 +68,30 @@ Page({
   noop() {},
 
   onAmount(e) {
-    this.setData({ withdrawAmount: e.detail.value })
+    const amount = Number(e.detail.value || 0)
+    const taxRate = Number(this.data.config.withdrawTaxRate ?? 20)
+    const tax = Number((amount * taxRate / 100).toFixed(2))
+    const actual = Number((amount - tax).toFixed(2))
+    this.setData({ withdrawAmount: e.detail.value, withdrawTax: tax, withdrawActual: actual })
   },
 
   async applyWithdraw() {
-    if (this.data.withdraws.length > 0) {
-      wx.showToast({ title: '本月已申请过提现', icon: 'none' })
+    const cfg = this.data.config || {}
+    const monthlyLimit = Number(cfg.withdrawMonthlyLimit ?? 1)
+    const applied = (this.data.withdraws || []).filter((w) => w.status !== '已拒绝').length
+    if (applied >= monthlyLimit) {
+      wx.showToast({ title: `每月最多提现${monthlyLimit}次`, icon: 'none' })
       return
     }
     const amount = Number(this.data.withdrawAmount)
-    if (!amount || amount < 100) {
-      wx.showToast({ title: '最低提现金额为100元', icon: 'none' })
+    const min = Number(cfg.minWithdraw ?? 100)
+    if (!amount || amount < min) {
+      wx.showToast({ title: `最低提现金额为${min}元`, icon: 'none' })
+      return
+    }
+    const available = Number(this.data.manager.available || 0)
+    if (amount > available) {
+      wx.showToast({ title: '超出可结算余额', icon: 'none' })
       return
     }
     await store.applyWithdraw(DEMO_MANAGER_ID, amount)

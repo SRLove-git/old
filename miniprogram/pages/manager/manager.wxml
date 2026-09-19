@@ -57,6 +57,7 @@
         <view wx:for="{{withdraws}}" wx:key="id" class="withdraw-row">
           <view>
             <view class="withdraw-amount">¥{{item.amount}}</view>
+            <view class="withdraw-meta">代扣税 ¥{{item.tax || 0}} · 到账 ¥{{item.actualAmount || item.amount}}</view>
             <view class="withdraw-meta">{{item.status}} · {{item.payChannel || '微信零钱'}} · {{item.applyTime}}</view>
             <view wx:if="{{item.rejectReason}}" class="withdraw-meta red">{{item.rejectReason}}</view>
           </view>
@@ -110,6 +111,22 @@
       </view>
       <button class="share-btn" bindtap="shareCard">分享活动卡片</button>
     </view>
+
+    <view wx:if="{{tab === 'promote'}}" class="section card">
+      <view class="panel-title">活动收益参考</view>
+      <view wx:for="{{activities}}" wx:key="id" class="promote-activity">
+        <view class="promote-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+        <view class="promote-activity-info">
+          <view class="promote-activity-title">{{item.title}}</view>
+          <view class="promote-activity-price">会员价 ¥{{item.memberPrice}}</view>
+        </view>
+        <view class="promote-commission">
+          <view class="promote-commission-rate">{{item.commissionRate}}%</view>
+          <view class="promote-commission-amount">约¥{{item.commissionAmount}}</view>
+        </view>
+      </view>
+      <view class="promote-activity-tip">佣金比例按活动专属比例（如有）或全局默认比例；金额按会员价估算，实际按实付金额结算。</view>
+    </view>
   </view>
 
   <view wx:if="{{tab === 'dashboard'}}" class="fixed-bottom">
@@ -120,8 +137,22 @@
     <view class="pay-modal" catchtap="noop">
       <view class="modal-title">申请提现</view>
       <view class="withdraw-sub">可结算余额：¥{{manager.available}}</view>
-      <input class="field-input" type="number" value="{{withdrawAmount}}" bindinput="onAmount" placeholder="最低100元" />
-      <view class="withdraw-tip">本月仅可提现1次，平台承担手续费</view>
+      <input class="field-input" type="number" value="{{withdrawAmount}}" bindinput="onAmount" placeholder="最低{{config.minWithdraw || 100}}元" />
+      <view class="withdraw-calc">
+        <view class="withdraw-calc-row">
+          <text>提现金额</text>
+          <text>¥{{withdrawAmount || '0'}}</text>
+        </view>
+        <view class="withdraw-calc-row">
+          <text>代扣税费（{{config.withdrawTaxRate || 0}}%）</text>
+          <text>-¥{{withdrawTax}}</text>
+        </view>
+        <view class="withdraw-calc-row strong">
+          <text>实际到账</text>
+          <text>¥{{withdrawActual}}</text>
+        </view>
+      </view>
+      <view class="withdraw-tip">税费由本人承担，每月最多提现{{config.withdrawMonthlyLimit || 1}}次</view>
       <button class="btn btn-primary btn-block" bindtap="applyWithdraw">提交申请</button>
     </view>
   </view>

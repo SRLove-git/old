@@ -284,6 +284,78 @@
   font-size: 34rpx;
 }
 
+.promote-activity {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #e7e9ec;
+}
+
+.promote-activity:last-child {
+  border-bottom: 0;
+}
+
+.promote-cover {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.promote-activity-info {
+  flex: 1;
+  margin-left: 16rpx;
+  min-width: 0;
+}
+
+.promote-activity-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.promote-activity-price {
+  color: #6f747b;
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+.promote-commission {
+  text-align: right;
+  margin-left: 14rpx;
+  flex-shrink: 0;
+}
+
+.promote-commission-rate {
+  color: #ff6a3d;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.promote-commission-amount {
+  color: #2f9e6e;
+  font-size: 24rpx;
+  margin-top: 4rpx;
+}
+
+.promote-activity-tip {
+  color: #6f747b;
+  font-size: 24rpx;
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e7e9ec;
+  line-height: 1.5;
+}
+
 .pay-mask {
   position: fixed;
   top: 0;
@@ -322,4 +394,29 @@
   font-size: 26rpx;
   text-align: center;
   margin: 14rpx 0 24rpx;
+}
+
+.withdraw-calc {
+  background: #f6f7f8;
+  border-radius: 18rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.withdraw-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 28rpx;
+  color: #24272b;
+}
+
+.withdraw-calc-row + .withdraw-calc-row {
+  border-top: 1rpx solid #e7e9ec;
+}
+
+.withdraw-calc-row.strong {
+  color: #ff6a3d;
+  font-weight: 700;
 }

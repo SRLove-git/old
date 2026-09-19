@@ -138,6 +138,9 @@ async function load() {
       if (!config.value.filing) {
         config.value.filing = { companyName: '', icp: '', police: '' }
       }
+      if (config.value.withdrawTaxRate === undefined) {
+        config.value.withdrawTaxRate = 20
+      }
     }
   } catch (e) {
     error.value = e.message
@@ -598,10 +601,10 @@ function exportCsv(filename, rows) {
       <section v-if="view === 'withdraws'">
         <div class="card">
           <table>
-            <thead><tr><th>提现单</th><th>主理人</th><th>金额</th><th>状态</th><th>申请时间</th><th>操作</th></tr></thead>
+            <thead><tr><th>提现单</th><th>主理人</th><th>金额</th><th>税费</th><th>实际到账</th><th>状态</th><th>申请时间</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="w in withdraws" :key="w.id">
-                <td>{{ w.id }}</td><td>{{ managers.find(m => String(m.id) === String(w.managerId))?.name || w.managerId }}</td><td>¥{{ w.amount }}</td><td><span class="chip" :class="statusChip(w.status)">{{ w.status }}</span></td><td>{{ w.applyTime }}</td>
+                <td>{{ w.id }}</td><td>{{ managers.find(m => String(m.id) === String(w.managerId))?.name || w.managerId }}</td><td>¥{{ w.amount }}</td><td>¥{{ w.tax ?? 0 }}</td><td>¥{{ w.actualAmount ?? w.amount }}</td><td><span class="chip" :class="statusChip(w.status)">{{ w.status }}</span></td><td>{{ w.applyTime }}</td>
                 <td v-if="w.status === '待审核'"><button class="btn btn-filled btn-sm" @click="approveWithdraw(w.id)">打款</button><button class="btn btn-outlined btn-sm" @click="rejectWithdraw(w.id)">拒绝</button></td>
                 <td v-else>{{ w.rejectReason || w.payTime || '' }}</td>
               </tr>
@@ -645,6 +648,7 @@ function exportCsv(filename, rows) {
           <label class="field-label">全局默认分佣比例（%）</label><input v-model.number="config.globalCommissionRate" type="number" class="input" />
           <label class="field-label">最低提现金额（元）</label><input v-model.number="config.minWithdraw" type="number" class="input" />
           <label class="field-label">每月提现次数上限</label><input v-model.number="config.withdrawMonthlyLimit" type="number" class="input" />
+          <label class="field-label">提现代扣税费比例（%）</label><input v-model.number="config.withdrawTaxRate" type="number" class="input" />
         </div>
         <div class="card config-card mt-16">
           <div class="section-title">助理人信息</div>

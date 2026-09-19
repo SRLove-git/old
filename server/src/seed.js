@@ -136,6 +136,7 @@ const config = {
   globalCommissionRate: 8,
   minWithdraw: 100,
   withdrawMonthlyLimit: 1,
+  withdrawTaxRate: 20,
   assistant: {
     name: '小助理',
     wechat: 'suiyueli6070',
