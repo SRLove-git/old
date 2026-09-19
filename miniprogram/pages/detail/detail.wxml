@@ -41,14 +41,22 @@
     </view>
 
     <view class="block">
-      <view class="block-label">📅 活动时间</view>
-      <view class="schedule-preview">
-        <view>
-          <view class="schedule-date">{{activity.schedules[0].date}} {{activity.schedules[0].weekday}}</view>
-          <view class="schedule-time">{{activity.schedules[0].time}}</view>
+      <view class="block-label">{{activity.sellType === 'sku' ? '🛍️ 规格选择' : '📅 活动时间'}}</view>
+      <block wx:if="{{activity.sellType === 'sku'}}">
+        <view class="sku-quick">
+          <text wx:for="{{activity.skus}}" wx:key="id" class="sku-quick-tag">{{item.name}}</text>
         </view>
-        <button class="small-btn" bindtap="openSku">{{activity.hasSku ? '选房型报名' : '选日期报名'}}</button>
-      </view>
+        <view class="schedule-time">下单时选择规格，全国包邮</view>
+      </block>
+      <block wx:else>
+        <view class="schedule-preview">
+          <view>
+            <view class="schedule-date">{{activity.schedules[0].date}} {{activity.schedules[0].weekday}}</view>
+            <view class="schedule-time">{{activity.schedules[0].time}}</view>
+          </view>
+          <button class="small-btn" bindtap="openSku">{{activity.hasSku ? '选房型报名' : '选日期报名'}}</button>
+        </view>
+      </block>
     </view>
 
     <view class="block">
@@ -126,13 +134,13 @@
   <view class="fixed-bottom detail-bottom">
     <button class="share-btn" open-type="share">🔗 分销</button>
     <button class="service" bindtap="showService">🎧 客服</button>
-    <button class="btn btn-primary main-btn" bindtap="openSku">{{activity.category === 5 ? '立即购买' : (activity.hasSku ? '选房型报名' : '立即报名')}}</button>
+    <button class="btn btn-primary main-btn" bindtap="openSku">{{activity.sellType === 'sku' ? (activity.category === 5 ? '选规格购买' : '选规格报名') : (activity.hasSku ? '选房型报名' : (activity.category === 5 ? '立即购买' : '立即报名'))}}</button>
   </view>
 
   <view wx:if="{{skuOpen}}" class="sheet-mask" bindtap="closeSku">
     <view class="sheet" catchtap="noop">
       <view class="sheet-head">
-        <text class="sheet-title">请选择房型</text>
+        <text class="sheet-title">{{activity.sellType === 'sku' ? '请选择规格' : '请选择房型'}}</text>
         <button class="close" bindtap="closeSku">×</button>
       </view>
       <view class="sku-summary">

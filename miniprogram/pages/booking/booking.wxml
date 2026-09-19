@@ -7,7 +7,7 @@
 
 <view wx:else class="booking-page">
   <view class="steps">
-    <view class="step {{step >= 1 ? 'active' : ''}}">1 选时间</view>
+    <view class="step {{step >= 1 ? 'active' : ''}}">1 {{isSkuOnly ? '选规格' : '选时间'}}</view>
     <view class="step {{step >= 2 ? 'active' : ''}}">2 填信息</view>
     <view class="step {{step >= 3 ? 'active' : ''}}">3 确认支付</view>
   </view>
@@ -21,8 +21,8 @@
   </view>
 
   <view wx:if="{{step === 1}}" class="panel page-pad">
-    <block wx:if="{{activity.hasSku}}">
-      <view class="panel-title">请选择房型</view>
+    <block wx:if="{{isSkuOnly || activity.hasSku}}">
+      <view class="panel-title">{{isSkuOnly ? '请选择规格' : '请选择房型'}}</view>
       <view class="sku-options">
         <view
           wx:for="{{activity.skus}}"
@@ -38,28 +38,30 @@
       </view>
     </block>
 
-    <view class="panel-title">请选择报名时间</view>
-    <view
-      wx:for="{{visibleSchedules}}"
-      wx:key="id"
-      class="schedule-item {{scheduleId === item.id ? 'selected' : ''}} {{item.remaining <= 0 ? 'disabled' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="selectSchedule"
-    >
-      <view>
-        <view class="schedule-date">{{item.date}} {{item.weekday}}</view>
-        <view class="schedule-time">{{item.time}}</view>
-        <view class="schedule-avatars">
-          <text wx:for="{{item.avatars}}" wx:for-item="avatar" wx:key="*this" class="schedule-avatar">{{avatar}}</text>
-          <text class="schedule-avatar-more">已报名{{item.soldQuota}}人</text>
+    <block wx:if="{{!isSkuOnly}}">
+      <view class="panel-title">请选择报名时间</view>
+      <view
+        wx:for="{{visibleSchedules}}"
+        wx:key="id"
+        class="schedule-item {{scheduleId === item.id ? 'selected' : ''}} {{item.remaining <= 0 ? 'disabled' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="selectSchedule"
+      >
+        <view>
+          <view class="schedule-date">{{item.date}} {{item.weekday}}</view>
+          <view class="schedule-time">{{item.time}}</view>
+          <view class="schedule-avatars">
+            <text wx:for="{{item.avatars}}" wx:for-item="avatar" wx:key="*this" class="schedule-avatar">{{avatar}}</text>
+            <text class="schedule-avatar-more">已报名{{item.soldQuota}}人</text>
+          </view>
+        </view>
+        <view class="schedule-right">
+          <text class="remain">{{item.remaining > 0 ? '余' + item.remaining + '人' : '已满'}}</text>
+          <text class="check">✓</text>
         </view>
       </view>
-      <view class="schedule-right">
-        <text class="remain">{{item.remaining > 0 ? '余' + item.remaining + '人' : '已满'}}</text>
-        <text class="check">✓</text>
-      </view>
-    </view>
-    <view wx:if="{{hasMore}}" class="load-more" bindtap="toggleMore">{{showAll ? '收起' : '加载更多日期'}}</view>
+      <view wx:if="{{hasMore}}" class="load-more" bindtap="toggleMore">{{showAll ? '收起' : '加载更多日期'}}</view>
+    </block>
   </view>
 
   <view wx:if="{{step === 2}}" class="panel page-pad">
@@ -116,7 +118,11 @@
 
   <view wx:if="{{step === 3}}" class="panel page-pad">
     <view class="panel-title">确认订单</view>
-    <view class="confirm-row"><text>活动时间</text><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></view>
+    <view class="confirm-row">
+      <text>{{isSkuOnly ? '规格' : '活动时间'}}</text>
+      <block wx:if="{{isSkuOnly}}"><text>{{skuName}}</text></block>
+      <block wx:else><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></block>
+    </view>
     <view class="confirm-row"><text>{{isGoods ? '购买数量' : '报名人数'}}</text><text>{{count}}{{isGoods ? '件' : '人'}}</text></view>
     <view class="confirm-row"><text>{{isGoods ? '收货人' : '报名人'}}</text><text>{{isGoods ? address.name : info.name}}</text></view>
     <view wx:if="{{isGoods}}" class="confirm-row"><text>收货地址</text><text>{{address.district}} {{address.detail}}</text></view>

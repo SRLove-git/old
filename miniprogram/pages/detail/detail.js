@@ -54,6 +54,7 @@ Page({
       .filter((a) => a.category === activity.category)
       .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
     const rankLabel = rank.length && String(rank[0].id) === String(id) ? '本店销量榜第1' : ''
+    const hasSku = activity.hasSku || activity.sellType === 'sku'
     this.setData({
       activity,
       category: store.getCategory(activity.category),
@@ -62,8 +63,8 @@ Page({
       reviews,
       recommend,
       rankLabel,
-      selectedSkuId: activity.hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
-      selectedSku: activity.hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
+      selectedSkuId: hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
+      selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
     })
   },
 
@@ -77,7 +78,7 @@ Page({
   },
 
   openSku() {
-    if (this.data.activity && this.data.activity.hasSku) {
+    if (this.data.activity && (this.data.activity.hasSku || this.data.activity.sellType === 'sku')) {
       this.setData({ skuOpen: true })
     } else {
       this.goBooking()
@@ -105,7 +106,8 @@ Page({
 
   goBooking() {
     const { id, activity, selectedSkuId } = this.data
-    const query = activity.hasSku ? `&sku=${selectedSkuId}` : ''
+    const hasSku = activity.hasSku || activity.sellType === 'sku'
+    const query = hasSku ? `&sku=${selectedSkuId}` : ''
     wx.navigateTo({ url: `/pages/booking/booking?id=${id}${query}` })
   },
 

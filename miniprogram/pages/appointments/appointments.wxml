@@ -23,7 +23,7 @@
         <view class="order-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
         <view class="order-info">
           <view class="order-title">{{item.title}}</view>
-          <view class="order-meta">📅 {{item.schedule.date}} {{item.schedule.weekday}}</view>
+          <view class="order-meta">📅 {{item.timeText}}</view>
           <view class="order-meta">👥 {{item.participants}}</view>
         </view>
         <text class="status {{item.statusClass}}">{{item.status}}</text>

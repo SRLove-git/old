@@ -29,8 +29,10 @@ Page({
     const order = store.get().orders.find((o) => o.id === this.data.id)
     if (!order) return
     const refundInfo = store.calcRefund(order)
+    const timeText = order.schedule && order.schedule.date ? `${order.schedule.date} ${order.schedule.weekday || ''} ${order.schedule.time || ''}` : (order.skuName || '无需预约')
     this.setData({
       order,
+      timeText,
       refundInfo,
       actionLabel: this.actionLabel(order),
       payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : ''

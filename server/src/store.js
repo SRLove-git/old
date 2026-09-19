@@ -12,17 +12,26 @@ function clone(v) {
   return JSON.parse(JSON.stringify(v))
 }
 
+function normalizeActivities(db) {
+  ;(db.activities || []).forEach((a) => {
+    if (!a.sellType) a.sellType = 'date'
+    if (a.sellType === 'sku') a.hasSku = true
+  })
+}
+
 export function init() {
   if (db) return db
   if (fs.existsSync(DATA_FILE)) {
     try {
       db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
+      normalizeActivities(db)
       return db
     } catch (e) {
       db = null
     }
   }
   db = clone(seed)
+  normalizeActivities(db)
   save()
   return db
 }
@@ -203,9 +212,11 @@ export function createOrder(payload) {
   if (!activity) return null
   const limit = activity.limitPerUser || 99
   if (payload.count > limit) throw new Error(`每人限购${limit}份`)
-  const sku = activity.hasSku ? activity.skus.find((s) => s.id === payload.skuId) || activity.skus[0] : null
+  const isSkuOnly = activity.sellType === 'sku'
+  const hasSku = activity.hasSku || isSkuOnly
+  const sku = hasSku ? activity.skus.find((s) => s.id === payload.skuId) || activity.skus[0] || null : null
   const memberPrice = sku ? sku.memberPrice : activity.memberPrice
-  const schedule = activity.schedules.find((s) => s.id === payload.scheduleId) || activity.schedules[0]
+  const schedule = isSkuOnly ? null : activity.schedules.find((s) => s.id === payload.scheduleId) || activity.schedules[0] || null
   if (schedule && schedule.remaining < payload.count) throw new Error('该时间段名额不足')
   let coupon = null
   let discount = 0

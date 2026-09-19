@@ -19,7 +19,10 @@ Page({
     const filter = this.data.filter
     const list = store.get().orders
       .filter((o) => filter === '全部' || o.status === filter)
-      .map((o) => Object.assign({}, o, { statusClass: store.statusClass(o.status) }))
+      .map((o) => Object.assign({}, o, {
+        statusClass: store.statusClass(o.status),
+        timeText: o.schedule && o.schedule.date ? `${o.schedule.date} ${o.schedule.weekday || ''}` : (o.skuName || '无需预约')
+      }))
     this.setData({ list })
   },
 

@@ -20,6 +20,7 @@ Page({
     },
     skuName: '',
     skuId: '',
+    isSkuOnly: false,
     memberPrice: 0,
     discount: 0,
     total: 0,
@@ -47,16 +48,19 @@ Page({
       return
     }
 
-    const skuId = options.sku || (activity.hasSku && activity.skus.length ? activity.skus[0].id : '')
-    const sku = activity.hasSku ? activity.skus.find((s) => s.id === skuId) || activity.skus[0] : null
+    const isSkuOnly = activity.sellType === 'sku'
+    const hasSku = activity.hasSku || isSkuOnly
+    const skuId = options.sku || (hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '')
+    const sku = hasSku ? (activity.skus || []).find((s) => s.id === skuId) || activity.skus[0] : null
     const memberPrice = sku ? sku.memberPrice : activity.memberPrice
     const firstParticipant = state.participants[0] || { id: null, name: '', phone: '', idCard: '' }
 
     this.setData({
       id,
       activity,
+      isSkuOnly,
       skuId: skuId || '',
-      scheduleId: activity.schedules && activity.schedules.length ? activity.schedules[0].id : '',
+      scheduleId: !isSkuOnly && activity.schedules && activity.schedules.length ? activity.schedules[0].id : '',
       participants: state.participants,
       selectedParticipantId: firstParticipant.id,
       coupons: state.coupons,
@@ -191,11 +195,18 @@ Page({
   },
 
   nextStep() {
-    const { step, info, needIdCard, needDiscount, scheduleId, isGoods, address } = this.data
+    const { step, info, needIdCard, needDiscount, scheduleId, skuId, isSkuOnly, isGoods, address } = this.data
     if (step === 1) {
-      if (!scheduleId) {
-        wx.showToast({ title: '请选择报名时间', icon: 'none' })
-        return
+      if (isSkuOnly) {
+        if (!skuId) {
+          wx.showToast({ title: '请选择规格', icon: 'none' })
+          return
+        }
+      } else {
+        if (!scheduleId) {
+          wx.showToast({ title: '请选择报名时间', icon: 'none' })
+          return
+        }
       }
       this.setData({ step: 2 })
     } else if (step === 2) {

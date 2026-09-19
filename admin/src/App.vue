@@ -194,8 +194,8 @@ const filteredCommissions = computed(() => {
 
 function openActivity(a) {
   activityForm.value = a
-    ? { ...a }
-    : { title: '', category: 1, city: '北京', address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, hasSku: false, schedules: [], skus: [], points: [], detail: '' }
+    ? { ...a, sellType: a.sellType || 'date' }
+    : { title: '', category: 1, city: '北京', address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, schedules: [], skus: [], points: [], detail: '' }
   activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
@@ -209,6 +209,7 @@ function saveActivity() {
     error.value = '排班或 SKU JSON 格式错误'
     return
   }
+  form.hasSku = form.sellType === 'sku' || (Array.isArray(form.skus) && form.skus.length > 0)
   doAction(async () => {
     if (form.id) await api.put(`/activities/${form.id}`, form)
     else await api.post('/activities', form)
@@ -682,8 +683,14 @@ function exportCsv(filename, rows) {
         <label class="field-label">商品级分佣比例（%）</label><input v-model="activityForm.managerCommissionRate" type="number" class="input" placeholder="留空用全局" />
         <label class="field-label">状态</label>
         <select v-model.number="activityForm.status" class="input"><option :value="1">上架</option><option :value="0">下架</option></select>
-        <label class="field-label">排班 JSON（高级）</label><textarea v-model="activitySchedulesJson" class="input textarea"></textarea>
-        <label class="field-label">SKU JSON（高级）</label><textarea v-model="activitySkusJson" class="input textarea"></textarea>
+        <label class="field-label">购买方式</label>
+        <select v-model="activityForm.sellType" class="input">
+          <option value="date">预约日期（选日期/场次）</option>
+          <option value="sku">SKU 选择（选规格/房型）</option>
+        </select>
+        <div style="font-size:12px;color:#6f747b;margin:-6px 0 12px">预约日期：下单时选日期；SKU 选择：下单时选规格（无需日期）。</div>
+        <label class="field-label">排班 JSON（预约日期用，高级）</label><textarea v-model="activitySchedulesJson" class="input textarea"></textarea>
+        <label class="field-label">SKU JSON（SKU/房型用，高级）</label><textarea v-model="activitySkusJson" class="input textarea"></textarea>
         <div class="modal-actions"><button class="btn btn-outlined" @click="activityForm = null">取消</button><button class="btn btn-filled" @click="saveActivity">保存</button></div>
       </div>
     </div>
