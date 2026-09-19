@@ -3,7 +3,6 @@ const store = require('../../utils/store.js')
 Page({
   data: {
     user: {},
-    largeMode: true,
     boundManager: null,
     isManager: false,
     application: null,
@@ -26,7 +25,6 @@ Page({
     const state = store.get()
     this.setData({
       user: state.user,
-      largeMode: state.largeMode,
       boundManager: state.boundManager,
       isManager: state.isManager,
       application: state.application,
@@ -36,23 +34,18 @@ Page({
     })
   },
 
-  toggleLarge() {
-    const largeMode = store.toggleLargeMode()
-    this.setData({ largeMode })
-    wx.showToast({ title: largeMode ? '已开启大字模式' : '已关闭大字模式', icon: 'none' })
-  },
-
   go(e) {
     const url = e.currentTarget.dataset.url
-    if (url === '/pages/appointments/appointments') {
-      wx.switchTab({ url })
-    } else {
-      wx.navigateTo({ url })
-    }
+    wx.navigateTo({ url })
   },
 
   goMemberCode() {
     wx.navigateTo({ url: '/pages/member-code/member-code' })
+  },
+
+  goAcademy() {
+    wx.setStorageSync('academyTab', 'mine')
+    wx.switchTab({ url: '/pages/lives/lives' })
   },
 
   openBind() {

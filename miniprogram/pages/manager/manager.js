@@ -131,7 +131,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '和同龄人一起玩，岁悦里俱乐部精选活动',
+      title: '和同龄人一起玩，岁悦里精选活动',
       path: `/pages/index/index?ref=${this.data.manager.id}`
     }
   }

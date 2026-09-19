@@ -1,0 +1,9 @@
+.content-page { min-height: 100vh; box-sizing: border-box; padding: 34rpx 28rpx 100rpx; background: #fff; }
+.type-tag { display: inline-flex; padding: 8rpx 16rpx; border-radius: 999rpx; background: #edf3f8; color: #52758c; font-size: 21rpx; font-weight: 700; }
+.content-title { margin-top: 22rpx; color: #26302d; font-size: 44rpx; font-weight: 700; line-height: 1.35; }
+.content-meta { display: flex; gap: 22rpx; margin-top: 18rpx; color: #909692; font-size: 23rpx; }
+.content-cover, .content-video { width: 100%; height: 390rpx; margin-top: 28rpx; border-radius: 24rpx; overflow: hidden; background: #eee; }
+.content-summary { margin-top: 28rpx; padding: 24rpx; border-left: 7rpx solid #8ca6b2; border-radius: 0 18rpx 18rpx 0; background: #f5f7f7; color: #53605c; font-size: 27rpx; line-height: 1.75; }
+.content-body { display: block; margin-top: 30rpx; color: #303835; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
+.source-note { margin-top: 38rpx; padding: 22rpx; border-radius: 18rpx; background: #fff7e9; color: #8c6940; font-size: 23rpx; line-height: 1.65; }
+.original-button { margin-top: 28rpx; border-radius: 999rpx; background: #304b45; color: #fff; font-size: 28rpx; font-weight: 700; }

@@ -1,0 +1,46 @@
+<view class="attendance-page">
+  <scroll-view wx:if="{{cards.length > 1}}" scroll-x class="card-tabs" enhanced show-scrollbar="{{false}}">
+    <view class="card-tab-row"><view wx:for="{{cards}}" wx:key="id" class="card-tab {{activeCardId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectCard">{{item.title}}</view></view>
+  </scroll-view>
+
+  <block wx:if="{{currentCard}}">
+    <view class="training-card">
+      <view class="card-top"><view><view class="card-brand">岁悦里培训</view><view class="card-title">{{currentCard.title}}</view></view><text class="card-state">使用中</text></view>
+      <view class="course-name">{{currentCard.courseName || currentCard.title}}</view>
+      <view class="card-bottom"><text>授课老师：{{currentCard.teacher || '以排课为准'}}</text><text>有效期至 {{currentCard.validUntil || '长期有效'}}</text></view>
+      <view class="card-ring ring-one"></view><view class="card-ring ring-two"></view>
+    </view>
+
+    <view class="stats-card">
+      <view class="stats-title">消课与出勤统计</view>
+      <view class="stats-grid">
+        <view><text class="stat-value">{{summary.total}}</text><text class="stat-label">购买次数</text></view>
+        <view><text class="stat-value primary">{{summary.used}}</text><text class="stat-label">已核销</text></view>
+        <view><text class="stat-value">{{summary.remain}}</text><text class="stat-label">剩余次数</text></view>
+        <view><text class="stat-value sage">{{summary.attendanceRate}}%</text><text class="stat-label">出勤率</text></view>
+      </view>
+      <view class="progress-head"><text>消课进度</text><text>{{summary.used}} / {{summary.total}} 次</text></view>
+      <view class="progress-track"><view class="progress-value" style="width: {{summary.useRate}}%"></view></view>
+      <view class="stats-note">签到成功后自动核销 1 次；缺勤只计入出勤统计，不自动扣次。</view>
+    </view>
+
+    <view class="code-entry" bindtap="goMemberCode">
+      <view class="code-icon">▦</view><view class="code-copy"><view>出示会员码签到</view><text>到课后请向老师出示，由工作人员完成核销</text></view><text class="code-arrow">›</text>
+    </view>
+
+    <view class="records-head"><view><view class="records-title">签到记录</view><view class="records-sub">共签到 {{summary.checked}} 次 · 缺勤 {{summary.absent}} 次</view></view></view>
+    <scroll-view scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}"><view class="filter-row"><view wx:for="{{filters}}" wx:key="key" class="filter-item {{filter === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="setFilter">{{item.label}}</view></view></scroll-view>
+
+    <view wx:if="{{records.length}}" class="record-list">
+      <view wx:for="{{records}}" wx:key="id" class="record-item">
+        <view class="record-date"><text>{{item.displayDate}}</text><text>{{item.time}}</text></view>
+        <view class="record-line"><view class="dot {{item.statusCls}}"></view><view class="line"></view></view>
+        <view class="record-info"><view class="record-title">{{item.lesson}}</view><view class="record-meta">{{item.teacher}} · {{item.location}}</view><view wx:if="{{item.checkedAt}}" class="checked-time">签到时间 {{item.checkedAt}}</view></view>
+        <text class="status {{item.statusCls}}">{{item.statusLabel}}</text>
+      </view>
+    </view>
+    <view wx:else class="empty-record"><view class="empty-icon">✓</view><view class="empty-title">暂无相关签到记录</view><view class="empty-sub">课程签到后会自动同步到这里</view></view>
+  </block>
+
+  <view wx:else class="empty-record page-empty"><view class="empty-icon">▤</view><view class="empty-title">暂无培训计次卡</view><view class="empty-sub">购买培训课程后，可在这里查看核销与签到统计</view></view>
+</view>

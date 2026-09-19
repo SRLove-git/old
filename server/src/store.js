@@ -13,11 +13,110 @@ function clone(v) {
 }
 
 function normalizeActivities(db) {
+  const seedActivities = new Map((seed.activities || []).map((item) => [String(item.id), item]))
   ;(db.activities || []).forEach((a) => {
     if (!a.sellType) a.sellType = 'date'
     if (a.sellType === 'sku') a.hasSku = true
+    if (!Array.isArray(a.regionIds)) {
+      const seeded = seedActivities.get(String(a.id)) || {}
+      a.regionIds = clone(seeded.regionIds || [])
+      if (seeded.city) a.city = seeded.city
+    }
   })
-  if (!Array.isArray(db.lives)) db.lives = clone(seed.lives)
+  if (!Array.isArray(db.lives)) {
+    db.lives = clone(seed.lives)
+  } else {
+    const seedLives = new Map((seed.lives || []).map((item) => [String(item.id), item]))
+    db.lives = db.lives.map((item) => ({ ...(seedLives.get(String(item.id)) || {}), ...item }))
+    const existing = new Set(db.lives.map((item) => String(item.id)))
+    ;(seed.lives || []).forEach((item) => {
+      if (!existing.has(String(item.id))) db.lives.push(clone(item))
+    })
+  }
+  if (!Array.isArray(db.products)) {
+    db.products = clone(seed.products)
+  } else {
+    const seedProducts = new Map((seed.products || []).map((item) => [String(item.id), item]))
+    db.products = db.products.map((item) => ({ ...(seedProducts.get(String(item.id)) || {}), ...item }))
+    const existingProducts = new Set(db.products.map((item) => String(item.id)))
+    ;(seed.products || []).forEach((item) => {
+      if (!existingProducts.has(String(item.id))) db.products.push(clone(item))
+    })
+  }
+  if (!Array.isArray(db.cards)) {
+    db.cards = clone(seed.cards)
+  } else {
+    const seedCards = new Map((seed.cards || []).map((item) => [String(item.id), item]))
+    db.cards = db.cards.map((item) => ({ ...(seedCards.get(String(item.id)) || {}), ...item }))
+  }
+  // 迁移：把种子里的商品从活动移出，并同步商品类目类型，避免旧数据重复
+  const productIds = new Set((seed.products || []).map((p) => String(p.id)))
+  db.activities = (db.activities || []).filter((a) => !productIds.has(String(a.id)))
+  Object.keys(db.categories || {}).forEach((id) => {
+    if (seed.categories[id]) db.categories[id].type = seed.categories[id].type
+  })
+}
+
+function normalizeConfig(db) {
+  if (!db.config) db.config = {}
+  // 合并种子默认配置，缺失的字段用种子值补齐（用户已改的值保留）
+  db.config = { ...clone(seed.config), ...db.config }
+  if (!Array.isArray(db.config.regions)) db.config.regions = clone(seed.config.regions)
+}
+
+function normalizeContent(db) {
+  if (!Array.isArray(db.contentPosts)) {
+    db.contentPosts = clone(seed.contentPosts || [])
+  }
+}
+
+function normalizeRegionIds(regionIds) {
+  if (!Array.isArray(regionIds)) return []
+  return [...new Set(regionIds.map(String).filter(Boolean))]
+}
+
+function regionText(regionIds, fallback = '') {
+  const database = get()
+  const ids = normalizeRegionIds(regionIds)
+  const names = ids
+    .map((id) => (database.config.regions || []).find((r) => String(r.id) === id)?.name)
+    .filter(Boolean)
+  return names.length ? names.join('、') : fallback
+}
+
+export function listRegions(options = {}) {
+  const all = (get().config.regions || []).slice().sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
+  return options.enabledOnly ? all.filter((r) => r.enabled !== false) : all
+}
+
+export function createRegion(data) {
+  const database = get()
+  const name = String((data && data.name) || '').trim()
+  if (!name) throw new Error('地区名称不能为空')
+  if (listRegions().some((r) => r.name === name)) throw new Error('地区名称已存在')
+  const region = {
+    id: `region-${Date.now()}`,
+    name,
+    enabled: data && data.enabled !== undefined ? !!data.enabled : true,
+    sort: Number((data && data.sort) ?? (listRegions().length + 1) * 10)
+  }
+  database.config.regions.push(region)
+  save()
+  return region
+}
+
+export function updateRegion(id, data) {
+  const database = get()
+  const region = (database.config.regions || []).find((r) => String(r.id) === String(id))
+  if (!region) return null
+  const name = data && data.name !== undefined ? String(data.name).trim() : region.name
+  if (!name) throw new Error('地区名称不能为空')
+  if ((database.config.regions || []).some((r) => String(r.id) !== String(id) && r.name === name)) throw new Error('地区名称已存在')
+  Object.assign(region, data || {}, { id: region.id, name })
+  region.enabled = region.enabled !== false
+  region.sort = Number(region.sort || 0)
+  save()
+  return region
 }
 
 export function init() {
@@ -26,6 +125,8 @@ export function init() {
     try {
       db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
       normalizeActivities(db)
+      normalizeConfig(db)
+      normalizeContent(db)
       return db
     } catch (e) {
       db = null
@@ -33,6 +134,8 @@ export function init() {
   }
   db = clone(seed)
   normalizeActivities(db)
+  normalizeConfig(db)
+  normalizeContent(db)
   save()
   return db
 }
@@ -58,7 +161,8 @@ function normalizeKeyword(kw) {
 export function activitySearchText(a) {
   const skuNames = (a.skus || []).map((s) => s.name).join(' ')
   const points = (a.points || []).join(' ')
-  return [a.title, a.city, a.address, a.highlight, a.detail, points, skuNames]
+  const regions = regionText(a.regionIds)
+  return [a.title, a.city, regions, a.address, a.highlight, a.detail, points, skuNames]
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
@@ -72,6 +176,33 @@ export function searchActivities(keyword, category) {
     const okKey = terms.length === 0 || terms.every((t) => text.includes(t))
     return okCat && okKey
   })
+}
+
+export function createActivity(data) {
+  const activity = {
+    id: Date.now(),
+    soldCount: 0,
+    hasSku: false,
+    skus: [],
+    schedules: [],
+    ...(data || {}),
+    regionIds: normalizeRegionIds(data && data.regionIds)
+  }
+  activity.city = regionText(activity.regionIds, activity.city || '线上/全国')
+  db.activities.unshift(activity)
+  save()
+  return activity
+}
+
+export function updateActivity(id, data) {
+  const idx = db.activities.findIndex((a) => String(a.id) === String(id))
+  if (idx < 0) return null
+  const next = { ...db.activities[idx], ...(data || {}), id: db.activities[idx].id }
+  if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
+  next.city = regionText(next.regionIds, next.city || '线上/全国')
+  db.activities[idx] = next
+  save()
+  return next
 }
 
 export function getCategories() {
@@ -115,6 +246,57 @@ export function deleteCategory(id) {
   return { ok: true }
 }
 
+export function listContentPosts(options = {}) {
+  let rows = (get().contentPosts || []).slice()
+  if (options.type) rows = rows.filter((item) => item.type === options.type)
+  if (options.publishedOnly) rows = rows.filter((item) => item.status === 1)
+  return rows.sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
+}
+
+export function createContentPost(data) {
+  get()
+  const post = {
+    id: `CONTENT${Date.now()}`,
+    type: 'news',
+    title: '',
+    summary: '',
+    source: '',
+    publishedAt: new Date().toISOString().slice(0, 10),
+    coverImage: '',
+    originalUrl: '',
+    videoUrl: '',
+    content: '',
+    regionIds: [],
+    featured: false,
+    status: 1,
+    ...(data || {})
+  }
+  post.regionIds = normalizeRegionIds(post.regionIds)
+  if (!String(post.title || '').trim()) throw new Error('标题不能为空')
+  db.contentPosts.unshift(post)
+  save()
+  return post
+}
+
+export function updateContentPost(id, data) {
+  get()
+  const idx = db.contentPosts.findIndex((item) => String(item.id) === String(id))
+  if (idx < 0) return null
+  const next = { ...db.contentPosts[idx], ...(data || {}), id: db.contentPosts[idx].id }
+  if (!String(next.title || '').trim()) throw new Error('标题不能为空')
+  if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
+  db.contentPosts[idx] = next
+  save()
+  return next
+}
+
+export function deleteContentPost(id) {
+  get()
+  db.contentPosts = db.contentPosts.filter((item) => String(item.id) !== String(id))
+  save()
+  return { ok: true }
+}
+
 function findManager(id) {
   return db.managers.find((m) => String(m.id) === String(id)) || null
 }
@@ -140,7 +322,7 @@ export function scheduleDaysUntil(schedule) {
 }
 
 export function calcRefund(order) {
-  const activity = db.activities.find((a) => String(a.id) === String(order.activityId))
+  const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(order.activityId))
   if (!activity) return { can: false, ratio: 0, amount: 0, reason: '活动不存在' }
   if (['已核销', '待评价', '已完成', '已退款', '已取消'].includes(order.status)) {
     return { can: false, ratio: 0, amount: 0, reason: '当前状态不可退款' }
@@ -169,7 +351,7 @@ export function calcRefund(order) {
 }
 
 function releaseSchedule(order) {
-  const activity = db.activities.find((a) => String(a.id) === String(order.activityId))
+  const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(order.activityId))
   const schedule = activity && order.schedule ? activity.schedules.find((s) => s.id === order.schedule.id) : null
   if (schedule) {
     schedule.soldQuota = Math.max(0, (schedule.soldQuota || 0) - order.count)
@@ -188,7 +370,7 @@ function generateCommission(order) {
   if (!order.managerId) return
   const manager = findManager(order.managerId)
   if (!manager) return
-  const activity = db.activities.find((a) => String(a.id) === String(order.activityId))
+  const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(order.activityId))
   const rate = resolveRate(activity, manager)
   const amount = Number((order.payAmount * rate / 100).toFixed(2))
   order.commissionRate = rate
@@ -209,7 +391,7 @@ function generateCommission(order) {
 }
 
 export function createOrder(payload) {
-  const activity = db.activities.find((a) => String(a.id) === String(payload.activityId))
+  const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(payload.activityId))
   if (!activity) return null
   const limit = activity.limitPerUser || 99
   if (payload.count > limit) throw new Error(`每人限购${limit}份`)
@@ -634,6 +816,12 @@ export function createLive(data) {
     streamUrl: (data && data.streamUrl) || '',
     replayUrl: (data && data.replayUrl) || '',
     description: (data && data.description) || '',
+    memberPrice: Number((data && data.memberPrice) || 0),
+    originalPrice: Number((data && data.originalPrice) || 0),
+    lessonCount: Number((data && data.lessonCount) || 1),
+    duration: (data && data.duration) || '',
+    category: (data && data.category) || '视频课程',
+    coverImage: (data && data.coverImage) || '',
     activityId: (data && data.activityId != null && data.activityId !== '') ? Number(data.activityId) : null,
     viewers: Number((data && data.viewers) || 0),
     createdAt: new Date().toLocaleString('zh-CN', { hour12: false })
@@ -658,6 +846,47 @@ export function updateLive(id, data) {
 
 export function deleteLive(id) {
   db.lives = (db.lives || []).filter((l) => String(l.id) !== String(id))
+  save()
+  return { ok: true }
+}
+
+export function listProducts() {
+  return get().products || []
+}
+
+export function createProduct(data) {
+  const product = {
+    id: Date.now(),
+    soldCount: 0,
+    sellType: 'sku',
+    hasSku: false,
+    skus: [],
+    points: [],
+    stock: 0,
+    status: 1,
+    ...data,
+    regionIds: normalizeRegionIds(data && data.regionIds)
+  }
+  product.city = regionText(product.regionIds, product.city || '全国')
+  db.products = db.products || []
+  db.products.unshift(product)
+  save()
+  return product
+}
+
+export function updateProduct(id, data) {
+  const idx = (db.products || []).findIndex((p) => String(p.id) === String(id))
+  if (idx < 0) return null
+  const next = { ...db.products[idx], ...data, id: db.products[idx].id }
+  if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
+  next.city = regionText(next.regionIds, next.city || '全国')
+  db.products[idx] = next
+  save()
+  return db.products[idx]
+}
+
+export function deleteProduct(id) {
+  db.products = (db.products || []).filter((p) => String(p.id) !== String(id))
   save()
   return { ok: true }
 }
@@ -701,6 +930,30 @@ export function getUserProfile(userId) {
   const isManager = db.managers.some((m) => String(m.id) === String(userId)) || Boolean(user.isManager)
   const application = db.managerApplications.find((a) => String(a.name) === String(user.name)) || null
   return { user, cards, boundManager, addresses, coupons: db.coupons, isManager, application, bindLogs: db.bindings.filter((b) => b.customerId === userId) }
+}
+
+export function checkInCard(cardId, data = {}) {
+  const card = db.cards.find((item) => String(item.id) === String(cardId))
+  if (!card) throw new Error('计次卡不存在')
+  if (Number(card.remain || 0) <= 0) throw new Error('计次卡剩余次数不足')
+  card.attendanceRecords = Array.isArray(card.attendanceRecords) ? card.attendanceRecords : []
+  const sessionId = String(data.sessionId || '')
+  const existing = sessionId ? card.attendanceRecords.find((item) => String(item.id) === sessionId) : null
+  if (existing && existing.status === 'checked') throw new Error('本节课程已签到')
+  const record = existing || {
+    id: sessionId || `att${Date.now()}`,
+    date: data.date || new Date().toISOString().slice(0, 10),
+    time: data.time || '',
+    lesson: data.lesson || card.courseName || card.title,
+    teacher: data.teacher || card.teacher || '',
+    location: data.location || ''
+  }
+  record.status = 'checked'
+  record.checkedAt = new Date().toLocaleString('zh-CN', { hour12: false })
+  if (!existing) card.attendanceRecords.unshift(record)
+  card.remain = Math.max(0, Number(card.remain || 0) - 1)
+  save()
+  return card
 }
 
 export function bindCustomerByCodeOrId(userId, code, managerId, source) {

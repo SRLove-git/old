@@ -1,14 +1,15 @@
-/* 岁悦里 · Arco Design 设计令牌
- * 主色统一为暖陶土棕（与运营后台一致），语义色沿用 Arco 默认绿/橙/红。
- */
+/* 岁悦里 · 温暖、克制、适合银龄用户的视觉令牌 */
 page {
   /* 品牌主色 */
-  --color-primary: #c25e3d;
-  --color-primary-hover: #d07052;
-  --color-primary-active: #a64c2f;
-  --color-primary-light: #fde9df;
-  --color-primary-light-border: #f0bba6;
-  --color-primary-text: #9e4f2f;
+  --color-primary: #b98555;
+  --color-primary-hover: #c99867;
+  --color-primary-active: #94683f;
+  --color-primary-light: #f8efe5;
+  --color-primary-light-border: #ead4bd;
+  --color-primary-text: #79502f;
+  --color-coral: #e87863;
+  --color-sage: #7f9a83;
+  --color-ink: #26312f;
 
   /* 语义色 */
   --color-success: #00b42a;
@@ -21,13 +22,13 @@ page {
   --color-info-light: #e8f1fa;
 
   /* 中性色 */
-  --color-text-1: #24272b;
-  --color-text-2: #4e5969;
-  --color-text-3: #6f747b;
+  --color-text-1: #26312f;
+  --color-text-2: #505b58;
+  --color-text-3: #7a817f;
   --color-text-4: #c9cdd4;
-  --color-bg: #f5f6f8;
-  --color-fill: #f1f2f4;
-  --color-border: #e7e9ec;
+  --color-bg: #faf9f6;
+  --color-fill: #f3f1ec;
+  --color-border: #e9e5de;
 
   background: var(--color-bg);
   color: var(--color-text-1);
@@ -69,19 +70,10 @@ textarea {
   padding-bottom: 180rpx;
 }
 
-.large-mode {
-  font-size: 36rpx;
-}
-
-.large-mode .btn {
-  min-height: 108rpx;
-  font-size: 36rpx;
-}
-
 .card {
   background: #ffffff;
-  border-radius: 32rpx;
-  box-shadow: 0 6rpx 20rpx rgba(29, 33, 41, 0.06);
+  border-radius: 28rpx;
+  box-shadow: 0 10rpx 34rpx rgba(55, 44, 31, 0.06);
 }
 
 .btn {

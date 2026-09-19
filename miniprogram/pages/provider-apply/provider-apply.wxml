@@ -1,0 +1,48 @@
+<view class="provider-page">
+  <view class="apply-head">
+    <view class="head-mark">合作申请</view>
+    <view class="head-title">申请成为岁悦里服务商</view>
+    <view class="head-sub">请填写以下资料，我们会尽快与您联系</view>
+  </view>
+
+  <view class="form-card">
+    <view class="field">
+      <view class="field-label">主体类型<text>*</text></view>
+      <view class="type-options">
+        <view wx:for="{{typeOptions}}" wx:key="value" class="type-option {{form.type === item.value ? 'active' : ''}}" data-value="{{item.value}}" bindtap="selectType">
+          <view class="radio"><text wx:if="{{form.type === item.value}}"></text></view>
+          <view><view class="type-name">{{item.label}}</view><view class="type-tip">{{item.tip}}</view></view>
+        </view>
+      </view>
+      <view wx:if="{{errors.type}}" class="error">{{errors.type}}</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">名称（联系人）<text>*</text></view>
+      <input class="field-control" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="请输入姓名或联系人名称" />
+      <view wx:if="{{errors.name}}" class="error">{{errors.name}}</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">联系方式（手机号）<text>*</text></view>
+      <input class="field-control" type="number" maxlength="11" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="请输入11位手机号" />
+      <view wx:if="{{errors.phone}}" class="error">{{errors.phone}}</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">联系地址（公司地址）<text>*</text></view>
+      <textarea class="field-control textarea" value="{{form.address}}" data-field="address" bindinput="onInput" placeholder="请输入详细联系地址" maxlength="200" />
+      <view wx:if="{{errors.address}}" class="error">{{errors.address}}</view>
+    </view>
+
+    <view class="field last-field">
+      <view class="field-label">主营产品（服务）<text>*</text></view>
+      <textarea class="field-control textarea products" value="{{form.products}}" data-field="products" bindinput="onInput" placeholder="请简单介绍主营产品或可提供的服务" maxlength="500" />
+      <view class="count">{{form.products.length}}/500</view>
+      <view wx:if="{{errors.products}}" class="error">{{errors.products}}</view>
+    </view>
+  </view>
+
+  <view class="privacy-tip">提交即表示您同意平台工作人员通过上述联系方式与您沟通合作事宜</view>
+  <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">提交申请</button>
+</view>

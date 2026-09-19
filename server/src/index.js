@@ -32,6 +32,9 @@ app.get('/api/home', wrap(() => {
     banners: db.banners,
     categories: db.categories,
     activities: db.activities,
+    products: db.products || [],
+    regions: store.listRegions({ enabledOnly: true }),
+    contentPosts: store.listContentPosts({ publishedOnly: true }),
     config: db.config
   }
 }))
@@ -42,30 +45,35 @@ app.post('/api/categories', adminAuth, wrap((req) => store.createCategory(req.bo
 app.put('/api/categories/:id', adminAuth, wrap((req) => store.updateCategory(req.params.id, req.body)))
 app.delete('/api/categories/:id', adminAuth, wrap((req) => store.deleteCategory(req.params.id)))
 
+// 地区管理：历史关联不删除，停用后仅从前台筛选和新发布选项中隐藏
+app.get('/api/regions', wrap((req) => store.listRegions({ enabledOnly: req.query.enabled === '1' })))
+app.post('/api/regions', adminAuth, wrap((req) => store.createRegion(req.body)))
+app.put('/api/regions/:id', adminAuth, wrap((req) => store.updateRegion(req.params.id, req.body)))
+
+// 政务资讯与视频内容
+app.get('/api/content-posts', wrap((req) => store.listContentPosts({ type: req.query.type, publishedOnly: req.query.published === '1' })))
+app.get('/api/content-posts/:id', wrap((req) => store.listContentPosts().find((item) => String(item.id) === String(req.params.id))))
+app.post('/api/content-posts', adminAuth, wrap((req) => store.createContentPost(req.body)))
+app.put('/api/content-posts/:id', adminAuth, wrap((req) => store.updateContentPost(req.params.id, req.body)))
+app.delete('/api/content-posts/:id', adminAuth, wrap((req) => store.deleteContentPost(req.params.id)))
+
 // 活动/商品
 app.get('/api/activities', wrap((req) => store.searchActivities(req.query.keyword, req.query.category)))
 app.get('/api/activities/:id', wrap((req) => store.get().activities.find((a) => String(a.id) === String(req.params.id))))
-app.post('/api/activities', adminAuth, wrap((req) => {
-  const db = store.get()
-  const activity = { id: Date.now(), soldCount: 0, hasSku: false, skus: [], schedules: [], ...req.body }
-  db.activities.unshift(activity)
-  store.save()
-  return activity
-}))
-app.put('/api/activities/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  const idx = db.activities.findIndex((a) => String(a.id) === String(req.params.id))
-  if (idx < 0) return null
-  db.activities[idx] = { ...db.activities[idx], ...req.body, id: db.activities[idx].id }
-  store.save()
-  return db.activities[idx]
-}))
+app.post('/api/activities', adminAuth, wrap((req) => store.createActivity(req.body)))
+app.put('/api/activities/:id', adminAuth, wrap((req) => store.updateActivity(req.params.id, req.body)))
 app.delete('/api/activities/:id', adminAuth, wrap((req) => {
   const db = store.get()
   db.activities = db.activities.filter((a) => String(a.id) !== String(req.params.id))
   store.save()
   return { ok: true }
 }))
+
+// 商品
+app.get('/api/products', wrap(() => store.listProducts()))
+app.post('/api/products', adminAuth, wrap((req) => store.createProduct(req.body)))
+app.put('/api/products/:id', adminAuth, wrap((req) => store.updateProduct(req.params.id, req.body)))
+app.delete('/api/products/:id', adminAuth, wrap((req) => store.deleteProduct(req.params.id)))
 
 // Banner 管理
 app.get('/api/banners', wrap(() => store.get().banners))
@@ -191,6 +199,7 @@ app.get('/api/bindings', wrap(() => store.get().bindings))
 app.post('/api/bindings/unbind', adminAuth, wrap((req) => store.unbindCustomer(req.body.customerId, req.body.reason)))
 app.post('/api/bindings/rebind', adminAuth, wrap((req) => store.rebindCustomer(req.body.customerId, req.body.managerId, req.body.reason)))
 app.get('/api/users/:id', wrap((req) => store.getUserProfile(req.params.id)))
+app.post('/api/cards/:id/checkin', adminAuth, wrap((req) => store.checkInCard(req.params.id, req.body)))
 app.post('/api/customers/:id/bind', wrap((req) => store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)))
 app.post('/api/customers/:id/unbind', wrap((req) => store.unbindCustomerByUser(req.params.id, req.body.reason)))
 app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id)))

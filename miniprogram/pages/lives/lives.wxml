@@ -1,37 +1,47 @@
-<view class="page {{largeMode ? 'large-mode' : ''}}">
-  <view class="head">
-    <view class="title">私域直播</view>
-    <view class="sub">直播、预告、回放，不错过每一场</view>
+<view class="academy-page">
+  <view class="academy-hero">
+    <image src="/assets/event-academy.jpg" mode="aspectFill" />
+    <view class="hero-mask"></view>
+    <view class="hero-copy"><text class="hero-kicker">SUIYUELI ACADEMY</text><view class="hero-title">在家也能学点新鲜的</view><view class="hero-sub">名师视频课 · 随时随地反复看</view></view>
   </view>
 
-  <view wx:if="{{list.length > 0}}" class="live-list">
-    <view
-      wx:for="{{list}}"
-      wx:key="id"
-      class="live-card card"
-      data-id="{{item.id}}"
-      bindtap="goRoom"
-    >
-      <view class="live-cover" style="background: {{item.coverTone}}">
-        <text class="live-cover-emoji">{{item.cover}}</text>
-        <text class="live-badge {{item.statusCls}}">{{item.statusLabel}}</text>
-        <text wx:if="{{item.managerId}}" class="private-badge">私域</text>
+  <view class="benefit-row">
+    <view><text class="benefit-icon">✓</text><text>永久回看</text></view>
+    <view><text class="benefit-icon">✓</text><text>适老讲解</text></view>
+    <view><text class="benefit-icon">✓</text><text>购买后即学</text></view>
+  </view>
+
+  <view class="academy-tabs">
+    <view class="academy-tab {{activeTab === 'all' ? 'active' : ''}}" data-tab="all" bindtap="setTab">精品课程</view>
+    <view class="academy-tab {{activeTab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="setTab">我的课程</view>
+  </view>
+
+  <view wx:if="{{list.length > 0}}" class="course-list">
+    <view wx:for="{{list}}" wx:key="id" class="course-card" data-id="{{item.id}}" bindtap="goRoom">
+      <view class="course-cover">
+        <image src="{{item.coverImage}}" mode="aspectFill" />
+        <view class="cover-shade"></view>
+        <text class="course-type">{{item.courseType}}</text>
+        <text class="play-button">▶</text>
+        <text wx:if="{{item.purchased}}" class="owned-badge">已购买</text>
       </view>
-      <view class="live-body">
-        <view class="live-title">{{item.title}}</view>
-        <view class="live-host">🧑‍🏫 {{item.hostName}}</view>
-        <view class="live-time">🕒 {{item.startAt}} - {{item.endAt}}</view>
-        <view class="live-foot">
-          <text class="live-viewers">👀 {{item.viewers}} 人观看</text>
-          <text class="live-arrow">进入 ›</text>
+      <view class="course-body">
+        <view class="course-title">{{item.title}}</view>
+        <view class="course-desc">{{item.description}}</view>
+        <view class="course-meta"><text>{{item.lessonCount}}节课</text><text>{{item.duration}}</text><text>{{item.viewers}}人学习</text></view>
+        <view class="course-foot">
+          <view wx:if="{{item.purchased}}" class="continue-text">继续学习 <text>›</text></view>
+          <view wx:else><text class="price-symbol">¥</text><text class="course-price">{{item.memberPrice}}</text><text class="original-price">¥{{item.originalPrice}}</text></view>
+          <view class="course-buttons"><button wx:if="{{!item.purchased}}" class="course-cart" data-id="{{item.id}}" catchtap="addCourseCart">＋购物车</button><view class="course-action">{{item.purchased ? '进入课程' : '查看课程'}}</view></view>
         </view>
       </view>
     </view>
   </view>
 
   <view wx:else class="empty">
-    <view class="empty-emoji">📺</view>
-    <view class="empty-title">暂无直播</view>
-    <view class="empty-sub">稍后再来看看吧</view>
+    <view class="empty-icon">▣</view>
+    <view class="empty-title">{{activeTab === 'mine' ? '还没有购买课程' : '暂无课程'}}</view>
+    <view class="empty-sub">{{activeTab === 'mine' ? '去精品课程挑一门喜欢的吧' : '更多课程正在准备中'}}</view>
+    <button wx:if="{{activeTab === 'mine'}}" class="empty-button" data-tab="all" bindtap="setTab">看看精品课程</button>
   </view>
 </view>

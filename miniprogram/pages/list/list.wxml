@@ -1,100 +1,48 @@
-<view class="page">
-  <view class="search-input">
-    <text>🔍</text>
-    <input value="{{keyword}}" bindinput="onInput" placeholder="搜索活动名称或地点" />
-  </view>
-
-  <scroll-view scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
-    <view class="filter-row">
-      <view class="chip {{cat === 'all' ? 'active' : ''}}" data-id="all" bindtap="setCat">全部</view>
-      <view
-        wx:for="{{categories}}"
-        wx:key="id"
-        class="chip {{cat === item.id ? 'active' : ''}}"
-        data-id="{{item.id}}"
-        bindtap="setCat"
-      >{{item.name}}</view>
-    </view>
-  </scroll-view>
-
+<view class="offline-page">
   <view class="filter-bar">
-    <view class="filter-item {{region !== 'all' ? 'on' : ''}}" data-key="region" bindtap="toggleFilter">地区 ▾</view>
-    <view class="filter-item {{timeFilter !== 'all' ? 'on' : ''}}" data-key="time" bindtap="toggleFilter">时间 ▾</view>
-    <view class="filter-item {{statusFilter !== 'all' ? 'on' : ''}}" data-key="status" bindtap="toggleFilter">状态 ▾</view>
+    <view class="filter-item {{region !== 'all' ? 'on' : ''}}" data-key="region" bindtap="toggleFilter"><text>{{regionName}}</text><text class="filter-caret">◢</text></view>
+    <view class="filter-item {{timeFilter !== 'all' ? 'on' : ''}}" data-key="time" bindtap="toggleFilter"><text>{{timeName}}</text><text class="filter-caret">◢</text></view>
+    <view class="filter-item {{statusFilter !== 'all' ? 'on' : ''}}" data-key="status" bindtap="toggleFilter"><text>{{statusName}}</text><text class="filter-caret">◢</text></view>
   </view>
 
-  <scroll-view wx:if="{{activeFilter === 'region'}}" scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
-    <view class="filter-row">
-      <view class="chip {{region === 'all' ? 'active' : ''}}" data-id="all" bindtap="setRegion">全部地区</view>
-      <view
-        wx:for="{{cities}}"
-        wx:key="*this"
-        class="chip {{region === item ? 'active' : ''}}"
-        data-id="{{item}}"
-        bindtap="setRegion"
-      >{{item}}</view>
+  <view wx:if="{{activeFilter}}" class="filter-panel">
+    <view wx:if="{{activeFilter === 'region'}}" class="option-grid">
+      <view class="option {{region === 'all' ? 'active' : ''}}" data-id="all" data-name="地区" bindtap="setRegion">全部地区</view>
+      <view wx:for="{{cities}}" wx:key="id" class="option {{region === item.id ? 'active' : ''}}" data-id="{{item.id}}" data-name="{{item.name}}" bindtap="setRegion">{{item.name}}</view>
     </view>
-  </scroll-view>
-
-  <scroll-view wx:if="{{activeFilter === 'time'}}" scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
-    <view class="filter-row">
-      <view
-        wx:for="{{timeFilters}}"
-        wx:key="key"
-        class="chip {{timeFilter === item.key ? 'active' : ''}}"
-        data-id="{{item.key}}"
-        bindtap="setTimeFilter"
-      >{{item.name}}</view>
+    <view wx:elif="{{activeFilter === 'time'}}" class="option-grid">
+      <view wx:for="{{timeFilters}}" wx:key="key" class="option {{timeFilter === item.key ? 'active' : ''}}" data-id="{{item.key}}" data-name="{{item.shortName || item.name}}" bindtap="setTimeFilter">{{item.name}}</view>
     </view>
-  </scroll-view>
-
-  <scroll-view wx:if="{{activeFilter === 'status'}}" scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}">
-    <view class="filter-row">
-      <view
-        wx:for="{{statusFilters}}"
-        wx:key="key"
-        class="chip {{statusFilter === item.key ? 'active' : ''}}"
-        data-id="{{item.key}}"
-        bindtap="setStatusFilter"
-      >{{item.name}}</view>
+    <view wx:else class="option-grid">
+      <view wx:for="{{statusFilters}}" wx:key="key" class="option {{statusFilter === item.key ? 'active' : ''}}" data-id="{{item.key}}" data-name="{{item.shortName || item.name}}" bindtap="setStatusFilter">{{item.name}}</view>
     </view>
-  </scroll-view>
+  </view>
 
-  <view class="result">共 {{total}} 个活动</view>
-
-  <view wx:if="{{list.length > 0}}" class="activity-list">
-    <view
-      wx:for="{{list}}"
-      wx:key="id"
-      class="activity-card card"
-      data-id="{{item.id}}"
-      bindtap="goDetail"
-    >
-      <view class="cover" style="background: {{item.coverTone}}">
-        <text class="cover-emoji">{{item.cover}}</text>
-        <text class="status-badge {{item.status}}">{{item.statusLabel}}</text>
-        <text class="sold">{{item.soldCount}}人已报名</text>
-        <text wx:if="{{item.minGroup > 0}}" class="group">{{item.soldCount >= item.minGroup ? '已成团' : item.minGroup + '人成团'}}</text>
-      </view>
-      <view class="card-body">
-        <view class="card-title">{{item.title}}</view>
-        <view class="time-row">📅 {{item.scheduleDate}} {{item.scheduleWeekday}} {{item.scheduleTime}}</view>
-        <view class="addr-row">📍 {{item.address}}</view>
-        <view class="card-foot">
-          <view>
-            <text class="price">¥{{item.memberPrice}}</text>
-            <text class="member-label">会员价</text>
+  <view wx:if="{{groups.length}}" class="date-groups">
+    <view wx:for="{{groups}}" wx:key="key" wx:for-item="group" class="date-group">
+      <view class="date-heading"><text class="calendar-icon">▣</text><text>{{group.label}}</text></view>
+      <view wx:for="{{group.items}}" wx:key="id" class="activity-card" data-id="{{item.id}}" bindtap="goDetail">
+        <view class="card-main">
+          <view class="cover-wrap"><image class="cover-image" src="{{item.art}}" mode="aspectFill" /><text class="status-ribbon {{item.status}}">{{item.statusLabel}}</text></view>
+          <view class="card-copy">
+            <view class="card-title">{{item.title}}</view>
+            <view class="meta-line"><text class="meta-icon">◷</text><text>{{item.scheduleLine}}</text></view>
+            <view class="meta-line"><text class="meta-icon">⌖</text><text class="ellipsis">{{item.address || item.city + '集合点'}}</text></view>
           </view>
-          <button class="go" data-id="{{item.id}}" catchtap="goBooking">立即报名</button>
+        </view>
+        <view class="card-footer">
+          <view class="signup-info">
+            <view class="avatar-stack"><text wx:for="{{item.buyerAvatars}}" wx:key="time" class="mini-avatar">{{item.avatar}}</text><text class="mini-avatar more">•••</text></view>
+            <text class="signup-count">{{item.soldCount}}人已报名</text>
+          </view>
+          <view class="starting-price"><text class="price-dot">¥</text><text>{{item.memberPrice}}</text><text class="price-suffix">起</text></view>
+          <button class="signup-button {{item.status === 'full' || item.status === 'ended' ? 'disabled' : ''}}" data-id="{{item.id}}" catchtap="goBooking" disabled="{{item.status === 'full' || item.status === 'ended'}}">{{item.status === 'full' ? '已满' : item.status === 'ended' ? '已结束' : '立即报名'}}</button>
         </view>
       </view>
     </view>
   </view>
 
-  <view wx:else class="empty">
-    <view class="empty-emoji">🍃</view>
-    <view class="empty-title">没有找到相关活动</view>
-    <view class="empty-sub">换个关键词或筛选条件试试</view>
-    <button class="btn btn-primary" bindtap="clearFilter">清空筛选</button>
-  </view>
+  <view wx:else class="empty"><view class="empty-icon">⌕</view><view class="empty-title">没有找到相关线下活动</view><view class="empty-sub">换个地区、时间或状态试试</view><button class="reset-button" bindtap="clearFilter">清空筛选</button></view>
+
+  <button class="share-fab" open-type="share">↗</button>
 </view>

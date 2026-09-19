@@ -1,0 +1,32 @@
+<view class="cart-page">
+  <view wx:if="{{cart.length}}" class="cart-list">
+    <view wx:for="{{cart}}" wx:key="id" class="cart-item">
+      <view class="check {{item.selected ? 'active' : ''}}" data-id="{{item.id}}" bindtap="toggleItem">{{item.selected ? '✓' : ''}}</view>
+      <view class="cart-cover" data-id="{{item.id}}" bindtap="goItem">
+        <image wx:if="{{item.coverImage}}" src="{{item.coverImage}}" mode="aspectFill" />
+        <view wx:else class="emoji-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+        <text class="kind-label">{{item.kind === 'course' ? '视频课' : '活动'}}</text>
+      </view>
+      <view class="cart-info">
+        <view class="cart-title" data-id="{{item.id}}" bindtap="goItem">{{item.title}}</view>
+        <view class="cart-spec">{{item.skuName ? item.skuName + ' · ' : ''}}{{item.scheduleLabel}}</view>
+        <view class="cart-foot">
+          <view><text class="price-symbol">¥</text><text class="price">{{item.price}}</text></view>
+          <view wx:if="{{item.kind !== 'course'}}" class="stepper"><button data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">−</button><text>{{item.count}}</text><button data-id="{{item.id}}" data-delta="1" bindtap="changeCount">＋</button></view>
+          <text wx:else class="course-count">1 门</text>
+        </view>
+        <button class="remove" data-id="{{item.id}}" bindtap="removeItem">移除</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="empty-cart">
+    <view class="empty-icon">购</view><view class="empty-title">购物车还是空的</view><view class="empty-sub">把感兴趣的活动和课程先加进来吧</view><button bindtap="goBrowse">去逛逛</button>
+  </view>
+
+  <view wx:if="{{cart.length}}" class="settlement-bar">
+    <view class="select-all" bindtap="toggleAll"><view class="check {{allSelected ? 'active' : ''}}">{{allSelected ? '✓' : ''}}</view><text>全选</text></view>
+    <view class="total"><text>合计：</text><text class="total-price">¥{{total}}</text><text class="total-note">不含额外优惠</text></view>
+    <button class="checkout" loading="{{paying}}" bindtap="checkout">结算({{selectedCount}})</button>
+  </view>
+</view>

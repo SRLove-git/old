@@ -1,56 +1,62 @@
-<view class="page {{largeMode ? 'large-mode' : ''}}">
+<view class="course-page">
   <view wx:if="{{loading}}" class="loading">加载中…</view>
 
   <block wx:elif="{{live}}">
-    <view class="room-cover" style="background: {{live.coverTone}}">
-      <view class="room-title">{{live.title}}</view>
-      <view class="room-host">🧑‍🏫 {{live.hostName}}</view>
-      <view class="room-meta">{{live.startAt}} - {{live.endAt}} · 👀 {{live.viewers}} 人观看</view>
+    <view class="course-hero">
+      <image src="{{live.coverImage}}" mode="aspectFill" />
+      <view class="hero-shade"></view>
+      <view class="hero-info"><text class="course-type">{{live.courseType}}</text><view class="course-title">{{live.title}}</view><view class="course-teacher">主讲 · {{live.hostName}}</view></view>
     </view>
 
-    <view wx:if="{{live.status === 'live' && live.streamUrl}}" class="player-wrap">
-      <video class="player" src="{{live.streamUrl}}" autoplay controls></video>
-      <view class="player-tip">● 直播中</view>
+    <view wx:if="{{purchased && playableUrl}}" class="player-wrap">
+      <video class="player" src="{{playableUrl}}" controls enable-play-gesture show-center-play-btn></video>
+      <view class="player-tip">{{live.status === 'live' ? '● 直播中' : '已解锁 · 随时回看'}}</view>
     </view>
 
-    <view wx:elif="{{live.status === 'live'}}" class="state-box">
-      <view class="state-emoji">📡</view>
-      <view class="state-title">直播即将开始</view>
-      <view class="state-sub">主播正在准备中，请稍候</view>
+    <view wx:elif="{{!purchased}}" class="locked-player">
+      <view class="lock-icon">▣</view><view class="lock-title">购买课程后观看完整视频</view>
+      <view class="lock-sub">支持永久回看，可在“我的课程”中继续学习</view>
+      <button class="unlock-button" bindtap="buyCourse">¥{{live.memberPrice}} 立即解锁</button>
     </view>
 
     <view wx:elif="{{live.status === 'scheduled'}}" class="state-box">
-      <view class="state-emoji">⏰</view>
-      <view class="state-title">直播预告</view>
-      <view class="state-sub">{{countdown || live.startAt}}</view>
-      <button class="btn btn-primary remind-btn" bindtap="remind">开播提醒我</button>
+      <view class="state-icon">◷</view><view class="state-title">课程即将开播</view><view class="state-sub">{{countdown || live.startAt}}</view>
+      <button class="remind-button" bindtap="remind">开播提醒我</button>
     </view>
 
     <view wx:else class="state-box">
-      <view class="state-emoji">🎬</view>
-      <view class="state-title">本场直播已结束</view>
-      <view wx:if="{{live.replayUrl}}" class="state-sub">下方可观看回放</view>
-      <view wx:else class="state-sub">暂无回放</view>
+      <view class="state-icon">▶</view><view class="state-title">视频正在制作中</view><view class="state-sub">上线后会在“我的课程”中提醒你</view>
     </view>
 
-    <view wx:if="{{live.status === 'ended' && live.replayUrl}}" class="player-wrap">
-      <video class="player" src="{{live.replayUrl}}" controls></video>
-      <view class="player-tip">回放</view>
+    <view class="course-summary">
+      <view class="summary-main"><view><text class="price-symbol">¥</text><text class="price">{{live.memberPrice}}</text><text class="original">¥{{live.originalPrice}}</text></view><text wx:if="{{purchased}}" class="purchased-label">已购买</text></view>
+      <view class="summary-stats"><text>{{live.lessonCount}} 节内容</text><text>{{live.duration}}</text><text>{{live.viewers}} 人学习</text></view>
     </view>
 
-    <view class="card info-card">
-      <view class="info-title">直播简介</view>
-      <view class="info-desc">{{live.description || '暂无简介'}}</view>
-      <view wx:if="{{live.managerId}}" class="tag tag-primary">私域 · {{live.managerName || live.hostName}}</view>
-    </view>
-
-    <view wx:if="{{activity}}" class="card activity-card" bindtap="goActivity">
-      <view class="activity-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
-      <view class="activity-info">
-        <view class="activity-title">{{activity.title}}</view>
-        <view class="activity-price">¥{{activity.memberPrice}} 起</view>
-        <view class="activity-link">查看活动 ›</view>
+    <view class="section-card">
+      <view class="section-title">课程目录</view>
+      <view wx:for="{{lessons}}" wx:key="index" class="lesson-row">
+        <text class="lesson-number">{{index + 1 < 10 ? '0' + (index + 1) : index + 1}}</text>
+        <view class="lesson-info"><view class="lesson-title">{{item.title}}</view><view class="lesson-duration">{{item.duration}}</view></view>
+        <text class="lesson-state">{{purchased || index === 0 ? '▶' : '锁'}}</text>
       </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-title">课程介绍</view>
+      <view class="info-desc">{{live.description || '跟着老师循序渐进学习，每一节都讲得清楚、练得明白。'}}</view>
+      <view class="teacher-row"><view class="teacher-avatar">师</view><view><view class="teacher-name">{{live.hostName}}</view><view class="teacher-desc">岁悦里特邀讲师 · 适老化教学</view></view></view>
+    </view>
+
+    <view wx:if="{{activity}}" class="section-card activity-card" bindtap="goActivity">
+      <view class="activity-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
+      <view class="activity-info"><view class="activity-title">配套活动 · {{activity.title}}</view><view class="activity-price">会员价 ¥{{activity.memberPrice}}</view><view class="activity-link">查看活动 ›</view></view>
+    </view>
+
+    <view wx:if="{{!purchased}}" class="purchase-bar">
+      <view><text class="bar-label">会员价</text><text class="bar-price">¥{{live.memberPrice}}</text></view>
+      <button class="bar-cart" bindtap="addCart">加入购物车</button>
+      <button class="bar-button" bindtap="buyCourse">立即购买</button>
     </view>
   </block>
 </view>

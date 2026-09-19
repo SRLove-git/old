@@ -113,7 +113,7 @@ Page({
 
   selectSchedule(e) {
     const scheduleId = e.currentTarget.dataset.id
-    const schedule = this.data.activity.schedules.find((s) => s.id === scheduleId)
+    const schedule = (this.data.activity.schedules || []).find((s) => s.id === scheduleId)
     if (schedule && schedule.remaining <= 0) {
       wx.showToast({ title: '该时间段已满', icon: 'none' })
       return
@@ -134,7 +134,8 @@ Page({
   changeCount(e) {
     const delta = Number(e.currentTarget.dataset.delta)
     const activity = this.data.activity
-    const schedule = activity.schedules.find((s) => s.id === this.data.scheduleId) || activity.schedules[0]
+    const schedules = activity.schedules || []
+    const schedule = schedules.find((s) => s.id === this.data.scheduleId) || schedules[0]
     const limit = Math.min(activity.limitPerUser || 99, schedule ? schedule.remaining : 99)
     const next = this.data.count + delta
     const count = Math.min(limit, Math.max(1, next))
@@ -318,7 +319,7 @@ Page({
       }
       this.setData({ payOpen: false, payDone: true })
       setTimeout(() => {
-        wx.switchTab({ url: '/pages/appointments/appointments' })
+        wx.redirectTo({ url: '/pages/appointments/appointments' })
       }, 800)
     } catch (e) {
       wx.hideLoading()
@@ -347,7 +348,7 @@ Page({
       }
       this.setData({ payOpen: false, payDone: true })
       setTimeout(() => {
-        wx.switchTab({ url: '/pages/orders/orders' })
+        wx.redirectTo({ url: '/pages/orders/orders' })
       }, 800)
     } catch (e) {
       wx.hideLoading()
@@ -365,6 +366,6 @@ Page({
   },
 
   goAppointments() {
-    wx.switchTab({ url: '/pages/appointments/appointments' })
+    wx.redirectTo({ url: '/pages/appointments/appointments' })
   }
 })

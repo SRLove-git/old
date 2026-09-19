@@ -1,148 +1,120 @@
-<view class="page {{largeMode ? 'large-mode' : ''}}">
-  <view class="region-bar" bindtap="openCity">
-    <text class="region-icon">📍</text>
-    <text class="region-city">{{city}}</text>
-    <text class="region-arrow">▾</text>
-    <text class="region-tip">点击切换区域</text>
+<view class="home-page">
+  <view class="home-tools">
+    <view class="city-pill" bindtap="openCity"><text class="pin">⌖</text><text>{{city}}</text><text class="chevron">⌄</text></view>
+    <view class="search-box" bindtap="goList"><text class="search-icon">⌕</text><text class="search-placeholder">搜索活动、旅行、课程</text></view>
   </view>
 
-  <view class="home-top">
-    <view>
-      <view class="brand">岁悦里俱乐部</view>
-      <view class="slogan">和同龄人一起，玩得开心又省心</view>
+  <view class="hero" bindtap="goList">
+    <image class="hero-image" src="/assets/home-hero.jpg" mode="aspectFill" />
+    <view class="hero-shade"></view>
+    <view class="hero-copy">
+      <text class="hero-kicker">岁悦里 · 乐活俱乐部</text>
+      <view class="hero-title">把闲暇过成<text>闪亮日常</text></view>
+      <view class="hero-sub">和同龄人一起，看山河、学新知、交朋友</view>
+      <view class="hero-action">发现本周活动 <text>→</text></view>
     </view>
-    <button class="badge" bindtap="toggleLarge">大字</button>
+    <view class="hero-dots"><text></text><text></text><text></text></view>
   </view>
 
-  <swiper class="banner-swiper" indicator-dots autoplay circular interval="4000" duration="500">
-    <swiper-item wx:for="{{banners}}" wx:key="id">
-      <view class="banner-item" style="background: {{item.tone}}" data-cat="{{item.cat}}" bindtap="goBanner">
-        <view class="banner-text">
-          <view class="banner-text-title">{{item.title}}</view>
-          <view class="banner-text-sub">{{item.sub}}</view>
-        </view>
-        <text class="banner-emoji">{{item.emoji}}</text>
+  <view wx:if="{{newsPosts.length}}" class="home-content-section policy-section">
+    <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><text class="official-badge">权威来源</text></view>
+    <view class="policy-list">
+      <view wx:for="{{newsPosts}}" wx:key="id" class="policy-card" data-id="{{item.id}}" bindtap="goContent">
+        <image class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        <view class="policy-copy"><view class="policy-title">{{item.title}}</view><view class="policy-summary">{{item.summary}}</view><view class="policy-meta"><text>{{item.source}}</text><text>{{item.publishedAt}}</text></view></view>
       </view>
-    </swiper-item>
-  </swiper>
-
-  <view class="search-box" bindtap="goList">
-    <text>🔍</text>
-    <text class="search-placeholder">搜活动、旅行、课程</text>
-  </view>
-
-  <view class="live-entry card" bindtap="goLives">
-    <view class="live-entry-emoji">📺</view>
-    <view class="live-entry-text">
-      <view class="live-entry-title">私域直播</view>
-      <view class="live-entry-sub">{{liveHint}}</view>
     </view>
-    <text class="live-entry-arrow">›</text>
   </view>
 
-  <view class="section-title">按兴趣找活动</view>
+  <view wx:if="{{videoPosts.length}}" class="home-content-section video-section">
+    <view class="content-section-head"><view><view class="content-section-title">视频推荐</view><view class="content-section-en">FEATURED VIDEOS</view></view></view>
+    <scroll-view scroll-x class="video-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="video-row">
+        <view wx:for="{{videoPosts}}" wx:key="id" class="video-card" data-id="{{item.id}}" bindtap="goContent">
+          <view class="video-cover-wrap"><image class="video-cover" src="{{item.coverImage}}" mode="aspectFill" /><view class="video-play">▶</view><text class="video-label">视频</text></view>
+          <view class="video-title">{{item.title}}</view><view class="video-meta">{{item.source}} · {{item.publishedAt}}</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
   <view class="category-grid">
-    <view
-      wx:for="{{categories}}"
-      wx:key="id"
-      class="category-item"
-      data-id="{{item.id}}"
-      bindtap="goCategory"
-    >
-      <view class="category-emoji" style="background: {{item.color}}">{{item.emoji}}</view>
-      <text class="category-name">{{item.name}}</text>
+    <view wx:for="{{categories}}" wx:key="id" class="category-item" data-id="{{item.id}}" bindtap="goCategory">
+      <view class="category-icon tone-{{index}}">{{item.emoji}}</view><text class="category-name">{{item.name}}</text>
     </view>
   </view>
 
   <view class="member-card">
-    <view>
-      <view class="member-title">免费入会 · 领2张券</view>
-      <view class="member-sub">会员价更划算，本单最高省¥100</view>
+    <view class="member-top">
+      <view><view class="member-title">立即入会，享会员特权</view><view class="member-sub">免费加入 · 本单最高省 ¥100</view></view>
+      <button class="member-btn" bindtap="goProfile">立即入会</button>
     </view>
-    <button class="member-btn" bindtap="goProfile">立即入会</button>
-  </view>
-
-  <view class="home-coupons card">
-    <view class="home-coupons-title">入会即送</view>
-    <view class="home-coupons-list">
-      <view wx:for="{{coupons}}" wx:key="id" class="home-coupon">
-        <text class="home-coupon-value">¥{{item.value}}</text>
-        <text class="home-coupon-name">{{item.title}}</text>
+    <view class="coupon-row">
+      <view wx:for="{{coupons}}" wx:key="id" wx:if="{{index < 2}}" class="coupon-ticket">
+        <view><text class="coupon-value">{{item.value}}</text><text class="coupon-unit">元</text></view>
+        <text class="coupon-name">{{item.minAmount ? '满' + item.minAmount + '元使用' : '无门槛券'}}</text>
       </view>
     </view>
   </view>
 
-  <view class="section-head">
-    <text class="section-title">分类活动</text>
-    <view class="mode-toggle">
-      <text class="mode-item {{viewMode === 'recommend' ? 'on' : ''}}" data-mode="recommend" bindtap="setMode">推荐</text>
-      <text class="mode-item {{viewMode === 'latest' ? 'on' : ''}}" data-mode="latest" bindtap="setMode">最新</text>
+  <view class="editor-pick">
+    <view class="section-heading">
+      <view><view class="heading-cn">本周精选</view><view class="heading-en">WEEKLY PICKS</view></view>
+      <view class="heading-more" bindtap="goList">查看全部 <text>›</text></view>
+    </view>
+    <view wx:if="{{featured}}" class="feature-card" data-id="{{featured.id}}" bindtap="goDetail">
+      <view class="feature-photo">
+        <image src="{{featured.art}}" mode="aspectFill" /><view class="feature-tag">{{featured.city}} · {{featured.soldCount}}人已报名</view>
+      </view>
+      <view class="feature-body">
+        <view class="feature-title">{{featured.title}}</view>
+        <view class="feature-meta">{{featured.schedules[0].date}} {{featured.schedules[0].weekday}} · {{featured.highlight}}</view>
+        <view class="feature-foot">
+          <view><text class="price-symbol">¥</text><text class="feature-price">{{featured.memberPrice}}</text><text class="price-note"> 会员价</text></view>
+          <button class="book-button" data-id="{{featured.id}}" catchtap="goBooking">去报名</button>
+        </view>
+      </view>
     </view>
   </view>
 
-  <block wx:for="{{groups}}" wx:key="id" wx:for-item="group">
-    <view class="group-head">
-      <text class="group-emoji">{{group.emoji}}</text>
-      <text class="group-name">{{group.name}}</text>
-    </view>
-    <view class="activity-list">
-      <view
-        wx:for="{{group.activities}}"
-        wx:key="id"
-        class="activity-card card"
-        data-id="{{item.id}}"
-        bindtap="goDetail"
-      >
-        <view class="cover" style="background: {{item.coverTone}}">
-          <text class="cover-emoji">{{item.cover}}</text>
-          <text class="sold">{{item.soldCount}}人已报名</text>
-          <text wx:if="{{item.minGroup > 0}}" class="group">{{item.soldCount >= item.minGroup ? '已成团' : item.minGroup + '人成团'}}</text>
-        </view>
-        <view class="card-body">
-          <view class="card-title">{{item.title}}</view>
-          <view class="meta">📅 {{item.schedules[0].date}} {{item.schedules[0].weekday}} · 📍 {{item.city}}</view>
-          <view class="card-foot">
-            <view>
-              <text class="price">¥{{item.memberPrice}}</text>
-              <text class="member-label">会员价</text>
+  <block wx:for="{{groups}}" wx:key="id" wx:for-item="group" wx:for-index="groupIndex">
+    <view class="activity-section section-{{groupIndex}}">
+      <view class="section-heading">
+        <view><view class="heading-cn">{{group.name}}</view><view class="heading-en">{{group.english}}</view></view>
+        <view class="heading-more" data-id="{{group.id}}" bindtap="goMore">查看全部 <text>›</text></view>
+      </view>
+      <scroll-view scroll-x class="activity-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="activity-row">
+          <view wx:for="{{group.activities}}" wx:key="id" class="mini-card" data-id="{{item.id}}" bindtap="goDetail">
+            <view class="mini-cover"><image src="{{item.art}}" mode="aspectFill" /><text class="mini-city">{{item.city}}</text></view>
+            <view class="mini-body">
+              <view class="mini-title">{{item.title}}</view>
+              <view class="mini-date">{{item.schedules[0].date}} · {{item.schedules[0].time}}</view>
+              <view class="mini-foot"><text class="mini-price">¥{{item.memberPrice}}</text><button class="mini-arrow" data-id="{{item.id}}" catchtap="addCart">＋</button></view>
             </view>
-            <button class="go" data-id="{{item.id}}" catchtap="goBooking">立即报名</button>
           </view>
         </view>
-      </view>
-    </view>
-    <view class="more-btn" data-id="{{group.id}}" bindtap="goMore">
-      <text>查看更多</text>
-      <text class="more-arrow">›</text>
+      </scroll-view>
     </view>
   </block>
 
-  <view class="brand-footer card">
-    <view class="brand-logo">岁悦里</view>
-    <view class="brand-slogan">主理人贴心服务 · 平台靠谱保障</view>
-    <button class="footer-btn" bindtap="showService">长按添加小助理微信，拉您进活动群</button>
+  <view class="highlight-panel">
+    <view class="highlight-mark">岁悦里</view><view class="highlight-title">探索无限世界 · 共创有趣人生</view>
+    <view class="highlight-sub">每一次出发，都有熟悉的人和贴心的陪伴</view><button class="highlight-btn" bindtap="showService">联系小助理</button>
+  </view>
+
+  <view class="brand-footer">
+    <view class="brand-word">SUI YUE LI</view><view class="brand-slogan">和同龄人一起，玩得开心又省心</view>
     <view wx:if="{{filing.companyName || filing.icp || filing.police}}" class="filing">
-      <text wx:if="{{filing.companyName}}" class="filing-text">{{filing.companyName}}</text>
-      <text wx:if="{{filing.icp}}" class="filing-text">{{filing.icp}}</text>
-      <text wx:if="{{filing.police}}" class="filing-text">{{filing.police}}</text>
+      <text wx:if="{{filing.companyName}}" class="filing-text">{{filing.companyName}}</text><text wx:if="{{filing.icp}}" class="filing-text">{{filing.icp}}</text><text wx:if="{{filing.police}}" class="filing-text">{{filing.police}}</text>
     </view>
   </view>
 
+  <button class="service-fab" bindtap="showService">•••</button>
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
       <view class="city-sheet-title">选择所在区域</view>
-      <view class="city-list">
-        <view
-          wx:for="{{cities}}"
-          wx:key="*this"
-          class="city-item {{city === item ? 'selected' : ''}}"
-          data-city="{{item}}"
-          bindtap="selectCity"
-        >
-          <text>{{item}}</text>
-          <text wx:if="{{city === item}}" class="city-check">✓</text>
-        </view>
-      </view>
+      <view class="city-list"><view wx:for="{{cities}}" wx:key="*this" class="city-item {{city === item ? 'selected' : ''}}" data-city="{{item}}" bindtap="selectCity"><text>{{item}}</text><text wx:if="{{city === item}}" class="city-check">✓</text></view></view>
       <button class="btn btn-ghost btn-block" bindtap="closeCity">取消</button>
     </view>
   </view>

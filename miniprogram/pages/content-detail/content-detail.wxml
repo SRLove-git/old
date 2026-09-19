@@ -1,0 +1,14 @@
+<view wx:if="{{post}}" class="content-page">
+  <view class="type-tag">{{post.type === 'video' ? '视频推荐' : '政策资讯'}}</view>
+  <view class="content-title">{{post.title}}</view>
+  <view class="content-meta"><text>{{post.source || '来源待补充'}}</text><text>{{post.publishedAt}}</text></view>
+
+  <video wx:if="{{post.type === 'video' && post.videoUrl}}" class="content-video" src="{{post.videoUrl}}" poster="{{post.coverImage}}" controls enable-play-gesture show-center-play-btn></video>
+  <image wx:else class="content-cover" src="{{post.coverImage}}" mode="aspectFill" />
+
+  <view wx:if="{{post.summary}}" class="content-summary">{{post.summary}}</view>
+  <text class="content-body" user-select>{{post.content}}</text>
+
+  <view wx:if="{{post.type === 'news'}}" class="source-note">政策、申报和办事要求请以政府主管部门最新原文为准。</view>
+  <button wx:if="{{post.originalUrl}}" class="original-button" bindtap="copyOriginal">复制政府原文链接</button>
+</view>

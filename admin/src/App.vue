@@ -8,6 +8,7 @@ import {
   IconFile,
   IconUserGroup,
   IconGift,
+  IconArchive,
   IconMessage,
   IconImage,
   IconUserAdd,
@@ -19,7 +20,8 @@ import {
   IconSettings,
   IconMenuFold,
   IconMenuUnfold,
-  IconPlus
+  IconPlus,
+  IconLocation
 } from '@arco-design/web-vue/es/icon'
 import { api } from './api.js'
 
@@ -31,12 +33,15 @@ const collapsed = ref(false)
 const nav = [
   { key: 'dashboard', name: '数据看板', icon: IconDashboard },
   { key: 'activities', name: '活动管理', icon: IconCalendar },
+  { key: 'products', name: '商品管理', icon: IconArchive },
   { key: 'categories', name: '分类管理', icon: IconTags },
+  { key: 'regions', name: '地区管理', icon: IconLocation },
   { key: 'orders', name: '订单/退款', icon: IconFile },
   { key: 'customers', name: '用户管理', icon: IconUserGroup },
   { key: 'coupons', name: '优惠券管理', icon: IconGift },
   { key: 'reviews', name: '评价管理', icon: IconMessage },
   { key: 'banners', name: 'Banner管理', icon: IconImage },
+  { key: 'content', name: '资讯视频', icon: IconFile },
   { key: 'applications', name: '主理人审核', icon: IconUserAdd },
   { key: 'managers', name: '主理人管理', icon: IconIdcard },
   { key: 'bindings', name: '归属管理', icon: IconLink },
@@ -58,6 +63,9 @@ const withdraws = ref([])
 const coupons = ref([])
 const reviews = ref([])
 const banners = ref([])
+const products = ref([])
+const regions = ref([])
+const contentPosts = ref([])
 const logs = ref([])
 const config = ref({})
 
@@ -68,6 +76,10 @@ const orderStatuses = ['全部', '待付款', '待发货', '待收货', '待评�
 const activityForm = ref(null)
 const activitySchedulesJson = ref('')
 const activitySkusJson = ref('')
+const productForm = ref(null)
+const regionForm = ref(null)
+const contentForm = ref(null)
+const productSkusJson = ref('')
 const couponForm = ref(null)
 const bannerForm = ref(null)
 const customerForm = ref(null)
@@ -79,7 +91,7 @@ const adjustReason = ref('')
 
 const categories = ref({})
 const categoryForm = ref(null)
-const categoryTypes = { activity: '活动', news: '资讯', video: '视频' }
+const categoryTypes = { activity: '活动', product: '商品', news: '资讯', video: '视频' }
 const couponTypes = { 1: '无门槛', 2: '满减', 3: '品类券', 4: '指定商品券' }
 const bindSource = { 1: '扫码', 2: '链接', 3: '邀请码', 4: '手动变更' }
 
@@ -92,6 +104,29 @@ const categoryList = computed(() =>
 const categoryOptions = computed(() =>
   categoryList.value.map((c) => ({ label: c.name, value: c.id }))
 )
+const productCategoryOptions = computed(() =>
+  categoryList.value
+    .filter((c) => c.type === 'product')
+    .map((c) => ({ label: c.name, value: c.id }))
+)
+const enabledRegionOptions = computed(() =>
+  regions.value
+    .filter((region) => region.enabled !== false)
+    .sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
+    .map((region) => ({ label: region.name, value: String(region.id) }))
+)
+
+function regionNames(record) {
+  const ids = Array.isArray(record && record.regionIds) ? record.regionIds.map(String) : []
+  const names = ids.map((id) => regions.value.find((region) => String(region.id) === id)?.name).filter(Boolean)
+  return names.length ? names.join('、') : (record && record.city) || '线上/全国'
+}
+
+function inferRegionIds(record) {
+  if (Array.isArray(record && record.regionIds)) return record.regionIds.map(String)
+  const city = String((record && record.city) || '')
+  return regions.value.filter((region) => city.split(/[、,，/]/).includes(region.name)).map((region) => String(region.id))
+}
 const managerOptions = computed(() =>
   managers.value.map((m) => ({ label: m.name, value: String(m.id) }))
 )
@@ -102,7 +137,12 @@ const couponTypeOptions = Object.keys(couponTypes).map((k) => ({
 const orderStatusOptions = orderStatuses.map((s) => ({ label: s, value: s }))
 const contentTypeOptions = [
   { label: '活动', value: 'activity' },
+  { label: '商品', value: 'product' },
   { label: '资讯', value: 'news' },
+  { label: '视频', value: 'video' }
+]
+const postTypeOptions = [
+  { label: '政策资讯', value: 'news' },
   { label: '视频', value: 'video' }
 ]
 const publishOptions = [
@@ -191,9 +231,34 @@ const activityColumns = [
   { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '标题', dataIndex: 'title', ellipsis: true, tooltip: true },
   { title: '分类', slotName: 'category', width: 110 },
-  { title: '城市', dataIndex: 'city', width: 100 },
+  { title: '适用地区', slotName: 'regions', width: 180 },
   { title: '会员价', slotName: 'price', align: 'right', width: 110 },
   { title: '已报名', dataIndex: 'soldCount', align: 'right', width: 90 },
+  { title: '状态', slotName: 'status', width: 90 },
+  { title: '操作', slotName: 'actions', width: 140 }
+]
+const productColumns = [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: '标题', dataIndex: 'title', ellipsis: true, tooltip: true },
+  { title: '分类', slotName: 'category', width: 110 },
+  { title: '适用地区', slotName: 'regions', width: 180 },
+  { title: '会员价', slotName: 'price', align: 'right', width: 110 },
+  { title: '销量', dataIndex: 'soldCount', align: 'right', width: 90 },
+  { title: '库存', dataIndex: 'stock', align: 'right', width: 90 },
+  { title: '状态', slotName: 'status', width: 90 },
+  { title: '操作', slotName: 'actions', width: 140 }
+]
+const regionColumns = [
+  { title: '地区名称', dataIndex: 'name' },
+  { title: '排序', dataIndex: 'sort', width: 100 },
+  { title: '前台状态', slotName: 'status', width: 120 },
+  { title: '操作', slotName: 'actions', width: 180 }
+]
+const contentColumns = [
+  { title: '类型', slotName: 'type', width: 100 },
+  { title: '标题', dataIndex: 'title', ellipsis: true, tooltip: true },
+  { title: '来源', dataIndex: 'source', width: 180 },
+  { title: '发布日期', dataIndex: 'publishedAt', width: 120 },
   { title: '状态', slotName: 'status', width: 90 },
   { title: '操作', slotName: 'actions', width: 140 }
 ]
@@ -308,8 +373,10 @@ async function load() {
   error.value = ''
   try {
     categories.value = await api.get('/categories')
+    regions.value = await api.get('/regions')
     if (view.value === 'dashboard') stats.value = await api.get('/stats/dashboard')
     if (view.value === 'activities') activities.value = await api.get('/activities')
+    if (view.value === 'products') products.value = await api.get('/products')
     if (view.value === 'orders') orders.value = await api.get('/orders')
     if (view.value === 'customers') {
       customers.value = await api.get('/customers')
@@ -318,6 +385,7 @@ async function load() {
     if (view.value === 'coupons') coupons.value = await api.get('/coupons')
     if (view.value === 'reviews') reviews.value = await api.get('/reviews')
     if (view.value === 'banners') banners.value = await api.get('/banners')
+    if (view.value === 'content') contentPosts.value = await api.get('/content-posts')
     if (view.value === 'applications') applications.value = await api.get('/manager-applications')
     if (view.value === 'managers') managers.value = await api.get('/managers')
     if (view.value === 'bindings') {
@@ -340,6 +408,9 @@ async function load() {
       }
       if (config.value.managerApplyFee === undefined) {
         config.value.managerApplyFee = 0
+      }
+      if (!config.value.brand) {
+        config.value.brand = { slogan: '和同龄人一起，玩得开心又省心' }
       }
     }
   } catch (e) {
@@ -406,7 +477,7 @@ function submitReason() {
 const filteredActivities = computed(() => {
   const k = kw.value.trim()
   return activities.value.filter((a) => {
-    const text = [a.title, a.city, a.address, a.highlight, a.detail, (a.points || []).join(' ')].filter(Boolean).join(' ')
+    const text = [a.title, a.city, regionNames(a), a.address, a.highlight, a.detail, (a.points || []).join(' ')].filter(Boolean).join(' ')
     return fuzzyMatch(text, k)
   })
 })
@@ -429,8 +500,8 @@ const filteredCommissions = computed(() => {
 
 function openActivity(a) {
   activityForm.value = a
-    ? { ...a, sellType: a.sellType || 'date' }
-    : { title: '', category: 1, city: '北京', address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, schedules: [], skus: [], points: [], detail: '' }
+    ? { ...a, regionIds: inferRegionIds(a), sellType: a.sellType || 'date' }
+    : { title: '', category: 1, city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, schedules: [], skus: [], points: [], detail: '' }
   activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
@@ -446,6 +517,8 @@ function saveActivity() {
     return
   }
   form.hasSku = form.sellType === 'sku' || (Array.isArray(form.skus) && form.skus.length > 0)
+  form.regionIds = (form.regionIds || []).map(String)
+  form.city = regionNames(form)
   doAction(async () => {
     if (form.id) await api.put(`/activities/${form.id}`, form)
     else await api.post('/activities', form)
@@ -456,6 +529,85 @@ function saveActivity() {
 function removeActivity(id) {
   confirmDanger('确定删除该活动？删除后不可恢复。', () =>
     doAction(() => api.del(`/activities/${id}`), '活动已删除')
+  )
+}
+
+function openProduct(p) {
+  productForm.value = p
+    ? { ...p, regionIds: inferRegionIds(p) }
+    : { title: '', category: 5, city: '全国', regionIds: [], price: 0, memberPrice: 0, originalPrice: 0, soldCount: 0, stock: 0, highlight: '', points: [], detail: '', cover: '🛍️', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', sellType: 'sku', hasSku: false, skus: [], status: 1 }
+  productSkusJson.value = p && p.skus ? JSON.stringify(p.skus, null, 2) : '[]'
+}
+
+function saveProduct() {
+  const form = { ...productForm.value }
+  try {
+    form.skus = JSON.parse(productSkusJson.value || '[]')
+  } catch (e) {
+    error.value = 'SKU JSON 格式错误'
+    Message.error('SKU JSON 格式错误')
+    return
+  }
+  form.hasSku = Array.isArray(form.skus) && form.skus.length > 0
+  form.regionIds = (form.regionIds || []).map(String)
+  form.city = regionNames(form)
+  doAction(async () => {
+    if (form.id) await api.put(`/products/${form.id}`, form)
+    else await api.post('/products', form)
+    productForm.value = null
+  }, '商品已保存')
+}
+
+function removeProduct(id) {
+  confirmDanger('确定删除该商品？删除后不可恢复。', () =>
+    doAction(() => api.del(`/products/${id}`), '商品已删除')
+  )
+}
+
+function openRegion(region) {
+  regionForm.value = region ? { ...region } : { name: '', sort: (regions.value.length + 1) * 10, enabled: true }
+}
+
+function saveRegion() {
+  const form = { ...regionForm.value }
+  if (!String(form.name || '').trim()) {
+    Message.error('请输入地区名称')
+    return
+  }
+  doAction(async () => {
+    if (form.id) await api.put(`/regions/${form.id}`, form)
+    else await api.post('/regions', form)
+    regionForm.value = null
+  }, '地区已保存')
+}
+
+function toggleRegion(region) {
+  const enabled = region.enabled === false
+  doAction(() => api.put(`/regions/${region.id}`, { enabled }), enabled ? '地区已启用' : '地区已停用')
+}
+
+function openContent(post) {
+  contentForm.value = post
+    ? { ...post, regionIds: inferRegionIds(post) }
+    : { type: 'news', title: '', summary: '', source: '', publishedAt: new Date().toISOString().slice(0, 10), coverImage: '', originalUrl: '', videoUrl: '', content: '', regionIds: [], featured: false, status: 1 }
+}
+
+function saveContent() {
+  const form = { ...contentForm.value, regionIds: (contentForm.value.regionIds || []).map(String) }
+  if (!String(form.title || '').trim()) {
+    Message.error('请输入标题')
+    return
+  }
+  doAction(async () => {
+    if (form.id) await api.put(`/content-posts/${form.id}`, form)
+    else await api.post('/content-posts', form)
+    contentForm.value = null
+  }, '内容已保存')
+}
+
+function removeContent(id) {
+  confirmDanger('确定删除这条内容？删除后不可恢复。', () =>
+    doAction(() => api.del(`/content-posts/${id}`), '内容已删除')
   )
 }
 
@@ -762,6 +914,7 @@ function exportCsv(filename, rows) {
                 size="middle"
               >
                 <template #category="{ record }"><a-tag color="arcoblue">{{ catName(record.category) }}</a-tag></template>
+                <template #regions="{ record }">{{ regionNames(record) }}</template>
                 <template #price="{ record }"><span class="num">¥{{ record.memberPrice }}</span></template>
                 <template #status="{ record }">
                   <a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag>
@@ -777,6 +930,58 @@ function exportCsv(filename, rows) {
             <a-button type="primary" shape="round" class="fab" @click="openActivity(null)">
               <template #icon><IconPlus /></template>
               新建活动
+            </a-button>
+          </section>
+
+          <section v-if="view === 'products'">
+            <a-card :bordered="false">
+              <a-table
+                :columns="productColumns"
+                :data="products"
+                :pagination="false"
+                row-key="id"
+                size="middle"
+              >
+                <template #category="{ record }"><a-tag color="arcoblue">{{ catName(record.category) }}</a-tag></template>
+                <template #regions="{ record }">{{ regionNames(record) }}</template>
+                <template #price="{ record }"><span class="num">¥{{ record.memberPrice }}</span></template>
+                <template #status="{ record }">
+                  <a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag>
+                </template>
+                <template #actions="{ record }">
+                  <a-space :size="0">
+                    <a-button type="text" size="small" @click="openProduct(record)">编辑</a-button>
+                    <a-button type="text" status="danger" size="small" @click="removeProduct(record.id)">删除</a-button>
+                  </a-space>
+                </template>
+              </a-table>
+            </a-card>
+            <a-button type="primary" shape="round" class="fab" @click="openProduct(null)">
+              <template #icon><IconPlus /></template>
+              新建商品
+            </a-button>
+          </section>
+
+          <section v-if="view === 'regions'">
+            <a-alert type="info" class="toolbar">
+              停用地区后，前台不再显示该地区筛选，新发布内容也不能选择；历史活动、商品和订单关联会保留。
+            </a-alert>
+            <a-card :bordered="false">
+              <a-table :columns="regionColumns" :data="regions" :pagination="false" row-key="id">
+                <template #status="{ record }">
+                  <a-tag :color="record.enabled !== false ? 'green' : 'gray'">{{ record.enabled !== false ? '已启用' : '已停用' }}</a-tag>
+                </template>
+                <template #actions="{ record }">
+                  <a-space :size="0">
+                    <a-button type="text" size="small" @click="openRegion(record)">编辑</a-button>
+                    <a-button type="text" size="small" @click="toggleRegion(record)">{{ record.enabled !== false ? '停用' : '启用' }}</a-button>
+                  </a-space>
+                </template>
+              </a-table>
+            </a-card>
+            <a-button type="primary" shape="round" class="fab" @click="openRegion(null)">
+              <template #icon><IconPlus /></template>
+              新增地区
             </a-button>
           </section>
 
@@ -906,6 +1111,23 @@ function exportCsv(filename, rows) {
               <template #icon><IconPlus /></template>
               新建 Banner
             </a-button>
+          </section>
+
+          <section v-if="view === 'content'">
+            <a-alert type="info" class="toolbar">转载政府信息时请填写准确来源与原文链接，正文不要改动政策口径。</a-alert>
+            <a-card :bordered="false">
+              <a-table :columns="contentColumns" :data="contentPosts" :pagination="false" row-key="id">
+                <template #type="{ record }"><a-tag :color="record.type === 'video' ? 'purple' : 'arcoblue'">{{ record.type === 'video' ? '视频' : '政策资讯' }}</a-tag></template>
+                <template #status="{ record }"><a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag></template>
+                <template #actions="{ record }">
+                  <a-space :size="0">
+                    <a-button type="text" size="small" @click="openContent(record)">编辑</a-button>
+                    <a-button type="text" status="danger" size="small" @click="removeContent(record.id)">删除</a-button>
+                  </a-space>
+                </template>
+              </a-table>
+            </a-card>
+            <a-button type="primary" shape="round" class="fab" @click="openContent(null)"><template #icon><IconPlus /></template>发布内容</a-button>
           </section>
 
           <section v-if="view === 'applications'">
@@ -1095,6 +1317,14 @@ function exportCsv(filename, rows) {
               </a-form>
             </a-card>
 
+            <a-card title="品牌信息" :bordered="false" class="config-card">
+              <a-form :model="config" layout="vertical">
+                <a-form-item label="首页口号">
+                  <a-input v-model="config.brand.slogan" placeholder="例如：和同龄人一起，玩得开心又省心" />
+                </a-form-item>
+              </a-form>
+            </a-card>
+
             <a-card title="助理人信息" :bordered="false" class="config-card">
               <a-form :model="config" layout="vertical">
                 <a-form-item label="助理人昵称"><a-input v-model="config.assistant.name" placeholder="例如：小助理" /></a-form-item>
@@ -1133,7 +1363,7 @@ function exportCsv(filename, rows) {
       <a-form-item label="标题"><a-input v-model="activityForm.title" /></a-form-item>
       <a-row :gutter="12">
         <a-col :span="12"><a-form-item label="分类"><a-select v-model="activityForm.category" :options="categoryOptions" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="城市"><a-input v-model="activityForm.city" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="适用地区（可多选）"><a-select v-model="activityForm.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示线上/全国" /></a-form-item></a-col>
       </a-row>
       <a-form-item label="地址"><a-input v-model="activityForm.address" /></a-form-item>
       <a-row :gutter="12">
@@ -1154,6 +1384,60 @@ function exportCsv(filename, rows) {
     <template #footer>
       <a-button @click="activityForm = null">取消</a-button>
       <a-button type="primary" @click="saveActivity">保存</a-button>
+    </template>
+  </a-modal>
+
+  <a-modal
+    v-if="productForm"
+    :visible="true"
+    :title="productForm.id ? '编辑商品' : '新建商品'"
+    :width="560"
+    @cancel="productForm = null"
+  >
+    <a-form :model="productForm" layout="vertical">
+      <a-form-item label="标题"><a-input v-model="productForm.title" /></a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="分类"><a-select v-model="productForm.category" :options="productCategoryOptions" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="库存"><a-input-number v-model="productForm.stock" :min="0" style="width: 100%" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="适用地区（可多选）">
+        <a-select v-model="productForm.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示全国/不限制地区" />
+      </a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="8"><a-form-item label="会员价"><a-input-number v-model="productForm.memberPrice" :min="0" style="width: 100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="非会员价"><a-input-number v-model="productForm.price" :min="0" style="width: 100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="原价"><a-input-number v-model="productForm.originalPrice" :min="0" style="width: 100%" /></a-form-item></a-col>
+      </a-row>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="封面 emoji"><a-input v-model="productForm.cover" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="封面渐变"><a-input v-model="productForm.coverTone" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="亮点"><a-input v-model="productForm.highlight" /></a-form-item>
+      <a-form-item label="状态"><a-select v-model="productForm.status" :options="publishOptions" /></a-form-item>
+      <a-form-item label="SKU JSON（可选，高级）"><a-textarea v-model="productSkusJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
+      <a-form-item label="详情"><a-textarea v-model="productForm.detail" :auto-size="{ minRows: 2, maxRows: 6 }" /></a-form-item>
+    </a-form>
+    <template #footer>
+      <a-button @click="productForm = null">取消</a-button>
+      <a-button type="primary" @click="saveProduct">保存</a-button>
+    </template>
+  </a-modal>
+
+  <a-modal
+    v-if="regionForm"
+    :visible="true"
+    :title="regionForm.id ? '编辑地区' : '新增地区'"
+    :width="440"
+    @cancel="regionForm = null"
+  >
+    <a-form :model="regionForm" layout="vertical">
+      <a-form-item label="地区名称" required><a-input v-model="regionForm.name" placeholder="例如：佛山禅城" /></a-form-item>
+      <a-form-item label="显示排序"><a-input-number v-model="regionForm.sort" :min="0" style="width: 100%" /></a-form-item>
+      <a-form-item label="前台显示"><a-switch v-model="regionForm.enabled" /></a-form-item>
+    </a-form>
+    <template #footer>
+      <a-button @click="regionForm = null">取消</a-button>
+      <a-button type="primary" @click="saveRegion">保存</a-button>
     </template>
   </a-modal>
 
@@ -1203,6 +1487,36 @@ function exportCsv(filename, rows) {
       <a-button @click="couponForm = null">取消</a-button>
       <a-button type="primary" @click="saveCoupon">保存</a-button>
     </template>
+  </a-modal>
+
+  <a-modal
+    v-if="contentForm"
+    :visible="true"
+    :title="contentForm.id ? '编辑资讯/视频' : '发布资讯/视频'"
+    :width="680"
+    @cancel="contentForm = null"
+  >
+    <a-form :model="contentForm" layout="vertical">
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="内容类型"><a-select v-model="contentForm.type" :options="postTypeOptions" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="发布日期"><a-input v-model="contentForm.publishedAt" placeholder="YYYY-MM-DD" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="标题" required><a-input v-model="contentForm.title" /></a-form-item>
+      <a-form-item label="摘要"><a-textarea v-model="contentForm.summary" :auto-size="{ minRows: 2, maxRows: 4 }" /></a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="发布来源"><a-input v-model="contentForm.source" placeholder="例如：广州市人民政府" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="原文链接"><a-input v-model="contentForm.originalUrl" placeholder="政府官网原文地址" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="封面图片地址"><a-input v-model="contentForm.coverImage" placeholder="例如：/assets/event-local.jpg" /></a-form-item>
+      <a-form-item v-if="contentForm.type === 'video'" label="视频地址"><a-input v-model="contentForm.videoUrl" placeholder="HTTPS 视频或 m3u8 地址" /></a-form-item>
+      <a-form-item label="正文/视频说明"><a-textarea v-model="contentForm.content" :auto-size="{ minRows: 5, maxRows: 12 }" /></a-form-item>
+      <a-form-item label="适用地区（可多选）"><a-select v-model="contentForm.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示全部地区" /></a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="首页推荐"><a-switch v-model="contentForm.featured" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="状态"><a-select v-model="contentForm.status" :options="publishOptions" /></a-form-item></a-col>
+      </a-row>
+    </a-form>
+    <template #footer><a-button @click="contentForm = null">取消</a-button><a-button type="primary" @click="saveContent">保存</a-button></template>
   </a-modal>
 
   <a-modal

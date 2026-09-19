@@ -5,13 +5,18 @@
     "pages/live-room/live-room",
     "pages/list/list",
     "pages/detail/detail",
+    "pages/content-detail/content-detail",
+    "pages/merchant-shop/merchant-shop",
     "pages/booking/booking",
     "pages/appointments/appointments",
+    "pages/cart/cart",
+    "pages/card-attendance/card-attendance",
     "pages/order-detail/order-detail",
     "pages/orders/orders",
     "pages/profile/profile",
     "pages/coupons/coupons",
     "pages/participants/participants",
+    "pages/provider-apply/provider-apply",
     "pages/manager-apply/manager-apply",
     "pages/manager/manager",
     "pages/member-code/member-code"
@@ -20,13 +25,13 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "岁悦里俱乐部",
-    "backgroundColor": "#f5f6f8",
+    "backgroundColor": "#faf9f6",
     "backgroundTextStyle": "light"
   },
   "tabBar": {
     "custom": true,
     "color": "#6f747b",
-    "selectedColor": "#c25e3d",
+    "selectedColor": "#b98555",
     "backgroundColor": "#ffffff",
     "list": [
       {
@@ -35,15 +40,15 @@
       },
       {
         "pagePath": "pages/list/list",
-        "text": "找活动"
+        "text": "全部活动"
       },
       {
-        "pagePath": "pages/appointments/appointments",
-        "text": "我的预约"
+        "pagePath": "pages/lives/lives",
+        "text": "线上学堂"
       },
       {
         "pagePath": "pages/profile/profile",
-        "text": "我的"
+        "text": "个人中心"
       }
     ]
   },

@@ -1,57 +1,37 @@
-.head { padding: 8rpx 4rpx 24rpx; }
-.title { font-size: 44rpx; font-weight: 700; color: var(--color-text-1); }
-.sub { font-size: 28rpx; color: var(--color-text-3); margin-top: 8rpx; }
-
-.live-list { display: flex; flex-direction: column; gap: 24rpx; }
-.live-card { overflow: hidden; }
-
-.live-cover {
-  height: 260rpx;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  padding: 24rpx;
-  position: relative;
-}
-
-.live-cover-emoji { font-size: 96rpx; line-height: 1; }
-
-.live-badge {
-  position: absolute;
-  top: 20rpx;
-  right: 20rpx;
-  border-radius: 999rpx;
-  padding: 8rpx 20rpx;
-  font-size: 24rpx;
-  font-weight: 700;
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.35);
-}
-.live-badge.live { background: var(--color-danger); }
-.live-badge.scheduled { background: var(--color-warning); }
-.live-badge.ended { background: #8a9199; }
-
-.private-badge {
-  position: absolute;
-  top: 20rpx;
-  left: 20rpx;
-  border-radius: 999rpx;
-  padding: 8rpx 20rpx;
-  font-size: 24rpx;
-  font-weight: 700;
-  color: #ffffff;
-  background: #b04a6b;
-}
-
-.live-body { padding: 24rpx; }
-.live-title { font-size: 34rpx; font-weight: 700; color: var(--color-text-1); line-height: 1.4; }
-.live-host { font-size: 28rpx; color: var(--color-text-3); margin-top: 12rpx; }
-.live-time { font-size: 26rpx; color: var(--color-text-3); margin-top: 6rpx; }
-.live-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; }
-.live-viewers { font-size: 26rpx; color: var(--color-text-3); }
-.live-arrow { font-size: 28rpx; color: var(--color-primary); font-weight: 700; }
-
-.empty { text-align: center; padding: 120rpx 40rpx; color: var(--color-text-3); }
-.empty-emoji { font-size: 96rpx; }
-.empty-title { font-size: 34rpx; font-weight: 700; margin-top: 20rpx; color: var(--color-text-1); }
-.empty-sub { font-size: 28rpx; margin-top: 10rpx; }
+.academy-page { min-height: 100vh; padding: 20rpx 24rpx 180rpx; background: #faf9f6; }
+.academy-hero { position: relative; height: 320rpx; overflow: hidden; border-radius: 30rpx; background: #465650; }
+.academy-hero image, .hero-mask { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.hero-mask { background: linear-gradient(90deg,rgba(28,39,36,.82),rgba(28,39,36,.2)); }
+.hero-copy { position: absolute; left: 32rpx; top: 54rpx; width: 470rpx; color: #fff; }
+.hero-kicker { color: #edc994; font-size: 19rpx; font-weight: 700; letter-spacing: 4rpx; }
+.hero-title { margin-top: 20rpx; font-size: 40rpx; font-weight: 700; }
+.hero-sub { margin-top: 12rpx; font-size: 24rpx; color: rgba(255,255,255,.84); }
+.benefit-row { display: flex; align-items: center; justify-content: space-around; margin: -22rpx 20rpx 28rpx; position: relative; z-index: 2; height: 76rpx; border-radius: 20rpx; background: #fff; box-shadow: 0 10rpx 28rpx rgba(44,42,36,.08); color: #5d6562; font-size: 22rpx; }
+.benefit-row view { display: flex; align-items: center; } .benefit-icon { width: 30rpx; height: 30rpx; margin-right: 7rpx; border-radius: 50%; background: #edf3ee; color: #67816d; text-align: center; line-height: 30rpx; font-size: 19rpx; }
+.academy-tabs { display: flex; gap: 34rpx; margin-bottom: 22rpx; border-bottom: 1rpx solid #e9e5de; }
+.academy-tab { position: relative; padding: 16rpx 4rpx 20rpx; color: #8a8f8c; font-size: 29rpx; font-weight: 600; }
+.academy-tab.active { color: #29322f; font-weight: 700; }
+.academy-tab.active::after { content: ''; position: absolute; left: 50%; bottom: -1rpx; width: 44rpx; height: 5rpx; border-radius: 5rpx; background: var(--color-primary); transform: translateX(-50%); }
+.course-list { display: flex; flex-direction: column; gap: 24rpx; }
+.course-card { overflow: hidden; border-radius: 26rpx; background: #fff; box-shadow: 0 10rpx 32rpx rgba(53,47,39,.07); }
+.course-cover { position: relative; height: 306rpx; overflow: hidden; background: #ddd; }
+.course-cover image, .cover-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.cover-shade { background: linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.34)); }
+.course-type, .owned-badge { position: absolute; top: 18rpx; padding: 7rpx 14rpx; border-radius: 999rpx; color: #fff; font-size: 20rpx; font-weight: 700; }
+.course-type { left: 18rpx; background: rgba(37,48,44,.74); } .owned-badge { right: 18rpx; background: rgba(115,145,120,.9); }
+.play-button { position: absolute; left: 50%; top: 50%; width: 72rpx; height: 72rpx; border: 2rpx solid rgba(255,255,255,.7); border-radius: 50%; background: rgba(255,255,255,.9); color: #34413d; text-align: center; line-height: 72rpx; font-size: 27rpx; transform: translate(-50%,-50%); text-indent: 4rpx; }
+.course-body { padding: 24rpx; }
+.course-title { color: #28302e; font-size: 33rpx; font-weight: 700; line-height: 1.4; }
+.course-desc { margin-top: 8rpx; color: #737a77; font-size: 24rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.course-meta { display: flex; gap: 16rpx; margin-top: 15rpx; color: #9a9f9c; font-size: 21rpx; }
+.course-meta text { padding-right: 16rpx; border-right: 1rpx solid #ddd9d3; } .course-meta text:last-child { border-right: 0; }
+.course-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 21rpx; padding-top: 18rpx; border-top: 1rpx solid #f0ede8; }
+.price-symbol { color: var(--color-primary); font-size: 24rpx; } .course-price { color: var(--color-primary); font-size: 40rpx; font-weight: 700; }
+.original-price { margin-left: 10rpx; color: #aaa; font-size: 21rpx; text-decoration: line-through; }
+.continue-text { color: #617a68; font-size: 27rpx; font-weight: 700; } .continue-text text { margin-left: 6rpx; }
+.course-action { padding: 12rpx 22rpx; border-radius: 999rpx; background: #293633; color: #fff; font-size: 23rpx; font-weight: 700; }
+.course-buttons { display: flex; align-items: center; gap: 10rpx; }
+.course-cart { padding: 11rpx 17rpx; border: 1rpx solid var(--color-primary); border-radius: 999rpx; color: var(--color-primary); font-size: 21rpx; font-weight: 700; }
+.empty { padding: 110rpx 30rpx; text-align: center; }
+.empty-icon { color: #baa98f; font-size: 78rpx; } .empty-title { margin-top: 16rpx; color: #333a37; font-size: 32rpx; font-weight: 700; }
+.empty-sub { margin-top: 8rpx; color: #929795; font-size: 24rpx; } .empty-button { display: inline-flex; margin-top: 28rpx; padding: 15rpx 28rpx; border-radius: 999rpx; background: #293633; color: #fff; font-size: 24rpx; }

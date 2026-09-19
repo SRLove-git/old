@@ -33,7 +33,7 @@ const categories = {
   2: { name: '研学旅行', short: '研学', emoji: '🚌', color: '#c96b2a', type: 'activity' },
   3: { name: '岁悦学堂', short: '学堂', emoji: '📚', color: '#3b6fa0', type: 'activity' },
   4: { name: '商家福利', short: '福利', emoji: '🎁', color: '#b04a6b', type: 'activity' },
-  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae', type: 'activity' }
+  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae', type: 'product' }
 }
 
 const activities = [
@@ -43,10 +43,19 @@ const activities = [
   { id: 4, category: 2, city: '敦煌', title: '敦煌丝路 · 文化研学7日深度游', cover: '🏜️', coverTone: 'linear-gradient(135deg,#b04a2f,#e4b877)', price: 5980, memberPrice: 5580, originalPrice: 6480, minGroup: 16, maxGroup: 30, soldCount: 14, highlight: '专业文化讲师随团讲解', points: ['莫高窟、鸣沙山都含门票', '含全程住宿餐饮'], time: '7天6晚 · 每月月中发团', address: '敦煌机场接站', hasSku: false, schedules: makeSchedules(3, 3, 30, '第1天 全天接站'), refundRule: { type: 'ladder', ladder: [{ days: 15, rate: 1 }, { days: 7, rate: 0.7 }, { days: 3, rate: 0.4 }, { days: 0, rate: 0 }] }, managerCommissionRate: null, limitPerUser: 4, participantFields: { idCard: true, discount: true }, detail: '跟着讲师看敦煌壁画，听丝路故事。' },
   { id: 5, category: 3, city: '线上', title: '手机摄影入门 · 系列课（6节）', cover: '📷', coverTone: 'linear-gradient(135deg,#3b6fa0,#7fb3d5)', price: 199, memberPrice: 159, originalPrice: 259, minGroup: 0, maxGroup: 60, soldCount: 41, highlight: '老师手把手教，交作业有点评', points: ['每周1节共6节', '可回放1年'], time: '每周三 14:00-15:30', address: '线上直播', hasSku: false, schedules: makeSchedules(0, 5, 60, '14:00-15:30'), refundRule: { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 4, participantFields: { idCard: false, discount: false }, detail: '从拿稳手机到拍出好看的照片。' },
   { id: 6, category: 3, city: '北京', title: '声乐合唱 · 快乐课堂（10节）', cover: '🎤', coverTone: 'linear-gradient(135deg,#b04a6b,#e29abb)', price: 99, memberPrice: 79, originalPrice: 129, minGroup: 10, maxGroup: 30, soldCount: 17, highlight: '专业声乐老师，零基础也能唱', points: ['小班教学', '结课合唱展示'], time: '每周五 14:00-15:30', address: '东城区老年活动中心', hasSku: false, schedules: makeSchedules(1, 4, 30, '14:00-15:30'), refundRule: { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 4, participantFields: { idCard: false, discount: false }, detail: '一起唱歌，心情好。' },
-  { id: 7, category: 4, city: '北京', title: '肩颈理疗 · 到店体验套餐', cover: '💆', coverTone: 'linear-gradient(135deg,#2f7d5c,#7cc79a)', price: 128, memberPrice: 98, originalPrice: 168, minGroup: 0, maxGroup: 200, soldCount: 76, highlight: '专业理疗师，按需到店核销', points: ['到店出示核销码', '提前1天电话预约'], time: '到店核销 · 3个月内有效', address: '合作门店', hasSku: false, schedules: makeSchedules(0, 3, 200, '到店时间请提前预约'), refundRule: { type: 'always' }, managerCommissionRate: null, limitPerUser: 1, participantFields: { idCard: false, discount: false }, detail: '45分钟肩颈舒缓。' },
-  { id: 8, category: 5, city: '全国', title: '岁悦里定制保温杯 · 便携款', cover: '🥤', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', price: 69, memberPrice: 59, originalPrice: 89, minGroup: 0, maxGroup: 500, soldCount: 128, highlight: '大容量，单手开盖', points: ['500ml容量', '316不锈钢内胆', '全国包邮'], time: '下单后48小时内发货', address: '全国发货', sellType: 'sku', hasSku: true, skus: [{ id: 'sku-white', name: '经典白 500ml', price: 69, memberPrice: 59, hot: false }, { id: 'sku-blue', name: '星空蓝 500ml', price: 69, memberPrice: 59, hot: true }, { id: 'sku-pink', name: '樱花粉 500ml', price: 69, memberPrice: 59, hot: false }], schedules: [], refundRule: { type: 'day', fullDays: 0, partialDays: 0, partialRate: 0 }, managerCommissionRate: null, limitPerUser: 3, participantFields: { idCard: false, discount: false }, detail: '出门带上热水，保温约12小时。' }
+  { id: 7, category: 4, city: '北京', title: '肩颈理疗 · 到店体验套餐', cover: '💆', coverTone: 'linear-gradient(135deg,#2f7d5c,#7cc79a)', price: 128, memberPrice: 98, originalPrice: 168, minGroup: 0, maxGroup: 200, soldCount: 76, highlight: '专业理疗师，按需到店核销', points: ['到店出示核销码', '提前1天电话预约'], time: '到店核销 · 3个月内有效', address: '合作门店', hasSku: false, schedules: makeSchedules(0, 3, 200, '到店时间请提前预约'), refundRule: { type: 'always' }, managerCommissionRate: null, limitPerUser: 1, participantFields: { idCard: false, discount: false }, detail: '45分钟肩颈舒缓。' }
 ].map((a) => ({
   ...a,
+  city: ({ 1: '南沙', 2: '天河、番禺', 3: '多地区', 4: '多地区', 5: '线上', 6: '黄埔、天河', 7: '番禺、顺德' })[a.id] || a.city,
+  regionIds: ({
+    1: ['nansha'],
+    2: ['tianhe', 'panyu'],
+    3: ['nansha', 'huangpu', 'tianhe', 'panyu', 'shunde'],
+    4: ['nansha', 'huangpu', 'tianhe', 'panyu', 'shunde'],
+    5: [],
+    6: ['huangpu', 'tianhe'],
+    7: ['panyu', 'shunde']
+  })[a.id] || [],
   managerId: a.id <= 4 ? 1001 : 1002,
   detailBlocks: [
     { type: 'text', text: a.detail },
@@ -66,10 +75,41 @@ const activities = [
   ]
 }))
 
+const products = [
+  {
+    id: 8,
+    managerId: 1002,
+    regionIds: ['nansha', 'huangpu', 'tianhe', 'panyu', 'shunde'],
+    city: '多地区',
+    category: 5,
+    title: '岁悦里定制保温杯 · 便携款',
+    cover: '🥤',
+    coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)',
+    price: 69,
+    memberPrice: 59,
+    originalPrice: 89,
+    soldCount: 128,
+    highlight: '大容量，单手开盖',
+    points: ['500ml容量', '316不锈钢内胆', '全国包邮'],
+    sellType: 'sku',
+    hasSku: true,
+    skus: [
+      { id: 'sku-white', name: '经典白 500ml', price: 69, memberPrice: 59, hot: false },
+      { id: 'sku-blue', name: '星空蓝 500ml', price: 69, memberPrice: 59, hot: true },
+      { id: 'sku-pink', name: '樱花粉 500ml', price: 69, memberPrice: 59, hot: false }
+    ],
+    stock: 500,
+    limitPerUser: 5,
+    refundRule: { type: 'always' },
+    status: 1,
+    detail: '出门带上热水，保温约12小时。'
+  }
+]
+
 const managers = [
-  { id: 1001, name: '李秀兰', phone: '138****2035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }
+  { id: 1001, name: '李秀兰', shopName: '秀兰乐活活动社', shopIntro: '专注同城兴趣活动与品质研学旅行，用心陪伴每一次出发。', phone: '138****2035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }
   ,
-  { id: 1002, name: '王建国', phone: '139****7782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 9260, totalCommission: 7220.4, totalCustomers: 42, customers: 42, monthPerformance: 9260, monthCommission: 740.8, pending: 322, available: 588, total: 7220.4 }
+  { id: 1002, name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '139****7782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 9260, totalCommission: 7220.4, totalCustomers: 42, customers: 42, monthPerformance: 9260, monthCommission: 740.8, pending: 322, available: 588, total: 7220.4 }
 ]
 
 const customers = [
@@ -96,7 +136,23 @@ const addresses = [
 ]
 
 const cards = [
-  { id: 'card1', userId: 'u1', title: '声乐合唱10次卡', remain: 7, total: 10 }
+  {
+    id: 'card1',
+    userId: 'u1',
+    title: '声乐合唱10次培训卡',
+    courseName: '声乐合唱基础班',
+    teacher: '陈老师',
+    validUntil: '2026-12-31',
+    remain: 7,
+    total: 10,
+    attendanceRecords: [
+      { id: 'att1', date: '2026-08-29', time: '14:00-15:30', lesson: '第1课 · 呼吸与发声', teacher: '陈老师', location: '东城区老年活动中心', status: 'checked', checkedAt: '2026-08-29 13:52' },
+      { id: 'att2', date: '2026-09-05', time: '14:00-15:30', lesson: '第2课 · 音准练习', teacher: '陈老师', location: '东城区老年活动中心', status: 'checked', checkedAt: '2026-09-05 13:56' },
+      { id: 'att3', date: '2026-09-12', time: '14:00-15:30', lesson: '第3课 · 节奏训练', teacher: '陈老师', location: '东城区老年活动中心', status: 'checked', checkedAt: '2026-09-12 13:49' },
+      { id: 'att4', date: '2026-09-16', time: '14:00-15:30', lesson: '第4课 · 合唱配合', teacher: '陈老师', location: '东城区老年活动中心', status: 'absent', checkedAt: '' },
+      { id: 'att5', date: '2026-09-26', time: '14:00-15:30', lesson: '第5课 · 分声部练习', teacher: '陈老师', location: '东城区老年活动中心', status: 'upcoming', checkedAt: '' }
+    ]
+  }
 ]
 
 const reviews = [
@@ -129,7 +185,7 @@ const bindings = [
 const lives = [
   {
     id: 'live1',
-    title: '岁悦学堂 · 手机摄影直播课',
+    title: '手机摄影入门：从会拍到拍得好',
     cover: '📷',
     coverTone: 'linear-gradient(135deg,#3b6fa0,#7fb3d5)',
     hostName: '陈老师',
@@ -141,31 +197,43 @@ const lives = [
     streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     replayUrl: '',
     description: '零基础手机摄影入门，直播手把手教学，可实时提问互动。',
+    memberPrice: 99,
+    originalPrice: 159,
+    lessonCount: 12,
+    duration: '约240分钟',
+    category: '手机摄影',
+    coverImage: '/assets/event-academy.jpg',
     activityId: 5,
     viewers: 128,
     createdAt: '2026-09-19 10:00'
   },
   {
     id: 'live2',
-    title: '主理人私域 · 秋季养生茶话会',
+    title: '四季养生：吃得明白，睡得安稳',
     cover: '🍵',
     coverTone: 'linear-gradient(135deg,#2f7d5c,#7cc79a)',
     hostName: '李秀兰',
     hostAvatar: '👵',
-    managerId: 1001,
-    status: 'scheduled',
+    managerId: null,
+    status: 'ended',
     startAt: '2026-09-20 15:00',
     endAt: '2026-09-20 16:00',
     streamUrl: '',
-    replayUrl: '',
-    description: '仅限李秀兰主理人的私域客户观看，分享秋季养生小知识。',
+    replayUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    description: '用通俗易懂的方法分享四季饮食、睡眠和日常活动知识。',
+    memberPrice: 69,
+    originalPrice: 99,
+    lessonCount: 8,
+    duration: '约160分钟',
+    category: '健康生活',
+    coverImage: '/assets/event-benefit.jpg',
     activityId: null,
     viewers: 0,
     createdAt: '2026-09-19 09:00'
   },
   {
     id: 'live3',
-    title: '大理研学行前说明会 · 回放',
+    title: '山水人文课：跟着老师读懂大理',
     cover: '🏔️',
     coverTone: 'linear-gradient(135deg,#2b6f9c,#8fc6e7)',
     hostName: '王建国',
@@ -176,10 +244,40 @@ const lives = [
     endAt: '2026-09-18 20:00',
     streamUrl: '',
     replayUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: '大理5日研学行前说明，讲解行程安排与注意事项。',
+    description: '从山水地理到白族文化，在出发前先读懂大理的故事。',
+    memberPrice: 129,
+    originalPrice: 199,
+    lessonCount: 10,
+    duration: '约210分钟',
+    category: '文化旅行',
+    coverImage: '/assets/event-travel.jpg',
     activityId: 3,
     viewers: 86,
     createdAt: '2026-09-18 15:00'
+  },
+  {
+    id: 'live4',
+    title: '智能手机轻松用：常用功能一步一步学',
+    cover: '📱',
+    coverTone: 'linear-gradient(135deg,#617a74,#a8b9a7)',
+    hostName: '周老师',
+    hostAvatar: '🧑‍🏫',
+    managerId: null,
+    status: 'ended',
+    startAt: '2026-09-10 14:00',
+    endAt: '2026-09-10 15:30',
+    streamUrl: '',
+    replayUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    description: '从扫码、拍照到微信常用功能，放慢速度逐步讲清楚。',
+    memberPrice: 79,
+    originalPrice: 129,
+    lessonCount: 9,
+    duration: '约180分钟',
+    category: '智能生活',
+    coverImage: '/assets/home-hero.jpg',
+    activityId: null,
+    viewers: 236,
+    createdAt: '2026-09-10 16:00'
   }
 ]
 
@@ -189,12 +287,67 @@ const banners = [
   { id: 3, title: '免费入会领2张券', sub: '会员价更划算，本单最高省¥100', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', emoji: '🎁', cat: 0 }
 ]
 
+const contentPosts = [
+  {
+    id: 'news-1',
+    type: 'news',
+    title: '便民服务信息：长者公共文化活动参与指引',
+    summary: '汇总公共文化场馆、社区活动和便民服务的参与方式，具体安排以政府部门最新公告为准。',
+    source: '政府公开信息（示例）',
+    publishedAt: '2026-09-18',
+    coverImage: '/assets/event-local.jpg',
+    originalUrl: '',
+    content: '本栏目用于转载和解读政府部门公开发布的便民资讯。正式发布时请填写准确来源、发布日期及原文链接，并以原文内容为准。',
+    regionIds: ['nansha', 'huangpu', 'tianhe', 'panyu', 'shunde'],
+    featured: true,
+    status: 1
+  },
+  {
+    id: 'news-2',
+    type: 'news',
+    title: '社区养老与文体服务信息集中发布',
+    summary: '及时了解各区适老服务、文化活动和办事提醒。',
+    source: '政府公开信息（示例）',
+    publishedAt: '2026-09-16',
+    coverImage: '/assets/event-benefit.jpg',
+    originalUrl: '',
+    content: '平台将持续整理公开渠道发布的信息，方便会员查看。涉及申报、补贴和办事条件时，请以政府官网及主管部门解释为准。',
+    regionIds: ['nansha', 'huangpu', 'tianhe', 'panyu', 'shunde'],
+    featured: true,
+    status: 1
+  },
+  {
+    id: 'video-1',
+    type: 'video',
+    title: '看懂适老化便民服务，一次讲清办理要点',
+    summary: '用几分钟了解常见便民服务的查询与办理方式。',
+    source: '岁悦里视频号',
+    publishedAt: '2026-09-17',
+    coverImage: '/assets/home-hero.jpg',
+    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    content: '视频内容仅作办事指引，具体要求请以主管部门最新公告为准。',
+    regionIds: [],
+    featured: true,
+    status: 1
+  }
+]
+
 const config = {
+  regions: [
+    { id: 'nansha', name: '南沙', enabled: true, sort: 10 },
+    { id: 'huangpu', name: '黄埔', enabled: true, sort: 20 },
+    { id: 'tianhe', name: '天河', enabled: true, sort: 30 },
+    { id: 'panyu', name: '番禺', enabled: true, sort: 40 },
+    { id: 'shunde', name: '顺德', enabled: true, sort: 50 }
+  ],
   globalCommissionRate: 8,
   minWithdraw: 100,
   withdrawMonthlyLimit: 1,
   withdrawTaxRate: 20,
   managerApplyFee: 199,
+  brand: {
+    slogan: '和同龄人一起，玩得开心又省心'
+  },
   assistant: {
     name: '小助理',
     wechat: 'suiyueli6070',
@@ -212,7 +365,9 @@ const config = {
 export const seed = {
   categories,
   banners,
+  contentPosts,
   activities,
+  products,
   managers,
   managerApplications,
   customers,
