@@ -152,9 +152,10 @@ Page({
   },
 
   contact() {
+    const a = store.getAssistant()
     wx.showModal({
       title: '联系客服',
-      content: '客服电话：400-800-6070',
+      content: `客服电话：${a.phone}`,
       showCancel: false
     })
   }

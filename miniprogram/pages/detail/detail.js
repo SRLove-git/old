@@ -6,6 +6,7 @@ Page({
     activity: null,
     category: {},
     merchant: null,
+    assistant: {},
     tab: 'detail',
     reviews: [],
     recommend: [],
@@ -57,6 +58,7 @@ Page({
       activity,
       category: store.getCategory(activity.category),
       merchant,
+      assistant: store.getAssistant(),
       reviews,
       recommend,
       rankLabel,
@@ -112,17 +114,19 @@ Page({
   },
 
   showService() {
+    const a = store.getAssistant()
     wx.showModal({
       title: '报名后请添加客服小助理',
-      content: '微信号：suiyueli6070\n客服电话：400-800-6070',
+      content: `微信号：${a.wechat}\n客服电话：${a.phone}`,
       showCancel: false,
       confirmText: '我知道了'
     })
   },
 
   copyAssistantWechat() {
+    const a = store.getAssistant()
     wx.setClipboardData({
-      data: 'suiyueli6070',
+      data: a.wechat,
       success: () => wx.showToast({ title: '助理微信号已复制', icon: 'none' })
     })
   },

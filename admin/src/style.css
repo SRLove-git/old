@@ -349,6 +349,7 @@ tbody tr:hover { background: color-mix(in srgb, var(--md-on-surface) 5%, transpa
 .actions-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .actions-row-left { justify-content: flex-start; }
 .config-card { max-width: 480px; }
+.mt-16 { margin-top: 16px; }
 
 /* FAB */
 .fab {

@@ -130,7 +130,12 @@ async function load() {
     if (view.value === 'commissions') commissions.value = await api.get('/commissions')
     if (view.value === 'withdraws') withdraws.value = await api.get('/withdraws')
     if (view.value === 'logs') logs.value = await api.get('/logs')
-    if (view.value === 'config') config.value = await api.get('/config')
+    if (view.value === 'config') {
+      config.value = await api.get('/config')
+      if (!config.value.assistant) {
+        config.value.assistant = { name: '小助理', wechat: 'suiyueli6070', phone: '400-800-6070', avatar: '🧑‍💼', intro: '' }
+      }
+    }
   } catch (e) {
     error.value = e.message
   } finally {
@@ -637,8 +642,16 @@ function exportCsv(filename, rows) {
           <label class="field-label">全局默认分佣比例（%）</label><input v-model.number="config.globalCommissionRate" type="number" class="input" />
           <label class="field-label">最低提现金额（元）</label><input v-model.number="config.minWithdraw" type="number" class="input" />
           <label class="field-label">每月提现次数上限</label><input v-model.number="config.withdrawMonthlyLimit" type="number" class="input" />
-          <div class="actions-row actions-row-left"><button class="btn btn-filled" @click="saveConfig">保存配置</button></div>
         </div>
+        <div class="card config-card mt-16">
+          <div class="section-title">助理人信息</div>
+          <label class="field-label">助理人昵称</label><input v-model="config.assistant.name" class="input" placeholder="例如：小助理" />
+          <label class="field-label">微信号</label><input v-model="config.assistant.wechat" class="input" placeholder="例如：suiyueli6070" />
+          <label class="field-label">客服电话</label><input v-model="config.assistant.phone" class="input" placeholder="例如：400-800-6070" />
+          <label class="field-label">头像（emoji）</label><input v-model="config.assistant.avatar" class="input" placeholder="例如：🧑‍💼" />
+          <label class="field-label">一句话介绍</label><input v-model="config.assistant.intro" class="input" placeholder="例如：报名咨询、活动群、售后都可以找我" />
+        </div>
+        <div class="actions-row actions-row-left"><button class="btn btn-filled" @click="saveConfig">保存全部配置</button></div>
       </section>
     </main>
 

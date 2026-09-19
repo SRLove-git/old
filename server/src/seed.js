@@ -132,7 +132,18 @@ const banners = [
   { id: 3, title: '免费入会领2张券', sub: '会员价更划算，本单最高省¥100', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', emoji: '🎁', cat: 0 }
 ]
 
-const config = { globalCommissionRate: 8, minWithdraw: 100, withdrawMonthlyLimit: 1 }
+const config = {
+  globalCommissionRate: 8,
+  minWithdraw: 100,
+  withdrawMonthlyLimit: 1,
+  assistant: {
+    name: '小助理',
+    wechat: 'suiyueli6070',
+    phone: '400-800-6070',
+    avatar: '🧑‍💼',
+    intro: '报名咨询、活动群、售后都可以找我'
+  }
+}
 
 export const seed = {
   categories,

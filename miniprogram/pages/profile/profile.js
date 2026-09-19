@@ -86,9 +86,10 @@ Page({
   },
 
   showService() {
+    const a = store.getAssistant()
     wx.showModal({
       title: '需要帮忙吗？',
-      content: '客服电话：400-800-6070\n小助理微信：suiyueli6070',
+      content: `客服电话：${a.phone}\n小助理微信：${a.wechat}`,
       showCancel: false
     })
   }

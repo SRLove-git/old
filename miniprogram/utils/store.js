@@ -60,6 +60,17 @@ function getCategory(id) {
   return cache.categories[id] || { name: '全部', short: '全部', emoji: '📦', color: '#555555' }
 }
 
+function getAssistant() {
+  const a = (cache.config && cache.config.assistant) || {}
+  return {
+    name: a.name || '小助理',
+    wechat: a.wechat || 'suiyueli6070',
+    phone: a.phone || '400-800-6070',
+    avatar: a.avatar || '🧑‍💼',
+    intro: a.intro || ''
+  }
+}
+
 function couponApplicable(coupon, activity, amount) {
   if (!coupon || coupon.used) return false
   if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
@@ -303,6 +314,7 @@ module.exports = {
   refresh,
   get,
   getCategory,
+  getAssistant,
   getActivities,
   getActivity,
   getReviews,

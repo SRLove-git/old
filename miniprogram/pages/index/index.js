@@ -171,9 +171,10 @@ Page({
   },
 
   showService() {
+    const a = store.getAssistant()
     wx.showModal({
       title: '需要帮忙吗？',
-      content: '不会操作没关系，直接打电话，我们一步步教您。\n客服电话：400-800-6070\n\n或长按添加小助理微信：suiyueli6070',
+      content: `不会操作没关系，直接打电话，我们一步步教您。\n客服电话：${a.phone}\n\n或长按添加小助理微信：${a.wechat}`,
       showCancel: false,
       confirmText: '我知道了'
     })

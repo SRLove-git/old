@@ -118,7 +118,7 @@
 
     <view class="private-flow">
       <view class="private-title">{{activity.category === 5 ? '购买 / 发货 / 售后，请加助理微信' : '报名后请添加客服小助理'}}</view>
-      <view class="private-sub">{{activity.category === 5 ? '微信号：suiyueli6070' : '微信号：suiyueli6070 · 拉您进活动群'}}</view>
+      <view class="private-sub">{{activity.category === 5 ? '微信号：' + assistant.wechat : '微信号：' + assistant.wechat + ' · 拉您进活动群'}}</view>
       <button class="private-btn" bindtap="copyAssistantWechat">复制助理微信号</button>
     </view>
   </view>
