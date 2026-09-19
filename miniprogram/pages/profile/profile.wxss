@@ -1,7 +1,7 @@
 .profile-hero {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
   color: #ffffff;
   border-radius: 28rpx;
   padding: 34rpx 28rpx;
@@ -122,7 +122,7 @@
   width: 86rpx;
   height: 86rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,8 +146,8 @@
 }
 
 .small-btn {
-  border: 2rpx solid #c25e3d;
-  color: #c25e3d;
+  border: 2rpx solid #ff6a3d;
+  color: #ff6a3d;
   border-radius: 999rpx;
   padding: 12rpx 22rpx;
   font-size: 26rpx;
@@ -163,8 +163,8 @@
 }
 
 .apply-status {
-  background: #e7f3ee;
-  color: #2f7d5c;
+  background: #e5f6ee;
+  color: #2f9e6e;
   border-radius: 18rpx;
   padding: 20rpx;
   font-weight: 700;
@@ -183,8 +183,8 @@
 
 .footer-btn {
   margin-top: 18rpx;
-  background: #fff8f3;
-  color: #9e4428;
+  background: #fff4ec;
+  color: #e4572a;
   border-radius: 18rpx;
   padding: 22rpx;
   font-weight: 700;

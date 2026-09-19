@@ -27,7 +27,7 @@
 }
 
 .region-arrow {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 30rpx;
   margin-left: 8rpx;
 }
@@ -40,14 +40,14 @@
 
 .banner-swiper {
   height: 220rpx;
-  border-radius: 24rpx;
+  border-radius: 28rpx;
   overflow: hidden;
   margin-bottom: 18rpx;
 }
 
 .banner-item {
   height: 220rpx;
-  border-radius: 24rpx;
+  border-radius: 28rpx;
   padding: 32rpx 30rpx;
   display: flex;
   justify-content: space-between;
@@ -73,7 +73,7 @@
 .brand {
   font-size: 46rpx;
   font-weight: 700;
-  color: #9e4428;
+  color: #e4572a;
 }
 
 .slogan {
@@ -83,8 +83,8 @@
 }
 
 .badge {
-  background: #fdeee9;
-  color: #9e4428;
+  background: #ffefe6;
+  color: #e4572a;
   border-radius: 999rpx;
   padding: 16rpx 24rpx;
   font-size: 28rpx;
@@ -120,24 +120,25 @@
 }
 
 .category-emoji {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 28rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 32rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 46rpx;
+  font-size: 56rpx;
+  box-shadow: 0 10rpx 22rpx rgba(26, 34, 45, 0.10);
 }
 
 .category-name {
-  font-size: 26rpx;
+  font-size: 28rpx;
   font-weight: 700;
 }
 
 .member-card {
-  background: #fff8f3;
-  border: 2rpx solid #f6d6c8;
-  border-radius: 28rpx;
+  background: linear-gradient(135deg, #fff4ec 0%, #ffe4d3 100%);
+  border: 2rpx solid #ffd9c6;
+  border-radius: 32rpx;
   padding: 28rpx;
   display: flex;
   justify-content: space-between;
@@ -148,7 +149,7 @@
 .member-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #9e4428;
+  color: #e4572a;
 }
 
 .member-sub {
@@ -158,13 +159,14 @@
 }
 
 .member-btn {
-  background: #c25e3d;
+  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 22rpx 28rpx;
   font-weight: 700;
   font-size: 30rpx;
   white-space: nowrap;
+  box-shadow: 0 10rpx 24rpx rgba(255, 106, 61, 0.28);
 }
 
 .home-coupons {
@@ -184,7 +186,7 @@
 
 .home-coupon {
   flex: 1;
-  background: #fff8f3;
+  background: #fff4ec;
   border-radius: 18rpx;
   padding: 20rpx;
   margin-right: 16rpx;
@@ -197,7 +199,7 @@
 }
 
 .home-coupon-value {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 40rpx;
   font-weight: 700;
 }
@@ -241,7 +243,7 @@
 }
 
 .mode-item.on {
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
 }
 
@@ -281,7 +283,7 @@
 }
 
 .more-arrow {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 34rpx;
   line-height: 1;
 }
@@ -372,12 +374,13 @@
   width: auto;
   min-height: 0;
   line-height: 1.2;
-  background: #c25e3d;
+  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 10rpx 18rpx;
   font-weight: 700;
   font-size: 22rpx;
+  box-shadow: 0 6rpx 14rpx rgba(255, 106, 61, 0.24);
 }
 
 .brand-footer {
@@ -389,7 +392,7 @@
 .brand-logo {
   font-size: 42rpx;
   font-weight: 700;
-  color: #9e4428;
+  color: #e4572a;
 }
 
 .brand-slogan {
@@ -399,8 +402,8 @@
 
 .footer-btn {
   margin-top: 20rpx;
-  background: #fff8f3;
-  color: #9e4428;
+  background: #fff4ec;
+  color: #e4572a;
   border-radius: 18rpx;
   padding: 22rpx;
   font-weight: 700;
@@ -463,13 +466,13 @@
 }
 
 .city-item.selected {
-  color: #c25e3d;
-  background: #fff8f3;
+  color: #ff6a3d;
+  background: #fff4ec;
   border-radius: 18rpx;
 }
 
 .city-check {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 36rpx;
   font-weight: 700;
 }

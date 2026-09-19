@@ -58,8 +58,8 @@
 .rank-label {
   display: inline-flex;
   margin-top: 12rpx;
-  background: #fdeee9;
-  color: #9e4428;
+  background: #ffefe6;
+  color: #e4572a;
   border-radius: 999rpx;
   padding: 8rpx 18rpx;
   font-size: 24rpx;
@@ -83,7 +83,7 @@
 }
 
 .detail-price {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 52rpx;
   font-weight: 700;
 }
@@ -102,8 +102,8 @@
 }
 
 .small-btn {
-  border: 2rpx solid #c25e3d;
-  color: #c25e3d;
+  border: 2rpx solid #ff6a3d;
+  color: #ff6a3d;
   border-radius: 999rpx;
   padding: 12rpx 22rpx;
   font-size: 26rpx;
@@ -112,8 +112,8 @@
 }
 
 .member-tip {
-  background: #fff8f3;
-  color: #9e4428;
+  background: #fff4ec;
+  color: #e4572a;
   padding: 18rpx 22rpx;
   border-radius: 18rpx;
   font-size: 26rpx;
@@ -132,7 +132,7 @@
 }
 
 .highlight {
-  color: #9e4428;
+  color: #e4572a;
   font-size: 32rpx;
   font-weight: 700;
   margin-bottom: 10rpx;
@@ -178,7 +178,7 @@
   width: 64rpx;
   height: 64rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -203,12 +203,13 @@
 }
 
 .buyer-go {
-  background: #c25e3d;
+  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
   color: #ffffff;
   border-radius: 999rpx;
   padding: 10rpx 22rpx;
   font-size: 24rpx;
   font-weight: 700;
+  box-shadow: 0 6rpx 14rpx rgba(255, 106, 61, 0.24);
 }
 
 .tabs {
@@ -226,7 +227,7 @@
 }
 
 .tabs button.active {
-  background: #c25e3d;
+  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
   color: #ffffff;
 }
 
@@ -250,7 +251,7 @@
   width: 70rpx;
   height: 70rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -321,7 +322,7 @@
 }
 
 .recommend-price {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   font-size: 30rpx;
   margin-top: 8rpx;
@@ -345,7 +346,7 @@
 }
 
 .private-btn {
-  background: #2f7d5c;
+  background: #2f9e6e;
   color: #ffffff;
   border-radius: 999rpx;
   padding: 18rpx 26rpx;
@@ -425,7 +426,7 @@
 }
 
 .sku-price {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 46rpx;
   font-weight: 700;
 }
@@ -450,8 +451,8 @@
 }
 
 .sku-option.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
+  border-color: #ff6a3d;
+  background: #fff4ec;
 }
 
 .sku-name {
@@ -460,7 +461,7 @@
 }
 
 .sku-price-sm {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   font-size: 34rpx;
 }
@@ -469,7 +470,7 @@
   position: absolute;
   top: -2rpx;
   right: -2rpx;
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   font-size: 22rpx;
   padding: 4rpx 10rpx;
@@ -479,8 +480,8 @@
 .merchant-row {
   display: flex;
   align-items: center;
-  background: #fff8f3;
-  border: 2rpx solid #f6d6c8;
+  background: #fff4ec;
+  border: 2rpx solid #ffd9c6;
   border-radius: 20rpx;
   padding: 18rpx 22rpx;
   margin-top: 16rpx;
@@ -505,12 +506,12 @@
 .merchant-name {
   font-size: 30rpx;
   font-weight: 700;
-  color: #9e4428;
+  color: #e4572a;
   margin-top: 2rpx;
 }
 
 .merchant-tag {
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   font-size: 22rpx;
   border-radius: 999rpx;
@@ -573,7 +574,7 @@
 
 .share-btn {
   width: 120rpx;
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 28rpx;
   font-weight: 700;
   display: flex;

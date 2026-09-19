@@ -50,8 +50,8 @@ textarea {
 
 .card {
   background: #ffffff;
-  border-radius: 28rpx;
-  box-shadow: 0 12rpx 40rpx rgba(26, 34, 45, 0.07);
+  border-radius: 32rpx;
+  box-shadow: 0 12rpx 40rpx rgba(26, 34, 45, 0.08);
 }
 
 .btn {
@@ -66,19 +66,20 @@ textarea {
 }
 
 .btn-primary {
-  background: #c25e3d;
+  background: linear-gradient(135deg, #ff6a3d 0%, #ff9345 100%);
   color: #ffffff;
+  box-shadow: 0 12rpx 28rpx rgba(255, 106, 61, 0.28);
 }
 
 .btn-secondary {
   background: #ffffff;
-  color: #c25e3d;
-  border: 2rpx solid #c25e3d;
+  color: #ff6a3d;
+  border: 2rpx solid #ff6a3d;
 }
 
 .btn-ghost {
-  background: #fdeee9;
-  color: #9e4428;
+  background: #ffefe6;
+  color: #e4572a;
 }
 
 .btn-danger {
@@ -107,7 +108,7 @@ textarea {
 }
 
 .price {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
 }
 
@@ -121,13 +122,13 @@ textarea {
 }
 
 .tag-green {
-  background: #e7f3ee;
-  color: #2f7d5c;
+  background: #e5f6ee;
+  color: #2f9e6e;
 }
 
 .tag-orange {
-  background: #fdeee9;
-  color: #9e4428;
+  background: #ffefe6;
+  color: #e4572a;
 }
 
 .tag-gray {

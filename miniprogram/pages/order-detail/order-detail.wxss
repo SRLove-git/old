@@ -4,7 +4,7 @@
 }
 
 .status-hero {
-  background: linear-gradient(135deg, #2f7d5c, #4b9a78);
+  background: linear-gradient(135deg, #2f9e6e, #4b9a78);
   color: #ffffff;
   padding: 48rpx 30rpx;
   text-align: center;
@@ -70,7 +70,7 @@
 }
 
 .red {
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .code-box {
@@ -158,7 +158,7 @@
 }
 
 .refund-rule {
-  background: #fff8f3;
+  background: #fff4ec;
   border-radius: 18rpx;
   padding: 22rpx;
   margin-bottom: 24rpx;

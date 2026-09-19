@@ -22,7 +22,7 @@
 }
 
 .step.active {
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
 }
 
@@ -83,8 +83,8 @@
 }
 
 .schedule-item.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
+  border-color: #ff6a3d;
+  background: #fff4ec;
 }
 
 .schedule-item.disabled {
@@ -120,8 +120,8 @@
 }
 
 .sku-option.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
+  border-color: #ff6a3d;
+  background: #fff4ec;
 }
 
 .sku-name {
@@ -131,7 +131,7 @@
 }
 
 .sku-price-sm {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   font-size: 34rpx;
 }
@@ -140,7 +140,7 @@
   position: absolute;
   top: -2rpx;
   right: -2rpx;
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   font-size: 22rpx;
   padding: 4rpx 10rpx;
@@ -157,7 +157,7 @@
   width: 44rpx;
   height: 44rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -173,7 +173,7 @@
 
 .load-more {
   text-align: center;
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   padding: 18rpx 0;
 }
@@ -184,7 +184,7 @@
 }
 
 .remain {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   font-size: 26rpx;
 }
@@ -202,7 +202,7 @@
 }
 
 .schedule-item.selected .check {
-  background: #c25e3d;
+  background: #ff6a3d;
 }
 
 .counter {
@@ -242,13 +242,13 @@
 }
 
 .participant-chip.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
-  color: #c25e3d;
+  border-color: #ff6a3d;
+  background: #fff4ec;
+  color: #ff6a3d;
 }
 
 .participant-chip.manage {
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .required {
@@ -257,7 +257,7 @@
 }
 
 .refund-note {
-  background: #fff8f3;
+  background: #fff4ec;
   border-radius: 18rpx;
   padding: 20rpx;
   color: #6f747b;
@@ -267,8 +267,8 @@
 
 .address-card {
   position: relative;
-  background: #fff8f3;
-  border: 2rpx solid #f6d6c8;
+  background: #fff4ec;
+  border: 2rpx solid #ffd9c6;
   border-radius: 18rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
@@ -290,7 +290,7 @@
   position: absolute;
   right: 24rpx;
   top: 24rpx;
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 26rpx;
   font-weight: 700;
 }
@@ -314,11 +314,11 @@
 }
 
 .red {
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .detail-price {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 40rpx;
   font-weight: 700;
 }
@@ -333,8 +333,8 @@
 }
 
 .coupon-chip.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
+  border-color: #ff6a3d;
+  background: #fff4ec;
 }
 
 .coupon-chip.used {
@@ -352,7 +352,7 @@
 }
 
 .coupon-value {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-size: 42rpx;
   font-weight: 700;
   min-width: 100rpx;
@@ -458,7 +458,7 @@
   width: 150rpx;
   height: 150rpx;
   border-radius: 50%;
-  background: #2f7d5c;
+  background: #2f9e6e;
   color: #ffffff;
   font-size: 80rpx;
   display: flex;

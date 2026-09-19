@@ -4,7 +4,7 @@
 }
 
 .manager-top {
-  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
   color: #ffffff;
   padding: 30rpx;
   display: flex;
@@ -47,7 +47,7 @@
 .metric-value {
   font-size: 34rpx;
   font-weight: 700;
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .metric-label {
@@ -77,8 +77,8 @@
 }
 
 .nav-item.active {
-  background: #fdeee9;
-  color: #c25e3d;
+  background: #ffefe6;
+  color: #ff6a3d;
 }
 
 .content {
@@ -160,15 +160,15 @@
   width: 58rpx;
   height: 58rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .small-btn {
-  border: 2rpx solid #c25e3d;
-  color: #c25e3d;
+  border: 2rpx solid #ff6a3d;
+  color: #ff6a3d;
   border-radius: 999rpx;
   padding: 12rpx 20rpx;
   font-size: 26rpx;
@@ -186,7 +186,7 @@
 }
 
 .commission-amount {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
 }
 
@@ -213,7 +213,7 @@
 .withdraw-amount {
   font-size: 34rpx;
   font-weight: 700;
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .withdraw-meta {
@@ -276,7 +276,7 @@
 
 .share-btn {
   width: 100%;
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   border-radius: 24rpx;
   padding: 24rpx;

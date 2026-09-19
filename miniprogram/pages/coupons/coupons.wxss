@@ -12,8 +12,8 @@
 .coupon-left {
   width: 170rpx;
   min-height: 160rpx;
-  background: #fff8f3;
-  color: #c25e3d;
+  background: #fff4ec;
+  color: #ff6a3d;
   font-size: 46rpx;
   font-weight: 700;
   display: flex;
@@ -39,7 +39,7 @@
 
 .use {
   margin-right: 20rpx;
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   border-radius: 999rpx;
   padding: 16rpx 22rpx;

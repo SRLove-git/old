@@ -19,8 +19,8 @@
 }
 
 .chip.active {
-  background: #c25e3d;
-  border-color: #c25e3d;
+  background: #ff6a3d;
+  border-color: #ff6a3d;
   color: #ffffff;
 }
 
@@ -78,15 +78,15 @@
 .status.out,
 .status.done,
 .status.verified {
-  background: #e7f3ee;
-  color: #2f7d5c;
+  background: #e5f6ee;
+  color: #2f9e6e;
 }
 
 .status.pending,
 .status.refunding,
 .status.shipping {
-  background: #fdeee9;
-  color: #9e4428;
+  background: #ffefe6;
+  color: #e4572a;
 }
 
 .status.review {
@@ -110,13 +110,13 @@
 }
 
 .amount {
-  color: #c25e3d;
+  color: #ff6a3d;
   font-weight: 700;
   font-size: 38rpx;
 }
 
 .go {
-  background: #c25e3d;
+  background: #ff6a3d;
   color: #ffffff;
   border-radius: 999rpx;
   padding: 14rpx 24rpx;

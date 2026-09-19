@@ -23,9 +23,20 @@
 }
 
 .tab-item.active {
-  color: #c25e3d;
+  color: #ff6a3d;
 }
 
 .tab-emoji {
   font-size: 46rpx;
+}
+
+.tab-item.active .tab-emoji {
+  background: #ffefe6;
+  border-radius: 999rpx;
+  padding: 8rpx 22rpx;
+  transform: translateY(-4rpx);
+}
+
+.tab-item.active .tab-text {
+  font-size: 28rpx;
 }

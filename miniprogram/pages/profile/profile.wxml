@@ -88,7 +88,7 @@
     <view class="panel-title">显示设置</view>
     <view class="switch-row">
       <text>大字模式（更适合长辈）</text>
-      <switch checked="{{largeMode}}" color="#c25e3d" bindchange="toggleLarge" />
+      <switch checked="{{largeMode}}" color="#ff6a3d" bindchange="toggleLarge" />
     </view>
   </view>
 

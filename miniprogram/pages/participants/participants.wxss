@@ -9,7 +9,7 @@
   width: 78rpx;
   height: 78rpx;
   border-radius: 50%;
-  background: #fdeee9;
+  background: #ffefe6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,8 +31,8 @@
 }
 
 .small-btn {
-  border: 2rpx solid #c25e3d;
-  color: #c25e3d;
+  border: 2rpx solid #ff6a3d;
+  color: #ff6a3d;
   border-radius: 999rpx;
   padding: 12rpx 20rpx;
   font-size: 26rpx;

@@ -1,5 +1,5 @@
 .intro {
-  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  background: linear-gradient(135deg, #ff6a3d, #e19a6d);
   color: #ffffff;
   border-radius: 28rpx;
   padding: 38rpx 30rpx;
@@ -39,9 +39,9 @@
 }
 
 .tag-chip.selected {
-  border-color: #c25e3d;
-  background: #fff8f3;
-  color: #c25e3d;
+  border-color: #ff6a3d;
+  background: #fff4ec;
+  color: #ff6a3d;
 }
 
 .agree-row {
@@ -53,7 +53,7 @@
 .checkbox {
   width: 40rpx;
   height: 40rpx;
-  border: 2rpx solid #c25e3d;
+  border: 2rpx solid #ff6a3d;
   border-radius: 8rpx;
   display: flex;
   align-items: center;
@@ -63,5 +63,5 @@
 }
 
 .checkbox.checked {
-  background: #c25e3d;
+  background: #ff6a3d;
 }
