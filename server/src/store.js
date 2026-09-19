@@ -41,6 +41,29 @@ export function reset() {
   return db
 }
 
+function normalizeKeyword(kw) {
+  return String(kw || '').trim().toLowerCase().split(/\s+/).filter(Boolean)
+}
+
+export function activitySearchText(a) {
+  const skuNames = (a.skus || []).map((s) => s.name).join(' ')
+  const points = (a.points || []).join(' ')
+  return [a.title, a.city, a.address, a.highlight, a.detail, points, skuNames]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+export function searchActivities(keyword, category) {
+  const terms = normalizeKeyword(keyword)
+  return get().activities.filter((a) => {
+    const okCat = !category || String(a.category) === String(category)
+    const text = activitySearchText(a)
+    const okKey = terms.length === 0 || terms.every((t) => text.includes(t))
+    return okCat && okKey
+  })
+}
+
 function findManager(id) {
   return db.managers.find((m) => String(m.id) === String(id)) || null
 }

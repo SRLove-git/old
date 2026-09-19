@@ -37,7 +37,7 @@ app.get('/api/home', wrap(() => {
 }))
 
 // 活动/商品
-app.get('/api/activities', wrap(() => store.get().activities))
+app.get('/api/activities', wrap((req) => store.searchActivities(req.query.keyword, req.query.category)))
 app.get('/api/activities/:id', wrap((req) => store.get().activities.find((a) => String(a.id) === String(req.params.id))))
 app.post('/api/activities', adminAuth, wrap((req) => {
   const db = store.get()

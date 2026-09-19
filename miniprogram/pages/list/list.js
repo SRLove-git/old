@@ -32,10 +32,16 @@ Page({
   refresh() {
     const { keyword, cat } = this.data
     const all = store.getActivities()
+    const terms = String(keyword || '').trim().toLowerCase().split(/\s+/).filter(Boolean)
     const list = all.filter((a) => {
       const okCat = cat === 'all' || String(a.category) === String(cat)
-      const text = `${a.title}${a.city}${a.highlight}`
-      const okKey = !keyword || text.includes(keyword)
+      const skuNames = (a.skus || []).map((s) => s.name).join(' ')
+      const points = (a.points || []).join(' ')
+      const text = [a.title, a.city, a.address, a.highlight, a.detail, points, skuNames]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      const okKey = terms.length === 0 || terms.every((t) => text.includes(t))
       return okCat && okKey
     })
     this.setData({ list, total: list.length })

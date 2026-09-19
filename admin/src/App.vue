@@ -63,6 +63,14 @@ function catName(id) { return categories[id] || '未知' }
 
 const pageTitle = computed(() => nav.find((n) => n.key === view.value)?.name || '')
 
+function fuzzyMatch(text, kw) {
+  const k = String(kw || '').trim().toLowerCase()
+  if (!k) return true
+  const terms = k.split(/\s+/).filter(Boolean)
+  const hay = String(text || '').toLowerCase()
+  return terms.every((t) => hay.includes(t))
+}
+
 function toggleSide() { sideOpen.value = !sideOpen.value }
 
 function orderChip(status) {
@@ -136,23 +144,26 @@ async function doAction(fn) {
 
 const filteredActivities = computed(() => {
   const k = kw.value.trim()
-  return activities.value.filter((a) => !k || `${a.title}${a.city}${a.highlight}`.includes(k))
+  return activities.value.filter((a) => {
+    const text = [a.title, a.city, a.address, a.highlight, a.detail, (a.points || []).join(' ')].filter(Boolean).join(' ')
+    return fuzzyMatch(text, k)
+  })
 })
 const filteredOrders = computed(() => {
   const k = kw.value.trim()
   return orders.value.filter((o) => {
     const okStatus = orderStatusFilter.value === '全部' || o.status === orderStatusFilter.value
-    const okKey = !k || `${o.id}${o.title}${o.participants}`.includes(k)
+    const okKey = fuzzyMatch(`${o.id} ${o.title} ${o.participants}`, k)
     return okStatus && okKey
   })
 })
 const filteredCustomers = computed(() => {
   const k = kw.value.trim()
-  return customers.value.filter((c) => !k || `${c.name}${c.phone}`.includes(k))
+  return customers.value.filter((c) => fuzzyMatch(`${c.name} ${c.phone}`, k))
 })
 const filteredCommissions = computed(() => {
   const k = kw.value.trim()
-  return commissions.value.filter((c) => !k || `${c.id}${c.customerName}${c.productName}${c.status}`.includes(k))
+  return commissions.value.filter((c) => fuzzyMatch(`${c.id} ${c.customerName} ${c.productName} ${c.status}`, k))
 })
 
 function openActivity(a) {
