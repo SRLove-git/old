@@ -64,6 +64,47 @@ export function searchActivities(keyword, category) {
   })
 }
 
+export function getCategories() {
+  return get().categories
+}
+
+export function createCategory(data) {
+  const name = String((data && data.name) || '').trim() || '未命名分类'
+  const cat = {
+    id: Date.now(),
+    name,
+    short: String((data && data.short) || '').trim() || name.slice(0, 2),
+    emoji: (data && data.emoji) || '📌',
+    color: (data && data.color) || '#6f747b',
+    type: (data && data.type) || 'activity'
+  }
+  db.categories[String(cat.id)] = cat
+  save()
+  return cat
+}
+
+export function updateCategory(id, data) {
+  const key = String(id)
+  const cat = db.categories[key]
+  if (!cat) return null
+  const next = { ...cat, ...(data || {}), id: cat.id }
+  if (data && data.name !== undefined) next.name = String(data.name || '').trim() || cat.name
+  db.categories[key] = next
+  save()
+  return next
+}
+
+export function deleteCategory(id) {
+  const key = String(id)
+  if (!db.categories[key]) return null
+  delete db.categories[key]
+  db.activities.forEach((a) => {
+    if (String(a.category) === key) a.category = 0
+  })
+  save()
+  return { ok: true }
+}
+
 function findManager(id) {
   return db.managers.find((m) => String(m.id) === String(id)) || null
 }

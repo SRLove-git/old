@@ -29,11 +29,11 @@ function makeSchedules(offsetDays, slots, quota, time) {
 }
 
 const categories = {
-  1: { name: '同城活动', short: '同城', emoji: '🥾', color: '#2f7d5c' },
-  2: { name: '研学旅行', short: '研学', emoji: '🚌', color: '#c96b2a' },
-  3: { name: '岁悦学堂', short: '学堂', emoji: '📚', color: '#3b6fa0' },
-  4: { name: '商家福利', short: '福利', emoji: '🎁', color: '#b04a6b' },
-  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae' }
+  1: { name: '同城活动', short: '同城', emoji: '🥾', color: '#2f7d5c', type: 'activity' },
+  2: { name: '研学旅行', short: '研学', emoji: '🚌', color: '#c96b2a', type: 'activity' },
+  3: { name: '岁悦学堂', short: '学堂', emoji: '📚', color: '#3b6fa0', type: 'activity' },
+  4: { name: '商家福利', short: '福利', emoji: '🎁', color: '#b04a6b', type: 'activity' },
+  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae', type: 'activity' }
 }
 
 const activities = [

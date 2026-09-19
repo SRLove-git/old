@@ -36,6 +36,12 @@ app.get('/api/home', wrap(() => {
   }
 }))
 
+// 分类管理（活动/资讯/视频通用）
+app.get('/api/categories', wrap(() => store.getCategories()))
+app.post('/api/categories', adminAuth, wrap((req) => store.createCategory(req.body)))
+app.put('/api/categories/:id', adminAuth, wrap((req) => store.updateCategory(req.params.id, req.body)))
+app.delete('/api/categories/:id', adminAuth, wrap((req) => store.deleteCategory(req.params.id)))
+
 // 活动/商品
 app.get('/api/activities', wrap((req) => store.searchActivities(req.query.keyword, req.query.category)))
 app.get('/api/activities/:id', wrap((req) => store.get().activities.find((a) => String(a.id) === String(req.params.id))))

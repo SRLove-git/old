@@ -10,6 +10,7 @@ const sideOpen = ref(false)
 const nav = [
   { key: 'dashboard', name: '数据看板', icon: '📊' },
   { key: 'activities', name: '活动管理', icon: '🗓' },
+  { key: 'categories', name: '分类管理', icon: '🏷' },
   { key: 'orders', name: '订单/退款', icon: '🧾' },
   { key: 'customers', name: '用户管理', icon: '👥' },
   { key: 'coupons', name: '优惠券管理', icon: '🎟' },
@@ -55,11 +56,24 @@ const adjustTarget = ref(null)
 const adjustAmount = ref('')
 const adjustReason = ref('')
 
-const categories = { 1: '同城活动', 2: '研学旅行', 3: '岁悦学堂', 4: '商家福利', 5: '商品文创' }
+const categories = ref({})
+const categoryForm = ref(null)
+const categoryTypes = { activity: '活动', news: '资讯', video: '视频' }
 const couponTypes = { 1: '无门槛', 2: '满减', 3: '品类券', 4: '指定商品券' }
 const bindSource = { 1: '扫码', 2: '链接', 3: '邀请码', 4: '手动变更' }
 
-function catName(id) { return categories[id] || '未知' }
+const categoryList = computed(() =>
+  Object.keys(categories.value)
+    .map((id) => ({ id: Number(id), ...categories.value[id] }))
+    .sort((a, b) => Number(a.id) - Number(b.id))
+)
+
+function catName(id) {
+  const c = categories.value[String(id)] || categories.value[id]
+  return c ? c.name : '未知'
+}
+
+function typeName(type) { return categoryTypes[type] || '活动' }
 
 const pageTitle = computed(() => nav.find((n) => n.key === view.value)?.name || '')
 
@@ -102,6 +116,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    categories.value = await api.get('/categories')
     if (view.value === 'dashboard') stats.value = await api.get('/stats/dashboard')
     if (view.value === 'activities') activities.value = await api.get('/activities')
     if (view.value === 'orders') orders.value = await api.get('/orders')
@@ -227,6 +242,26 @@ function saveCoupon() {
 function removeCoupon(id) {
   if (!confirm('删除优惠券？')) return
   doAction(() => api.del(`/coupons/${id}`))
+}
+
+function openCategory(c) {
+  categoryForm.value = c
+    ? { ...c }
+    : { name: '', short: '', emoji: '📌', color: '#6f747b', type: 'activity' }
+}
+
+function saveCategory() {
+  const form = { ...categoryForm.value }
+  doAction(async () => {
+    if (form.id) await api.put(`/categories/${form.id}`, form)
+    else await api.post('/categories', form)
+    categoryForm.value = null
+  })
+}
+
+function removeCategory(id) {
+  if (!confirm('删除该分类？该分类下的活动会变为「未分类」。')) return
+  doAction(() => api.del(`/categories/${id}`))
 }
 
 function openBanner(b) {
@@ -576,6 +611,26 @@ function exportCsv(filename, rows) {
         </div>
       </section>
 
+      <section v-if="view === 'categories'">
+        <div class="card">
+          <table>
+            <thead><tr><th>ID</th><th>图标</th><th>名称</th><th>简称</th><th>类型</th><th>主题色</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="c in categoryList" :key="c.id">
+                <td>{{ c.id }}</td>
+                <td><span class="cat-emoji">{{ c.emoji }}</span></td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.short }}</td>
+                <td><span class="chip" :class="c.type === 'news' ? 'chip-info' : c.type === 'video' ? 'chip-primary' : 'chip-success'">{{ typeName(c.type) }}</span></td>
+                <td><span class="color-dot" :style="{ background: c.color }"></span>{{ c.color }}</td>
+                <td><button class="btn btn-text" @click="openCategory(c)">编辑</button><button class="btn btn-text btn-danger-text" @click="removeCategory(c.id)">删除</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="fab" @click="openCategory(null)">＋ 新建分类</button>
+      </section>
+
       <section v-if="view === 'config' && config">
         <div class="card config-card">
           <div class="section-title">规则配置</div>
@@ -592,7 +647,7 @@ function exportCsv(filename, rows) {
         <h2>{{ activityForm.id ? '编辑活动' : '新建活动' }}</h2>
         <label class="field-label">标题</label><input v-model="activityForm.title" class="input" />
         <label class="field-label">分类</label>
-        <select v-model.number="activityForm.category" class="input"><option v-for="(n, k) in categories" :key="k" :value="Number(k)">{{ n }}</option></select>
+        <select v-model.number="activityForm.category" class="input"><option v-for="c in categoryList" :key="c.id" :value="c.id">{{ c.name }}</option></select>
         <label class="field-label">城市</label><input v-model="activityForm.city" class="input" />
         <label class="field-label">地址</label><input v-model="activityForm.address" class="input" />
         <label class="field-label">会员价</label><input v-model.number="activityForm.memberPrice" type="number" class="input" />
@@ -625,7 +680,7 @@ function exportCsv(filename, rows) {
         <label class="field-label">类型</label><select v-model.number="couponForm.type" class="input"><option v-for="(n, k) in couponTypes" :key="k" :value="Number(k)">{{ n }}</option></select>
         <label class="field-label">面额</label><input v-model.number="couponForm.value" type="number" class="input" />
         <label class="field-label">使用门槛</label><input v-model.number="couponForm.minAmount" type="number" class="input" />
-        <label class="field-label">适用分类（品类券）</label><select v-model="couponForm.scopeCategory" class="input"><option :value="null">无</option><option v-for="(n, k) in categories" :key="k" :value="Number(k)">{{ n }}</option></select>
+        <label class="field-label">适用分类（品类券）</label><select v-model="couponForm.scopeCategory" class="input"><option :value="null">无</option><option v-for="c in categoryList" :key="c.id" :value="c.id">{{ c.name }}</option></select>
         <label class="field-label">适用商品 ID（指定商品券）</label><input v-model="couponForm.scopeProductId" class="input" />
         <label class="field-label">有效期至</label><input v-model="couponForm.expireAt" class="input" />
         <div class="modal-actions"><button class="btn btn-outlined" @click="couponForm = null">取消</button><button class="btn btn-filled" @click="saveCoupon">保存</button></div>
@@ -659,6 +714,23 @@ function exportCsv(filename, rows) {
         <label class="field-label">调整后金额</label><input v-model="adjustAmount" type="number" class="input" />
         <label class="field-label">调整原因</label><input v-model="adjustReason" class="input" placeholder="必填" />
         <div class="modal-actions"><button class="btn btn-outlined" @click="adjustTarget = null">取消</button><button class="btn btn-filled" @click="confirmAdjust">确认调整</button></div>
+      </div>
+    </div>
+
+    <div v-if="categoryForm" class="modal">
+      <div class="modal-box">
+        <h2>{{ categoryForm.id ? '编辑分类' : '新建分类' }}</h2>
+        <label class="field-label">分类名称</label><input v-model="categoryForm.name" class="input" placeholder="例如：健康资讯" />
+        <label class="field-label">简称</label><input v-model="categoryForm.short" class="input" placeholder="例如：资讯" />
+        <label class="field-label">图标（emoji）</label><input v-model="categoryForm.emoji" class="input" placeholder="例如：📰" />
+        <label class="field-label">主题色</label><input v-model="categoryForm.color" class="input" placeholder="例如：#3b6fa0" />
+        <label class="field-label">内容类型</label>
+        <select v-model="categoryForm.type" class="input">
+          <option value="activity">活动</option>
+          <option value="news">资讯</option>
+          <option value="video">视频</option>
+        </select>
+        <div class="modal-actions"><button class="btn btn-outlined" @click="categoryForm = null">取消</button><button class="btn btn-filled" @click="saveCategory">保存</button></div>
       </div>
     </div>
   </div>
