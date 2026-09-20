@@ -45,8 +45,12 @@
 .tone-0 { background: #edf4ef; } .tone-1 { background: #fff0e8; } .tone-2 { background: #edf0f8; } .tone-3 { background: #f9ecf0; } .tone-4 { background: #f7f0e4; }
 .profile-card { margin-bottom: 0; }
 .profile-card .panel-title { margin-bottom: 18rpx; }
-.manager-bound { display: flex; align-items: center; } .manager-avatar { width: 76rpx; height: 76rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f4e4d1; color: #94683f; font-weight: 700; }
-.manager-info { flex: 1; margin-left: 16rpx; } .manager-name { font-size: 29rpx; font-weight: 700; } .manager-sub, .manager-empty { margin: 7rpx 0 18rpx; color: #7f8582; font-size: 24rpx; }
+.manager-bound { display: flex; align-items: center; }
+.manager-avatar { flex-shrink: 0; width: 76rpx; height: 76rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f4e4d1; color: #94683f; font-weight: 700; }
+.manager-info { flex: 1; min-width: 0; margin-left: 16rpx; }
+.manager-name { font-size: 29rpx; font-weight: 700; overflow-wrap: anywhere; }
+.manager-sub, .manager-empty { margin: 7rpx 0 18rpx; color: #7f8582; font-size: 24rpx; overflow-wrap: anywhere; }
+.manager-bound .small-btn, .manager-bound .unbind-pending { flex-shrink: 0; margin-left: 12rpx; }
 .small-btn { padding: 10rpx 19rpx; border: 1rpx solid var(--color-primary); border-radius: 999rpx; color: var(--color-primary); font-size: 23rpx; }
 .apply-status { margin-bottom: 18rpx; padding: 18rpx; border-radius: 14rpx; background: var(--color-success-light); color: var(--color-success); text-align: center; font-size: 24rpx; }
 .bind-log { display: flex; flex-direction: column; padding: 15rpx 0; border-bottom: 1rpx solid var(--color-border); font-size: 23rpx; }

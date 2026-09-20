@@ -1,4 +1,13 @@
 <view class="manager-page">
+  <view wx:if="{{denied}}" class="denied-panel">
+    <view class="denied-icon">🏪</view>
+    <view class="denied-title">暂无主理人工作台</view>
+    <view class="denied-tip">{{deniedTip || '主理人工作台仅对已通过审核的主理人本人开放'}}</view>
+    <button class="btn btn-primary btn-block" bindtap="goApply">申请成为主理人</button>
+    <button class="btn btn-secondary btn-block" bindtap="exit">返回我的</button>
+  </view>
+
+  <block wx:else>
   <view class="manager-top">
     <view>
       <view class="manager-brand">主理人工作台</view>
@@ -42,8 +51,10 @@
         <view class="commission-grid">
           <view class="commission-box"><text>待结算</text><strong>¥{{manager.pending}}</strong></view>
           <view class="commission-box"><text>可结算</text><strong>¥{{manager.available}}</strong></view>
+          <view class="commission-box"><text>提现中</text><strong>¥{{manager.withdrawing}}</strong></view>
           <view class="commission-box"><text>累计佣金</text><strong>¥{{manager.total}}</strong></view>
         </view>
+        <view wx:if="{{manager.debt > 0}}" class="rate-line red">退款扣回 ¥{{manager.debt}} 将抵扣后续佣金（已打款部分形成负债）</view>
         <view class="rate-line">当前分佣比例：{{manager.commissionRate}}%（商品级比例优先，全局默认后台可配置）</view>
       </view>
       <view class="section card">
@@ -57,7 +68,8 @@
         <view wx:for="{{withdraws}}" wx:key="id" class="withdraw-row">
           <view>
             <view class="withdraw-amount">¥{{item.amount}}</view>
-            <view class="withdraw-meta">代扣税 ¥{{item.tax || 0}} · 到账 ¥{{item.actualAmount || item.amount}}</view>
+            <view class="withdraw-meta">代扣税 ¥{{item.tax || 0}} · 到账 ¥{{item.actualAmount || item.amount}} · 锁定佣金 {{item.commissionCount || 0}} 笔</view>
+            <view wx:if="{{item.adjustNote}}" class="withdraw-meta">已按退款调整：{{item.adjustNote}}</view>
             <view class="withdraw-meta">{{item.status}} · {{item.payChannel || '微信零钱'}} · {{item.applyTime}}</view>
             <view wx:if="{{item.rejectReason}}" class="withdraw-meta red">{{item.rejectReason}}</view>
           </view>
@@ -156,4 +168,5 @@
       <button class="btn btn-primary btn-block" bindtap="applyWithdraw">提交申请</button>
     </view>
   </view>
+  </block>
 </view>

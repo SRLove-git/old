@@ -1,10 +1,10 @@
 const store = require('../../utils/store.js')
 
-const DEMO_MANAGER_ID = 1001
-
 Page({
   data: {
     tab: 'dashboard',
+    denied: false,
+    deniedTip: '',
     manager: {},
     commissions: [],
     withdraws: [],
@@ -34,7 +34,21 @@ Page({
 
   async load() {
     await store.ready()
-    const dash = await store.loadManagerDashboard(DEMO_MANAGER_ID)
+    const own = store.getOwnManager()
+    const isManager = store.get().isManager
+    // 工作台只对主理人本人开放，非主理人看不到任何人的钱包与客户数据
+    if (!isManager || !own || !own.id) {
+      this.setData({ denied: true, deniedTip: '当前账号还不是主理人，无法进入工作台' })
+      return
+    }
+    let dash = null
+    try {
+      dash = await store.loadManagerDashboard(own.id)
+    } catch (e) {
+      this.setData({ denied: true, deniedTip: e.message || '无法加载主理人工作台' })
+      return
+    }
+    this.setData({ denied: false, deniedTip: '' })
     const recentOrders = (dash.commissions || []).slice(0, 3).map((c) => ({
       id: c.id,
       customerName: c.customerName,
@@ -42,11 +56,13 @@ Page({
       payAmount: c.payAmount,
       commissionAmount: c.commissionAmount
     }))
+    const customerList = (dash.customers || []).map((c) => ({ id: c.id, name: c.name, phone: c.phone }))
     this.setData({
-      manager: dash.manager || {},
+      // 客户数按实际归属客户计算，不用主理人表里的静态值
+      manager: { ...(dash.manager || {}), customers: customerList.length },
       commissions: dash.commissions || [],
       withdraws: dash.withdraws || [],
-      customers: (dash.customers || []).map((c) => ({ id: c.id, name: c.name, phone: c.phone })),
+      customers: customerList,
       activities: dash.activities || [],
       config: dash.config || {},
       recentOrders
@@ -76,10 +92,17 @@ Page({
   },
 
   async applyWithdraw() {
+    if (this.data.denied || !this.data.manager.id) {
+      wx.showToast({ title: '当前账号还不是主理人', icon: 'none' })
+      return
+    }
     const cfg = this.data.config || {}
     const monthlyLimit = Number(cfg.withdrawMonthlyLimit ?? 1)
-    const applied = (this.data.withdraws || []).filter((w) => w.status !== '已拒绝').length
-    if (applied >= monthlyLimit) {
+    const monthKey = this.monthKey()
+    const applied = (this.data.withdraws || []).filter(
+      (w) => !['已拒绝', '已撤销'].includes(w.status) && String(w.applyTime || '').slice(0, 7) === monthKey
+    ).length
+    if (monthlyLimit > 0 && applied >= monthlyLimit) {
       wx.showToast({ title: `每月最多提现${monthlyLimit}次`, icon: 'none' })
       return
     }
@@ -89,15 +112,26 @@ Page({
       wx.showToast({ title: `最低提现金额为${min}元`, icon: 'none' })
       return
     }
-    const available = Number(this.data.manager.available || 0)
+    const available = Number(this.data.manager.withdrawable ?? this.data.manager.available ?? 0)
     if (amount > available) {
       wx.showToast({ title: '超出可结算余额', icon: 'none' })
       return
     }
-    await store.applyWithdraw(DEMO_MANAGER_ID, amount)
-    this.setData({ withdrawOpen: false })
-    await this.load()
-    wx.showToast({ title: '提现申请已提交', icon: 'none' })
+    try {
+      // 服务端会再次校验金额、最低提现额与每月次数，以服务端结果为准
+      const record = await store.applyWithdraw(this.data.manager.id, amount)
+      this.setData({ withdrawOpen: false })
+      await this.load()
+      wx.showToast({ title: `已提交，锁定佣金${record.commissionCount || 0}笔`, icon: 'none' })
+    } catch (e) {
+      wx.showToast({ title: e.message || '提现申请失败', icon: 'none' })
+    }
+  },
+
+  monthKey() {
+    const d = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}`
   },
 
   copyCode() {
@@ -127,6 +161,10 @@ Page({
 
   exit() {
     wx.switchTab({ url: '/pages/profile/profile' })
+  },
+
+  goApply() {
+    wx.navigateTo({ url: '/pages/manager-apply/manager-apply' })
   },
 
   onShareAppMessage() {

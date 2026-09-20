@@ -22,6 +22,7 @@ let cache = {
   cards: [],
   boundManager: null,
   isManager: false,
+  manager: null,
   application: null,
   bindLogs: [],
   managerView: {},
@@ -109,7 +110,7 @@ function scheduleDaysUntil(schedule) {
 function calcRefund(order) {
   const activity = getActivity(order.activityId)
   if (!activity) return { can: false, ratio: 0, amount: 0, reason: '活动不存在' }
-  if (['已核销', '待评价', '已完成', '已退款', '已取消'].includes(order.status)) {
+  if (['已核销', '待评价', '已完成', '已退款', '已取消', '退款中'].includes(order.status)) {
     return { can: false, ratio: 0, amount: 0, reason: '当前状态不可退款' }
   }
   const rule = activity.refundRule || {}
@@ -160,6 +161,8 @@ async function ready() {
     cache.boundManager = profile.boundManager
     cache.addresses = profile.addresses
     cache.isManager = profile.isManager
+    // 只有主理人本人会拿到自己的主理人记录（含余额与 id）
+    cache.manager = profile.manager || null
     cache.application = profile.application
     cache.bindLogs = profile.bindLogs
     cache.pendingUnbind = profile.pendingUnbind || null
@@ -361,6 +364,27 @@ function getManagers() {
   return cache.managers
 }
 
+function getOwnManager() {
+  return cache.manager || null
+}
+
+function getCurrentUserId() {
+  return CURRENT_USER_ID
+}
+
+// 手机号统一成 11 位数字，容忍空格、短横线、+86 前缀等写法
+function normalizePhone(value) {
+  let digits = String(value == null ? '' : value).replace(/\D/g, '')
+  if (digits.length === 13 && digits.startsWith('86')) digits = digits.slice(2)
+  return digits
+}
+
+function maskPhone(value) {
+  const phone = normalizePhone(value)
+  if (phone.length !== 11) return ''
+  return `${phone.slice(0, 3)}****${phone.slice(7)}`
+}
+
 function getDefaultAddress() {
   return cache.addresses.find((a) => a.isDefault) || cache.addresses[0] || null
 }
@@ -518,7 +542,53 @@ function refundRuleText(rule) {
 
 function displayStatus(order) {
   if (order.status === '待收货' && order.category !== 5 && order.category !== 4) return '待出行/待使用'
+  if (order.status === '已核销') return '待完成'
   return order.status
+}
+
+// 订单筛选：个人中心入口、筛选 chip 与列表状态文案共用同一套口径
+const GOODS_CATEGORIES = [4, 5]
+const ORDER_FILTERS = [
+  { label: '全部', match: () => true },
+  { label: '待付款', match: (o) => o.status === '待付款' },
+  { label: '待发货', match: (o) => o.status === '待发货' },
+  { label: '待收货', match: (o) => o.status === '待收货' && GOODS_CATEGORIES.includes(Number(o.category)) },
+  { label: '待出行', match: (o) => o.status === '待收货' && !GOODS_CATEGORIES.includes(Number(o.category)) },
+  { label: '待完成', match: (o) => o.status === '已核销' },
+  { label: '待评价', match: (o) => o.status === '待评价' },
+  { label: '已完成', match: (o) => o.status === '已完成' },
+  { label: '退款/售后', match: (o) => ['退款中', '已退款'].includes(o.status) },
+  { label: '已取消', match: (o) => o.status === '已取消' }
+]
+
+function orderFilterLabels() {
+  return ORDER_FILTERS.map((item) => item.label)
+}
+
+// 个人中心入口（含历史写法）→ 筛选 chip
+function resolveOrderFilter(status) {
+  const map = {
+    待付款: '待付款',
+    待出行: '待出行',
+    待收货: '待收货',
+    待发货: '待发货',
+    待完成: '待完成',
+    待评价: '待评价',
+    已完成: '已完成',
+    已取消: '已取消',
+    退款售后: '退款/售后',
+    '退款/售后': '退款/售后',
+    退款中: '退款/售后',
+    已退款: '退款/售后',
+    已核销: '待完成'
+  }
+  const key = String(status == null ? '' : status).trim()
+  return map[key] || ''
+}
+
+function matchOrderFilter(order, label) {
+  const target = ORDER_FILTERS.find((item) => item.label === label) || ORDER_FILTERS[0]
+  return target.match(order)
 }
 
 async function submitManagerApply(form) {
@@ -528,11 +598,13 @@ async function submitManagerApply(form) {
 }
 
 async function loadManagerDashboard(managerId) {
-  const dash = await api.get(`/managers/${managerId}/dashboard`)
+  // 带上当前登录会员身份，服务端只允许主理人查看自己的工作台
+  const dash = await api.get(`/managers/${managerId}/dashboard?userId=${CURRENT_USER_ID}`)
   cache.managerView = dash.manager
   cache.managerCustomers = dash.customers
   cache.commissions = dash.commissions
   cache.withdraws = dash.withdraws
+  cache.manager = dash.manager
   return dash
 }
 
@@ -572,9 +644,16 @@ module.exports = {
   addActivityToCart,
   addCourseToCart,
   getManagers,
+  getOwnManager,
+  getCurrentUserId,
+  normalizePhone,
+  maskPhone,
   getDefaultAddress,
   money,
   statusClass,
+  orderFilterLabels,
+  resolveOrderFilter,
+  matchOrderFilter,
   bindSourceLabel,
   couponApplicable,
   calcRefund,

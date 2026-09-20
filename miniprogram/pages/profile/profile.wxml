@@ -48,7 +48,7 @@
       <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><text class="service-icon tone-4">📍</text><text>收货地址</text></view>
       <view class="service-item" bindtap="goAcademy"><text class="service-icon tone-0">📚</text><text>我的课程</text></view>
       <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><text class="service-icon tone-1">📝</text><text>学习记录</text></view>
-      <view class="service-item" data-url="/pages/manager/manager" bindtap="go"><text class="service-icon tone-2">🏪</text><text>主理人工作台</text></view>
+      <view wx:if="{{isManager}}" class="service-item" data-url="/pages/manager/manager" bindtap="go"><text class="service-icon tone-2">🏪</text><text>主理人工作台</text></view>
       <view class="service-item" bindtap="showService"><text class="service-icon tone-3">📞</text><text>联系商家</text></view>
       <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><text class="service-icon tone-4">🤝</text><text>申请服务商</text></view>
     </view>

@@ -20,13 +20,31 @@
   <view class="form-card card">
     <view class="field">
       <text class="field-label">姓名<text class="required">*</text></text>
-      <input class="field-input readonly" value="{{form.name}}" disabled placeholder="真实姓名" />
-      <text class="field-hint">与账号信息一致</text>
+      <input
+        class="field-input {{nameEditable ? '' : 'readonly'}}"
+        value="{{form.name}}"
+        disabled="{{!nameEditable}}"
+        data-field="name"
+        bindinput="onInput"
+        placeholder="真实姓名"
+      />
+      <text class="field-hint">{{nameHint}}</text>
+      <text wx:if="{{errors.name}}" class="field-error">{{errors.name}}</text>
     </view>
     <view class="field">
       <text class="field-label">手机号<text class="required">*</text></text>
-      <input class="field-input readonly" value="{{form.phone}}" disabled placeholder="联系电话" />
-      <text class="field-hint">与账号信息一致</text>
+      <input
+        class="field-input {{phoneEditable ? '' : 'readonly'}}"
+        type="number"
+        maxlength="11"
+        value="{{form.phone}}"
+        disabled="{{!phoneEditable}}"
+        data-field="phone"
+        bindinput="onInput"
+        placeholder="11位手机号"
+      />
+      <text class="field-hint">{{phoneHint}}</text>
+      <text wx:if="{{errors.phone}}" class="field-error">{{errors.phone}}</text>
     </view>
     <view class="field">
       <text class="field-label">微信群数量<text class="required">*</text></text>
