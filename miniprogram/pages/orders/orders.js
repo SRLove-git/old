@@ -3,14 +3,14 @@ const store = require('../../utils/store.js')
 Page({
   data: {
     filter: '全部',
-    statuses: ['全部', '待付款', '待发货', '待收货', '待评价', '已完成', '退款中', '已退款', '已取消'],
+    statuses: store.orderFilterLabels(),
     list: []
   },
 
   onLoad(options) {
-    const map = { '待付款': '待付款', '待出行': '待收货', '待完成': '待评价', '待评价': '待评价', '退款售后': '退款售后' }
     const status = options.status ? decodeURIComponent(options.status) : ''
-    if (map[status]) this.setData({ filter: map[status] })
+    const filter = store.resolveOrderFilter(status)
+    if (filter) this.setData({ filter })
   },
 
   async onShow() {
@@ -21,7 +21,7 @@ Page({
   refresh() {
     const filter = this.data.filter
     const list = store.get().orders
-      .filter((o) => filter === '全部' || (filter === '退款售后' ? ['退款中', '已退款'].includes(o.status) : o.status === filter))
+      .filter((o) => store.matchOrderFilter(o, filter))
       .map((o) => Object.assign({}, o, {
         statusClass: store.statusClass(o.status),
         displayStatus: store.displayStatus(o),

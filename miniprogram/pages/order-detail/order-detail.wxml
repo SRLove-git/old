@@ -1,8 +1,8 @@
 <view wx:if="{{order}}" class="order-detail-page">
   <view class="status-hero">
-    <view class="status-icon">✓</view>
+    <view class="status-icon">{{statusIcon}}</view>
     <view class="status-text">{{displayStatus}}</view>
-    <view class="status-sub">{{refundInfo.reason || '请按时参加活动'}}</view>
+    <view class="status-sub">{{statusSub}}</view>
   </view>
 
   <view class="detail-card page-pad">
@@ -26,6 +26,15 @@
       <view class="code">{{order.code}}</view>
       <view class="code-tip">到店出示给工作人员核销</view>
     </view>
+  </view>
+
+  <view wx:if="{{order.shipTime || order.trackingNo}}" class="detail-card page-pad">
+    <view class="panel-title">物流信息</view>
+    <view class="confirm-row"><text>配送方式</text><text>{{order.deliveryType === 'self' ? '无需物流（线下交付/自提）' : '快递发货'}}</text></view>
+    <view wx:if="{{order.trackingNo}}" class="confirm-row"><text>快递单号</text><text>{{order.carrier}} {{order.trackingNo}}</text></view>
+    <view wx:if="{{order.shipTime}}" class="confirm-row"><text>发货时间</text><text>{{order.shipTime}}</text></view>
+    <view wx:if="{{order.shippingNote}}" class="confirm-row"><text>商家备注</text><text>{{order.shippingNote}}</text></view>
+    <button wx:if="{{order.trackingNo}}" class="copy-tracking" bindtap="copyTracking">复制快递单号</button>
   </view>
 
   <view class="detail-card page-pad">
@@ -55,6 +64,10 @@
       <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
     </block>
 
+    <block wx:elif="{{order.status === '退款中'}}">
+      <view class="ship-hint">退款申请审核中，通过后原路退回</view>
+    </block>
+
     <block wx:elif="{{order.status === '已核销'}}">
       <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
     </block>
@@ -68,6 +81,7 @@
     <view class="sheet" catchtap="noop">
       <view class="modal-title">申请退款</view>
       <view class="refund-rule">预计可退 ¥{{refundInfo.amount}}（{{refundInfo.reason}}）</view>
+      <view class="refund-rule">提交后由平台审核，通过后原路退回</view>
       <view class="field">
         <text class="field-label">退款原因</text>
         <picker range="{{reasons}}" value="{{refundIndex}}" bindchange="onReason">

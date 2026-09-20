@@ -13,6 +13,8 @@ Page({
     reviewRating: 5,
     reviewContent: '',
     displayStatus: '',
+    statusSub: '',
+    statusIcon: '✓',
     actionLabel: '',
     payRemain: ''
   },
@@ -36,9 +38,34 @@ Page({
       timeText,
       refundInfo,
       displayStatus: store.displayStatus(order),
+      statusSub: this.statusSubText(order, refundInfo),
+      statusIcon: this.statusIconText(order),
       actionLabel: this.actionLabel(order),
       payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : ''
     })
+  },
+
+  statusSubText(order, refundInfo) {
+    if (order.status === '退款中') return '退款申请审核中，通过后原路退回'
+    if (order.status === '已退款') return `已退款 ¥${order.refundAmount || 0}`
+    if (order.refundRejected) return `退款申请未通过：${order.refundRejected}`
+    if (order.trackingNo) return `${order.carrier} ${order.trackingNo}`
+    return (refundInfo && refundInfo.reason) || '请按时参加活动'
+  },
+
+  statusIconText(order) {
+    const icons = {
+      待付款: '⏰',
+      待发货: '📦',
+      待收货: '🚚',
+      已核销: '✅',
+      待评价: '⭐',
+      已完成: '🏅',
+      退款中: '↩️',
+      已退款: '💸',
+      已取消: '🚫'
+    }
+    return icons[order.status] || '✓'
   },
 
   payRemainText(deadline) {
@@ -88,7 +115,15 @@ Page({
       this.setData({ refundOpen: false })
       return
     }
+    if (result.pending || result.order.status === '退款中') {
+      // 需要运营审核：提交后进入「退款中」，金额与规则在审核通过后执行
+      this.setData({ refundOpen: false, order: result.order })
+      this.loadOrder()
+      wx.showToast({ title: '退款申请已提交，等待审核', icon: 'none' })
+      return
+    }
     this.setData({ refundOpen: false, order: result.order })
+    this.loadOrder()
     wx.showToast({ title: '退款成功', icon: 'success' })
   },
 
@@ -161,6 +196,16 @@ Page({
       title: '联系客服',
       content: `客服电话：${a.phone}`,
       showCancel: false
+    })
+  },
+
+  copyTracking() {
+    const order = this.data.order || {}
+    const text = [order.carrier, order.trackingNo].filter(Boolean).join(' ')
+    if (!text) return
+    wx.setClipboardData({
+      data: text,
+      success: () => wx.showToast({ title: '快递单号已复制', icon: 'none' })
     })
   }
 })

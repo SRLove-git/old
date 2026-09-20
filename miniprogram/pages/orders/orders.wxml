@@ -25,6 +25,7 @@
           <view class="order-title">{{item.title}}</view>
           <view class="order-meta">📅 {{item.timeText}}</view>
           <view wx:if="{{item.venueAddress}}" class="order-meta">📍 {{item.venueAddress}}</view>
+          <view wx:if="{{item.trackingNo}}" class="order-meta">🚚 {{item.carrier}} {{item.trackingNo}}</view>
           <view class="order-meta">👥 {{item.participants}}</view>
         </view>
         <text class="status {{item.statusClass}}">{{item.displayStatus}}</text>
