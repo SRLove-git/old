@@ -204,3 +204,36 @@
   padding: 22rpx;
   text-align: center;
 }
+
+.order-venue {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin-top: 16rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 16rpx;
+  background: var(--color-primary-light);
+}
+
+.order-venue-pin {
+  font-size: 30rpx;
+}
+
+.order-venue-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-venue-label {
+  color: var(--color-primary);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.order-venue-text {
+  margin-top: 6rpx;
+  color: var(--color-text-1);
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.5;
+}

@@ -22,8 +22,8 @@
 
   <view wx:if="{{step === 1}}" class="panel page-pad">
     <block wx:if="{{isSkuOnly || activity.hasSku}}">
-      <view class="panel-title">{{isSkuOnly ? '请选择规格' : '请选择房型'}}</view>
-      <view class="sku-options">
+      <view class="panel-title">{{'请选择' + (activity.skuLabel || (isSkuOnly ? '规格' : '房型'))}}</view>
+      <view class="sku-options {{hasVenue ? 'stacked' : ''}}">
         <view
           wx:for="{{activity.skus}}"
           wx:key="id"
@@ -32,9 +32,14 @@
           bindtap="selectSku"
         >
           <text class="sku-name">{{item.name}}</text>
+          <text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text>
           <text class="sku-price-sm">¥{{item.memberPrice}}</text>
           <text wx:if="{{item.hot}}" class="hot">热销</text>
         </view>
+      </view>
+      <view wx:if="{{skuAddress}}" class="venue-hint">
+        <text class="venue-hint-pin">📍</text>
+        <view class="venue-hint-body"><view class="venue-hint-label">本次活动地址</view><view class="venue-hint-text">{{skuAddress}}</view></view>
       </view>
     </block>
 
@@ -118,11 +123,9 @@
 
   <view wx:if="{{step === 3}}" class="panel page-pad">
     <view class="panel-title">确认订单</view>
-    <view class="confirm-row">
-      <text>{{isSkuOnly ? '规格' : '活动时间'}}</text>
-      <block wx:if="{{isSkuOnly}}"><text>{{skuName}}</text></block>
-      <block wx:else><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></block>
-    </view>
+    <view wx:if="{{skuName}}" class="confirm-row"><text>{{activity.skuLabel || '规格'}}</text><text>{{skuName}}</text></view>
+    <view wx:if="{{!isSkuOnly}}" class="confirm-row"><text>活动时间</text><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></view>
+    <view wx:if="{{skuAddress}}" class="confirm-row"><text>活动地址</text><text class="venue-strong">{{skuAddress}}</text></view>
     <view class="confirm-row"><text>{{isGoods ? '购买数量' : '报名人数'}}</text><text>{{count}}{{isGoods ? '件' : '人'}}</text></view>
     <view class="confirm-row"><text>{{isGoods ? '收货人' : '报名人'}}</text><text>{{isGoods ? address.name : info.name}}</text></view>
     <view wx:if="{{isGoods}}" class="confirm-row"><text>收货地址</text><text>{{address.district}} {{address.detail}}</text></view>

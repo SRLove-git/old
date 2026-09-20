@@ -8,6 +8,8 @@
   <view class="detail-card page-pad">
     <view class="order-title">{{order.title}}</view>
     <view class="order-meta">📅 {{order.timeText}}</view>
+    <view wx:if="{{order.skuName}}" class="order-meta">🏷️ {{order.skuName}}</view>
+    <view wx:if="{{order.venueAddress}}" class="order-venue"><text class="order-venue-pin">📍</text><view class="order-venue-body"><view class="order-venue-label">活动地点</view><view class="order-venue-text">{{order.venueAddress}}</view></view></view>
     <view class="order-meta">👥 {{order.participants}}</view>
     <view class="order-meta">🧾 订单号 {{order.id}}</view>
   </view>
@@ -30,6 +32,7 @@
     <view class="confirm-row"><text>实付金额</text><text>¥{{order.payAmount}}</text></view>
     <view class="confirm-row"><text>优惠券</text><text>{{order.coupon}}</text></view>
     <view class="confirm-row"><text>下单时间</text><text>{{order.createdAt}}</text></view>
+    <view wx:if="{{order.venueAddress}}" class="confirm-row"><text>活动地址</text><text>{{order.venueAddress}}</text></view>
     <view wx:if="{{order.address}}" class="confirm-row"><text>收货地址</text><text>{{order.address.name}} {{order.address.phone}} {{order.address.district}} {{order.address.detail}}</text></view>
     <view wx:if="{{order.refundAmount}}" class="confirm-row"><text>退款金额</text><text class="red">¥{{order.refundAmount}}</text></view>
   </view>

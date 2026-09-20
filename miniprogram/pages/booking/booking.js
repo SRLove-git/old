@@ -20,7 +20,9 @@ Page({
     },
     skuName: '',
     skuId: '',
+    skuAddress: '',
     isSkuOnly: false,
+    hasVenue: false,
     memberPrice: 0,
     discount: 0,
     total: 0,
@@ -65,6 +67,8 @@ Page({
       selectedParticipantId: firstParticipant.id,
       coupons: state.coupons,
       skuName: sku ? sku.name : '',
+      skuAddress: (sku && sku.address) || activity.address || '',
+      hasVenue: (activity.skus || []).some((s) => s.address),
       memberPrice,
       needIdCard: !!(activity.participantFields && activity.participantFields.idCard),
       needDiscount: !!(activity.participantFields && activity.participantFields.discount),
@@ -126,7 +130,7 @@ Page({
     const sku = this.data.activity.skus.find((s) => s.id === id)
     if (!sku) return
     this.setData(
-      { skuId: id, skuName: sku.name, memberPrice: sku.memberPrice },
+      { skuId: id, skuName: sku.name, skuAddress: sku.address || this.data.activity.address || '', memberPrice: sku.memberPrice },
       () => this.recalc()
     )
   },

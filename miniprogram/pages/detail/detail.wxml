@@ -20,6 +20,20 @@
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
 
+    <view wx:if="{{venues.length}}" class="section-card venue-card">
+      <view class="section-title-row"><text>活动场地（{{venues.length}}个可选）</text><text class="muted-link">下单时选择</text></view>
+      <view wx:for="{{venues}}" wx:key="id" class="venue-row {{selectedSkuId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectSku">
+        <text class="venue-pin">📍</text>
+        <view class="venue-info"><view class="venue-name">{{item.district ? item.district + ' · ' : ''}}{{item.name}}</view><view class="venue-address">{{item.address}}</view></view>
+        <text class="venue-picked">{{selectedSkuId === item.id ? '已选' : ''}}</text>
+      </view>
+    </view>
+
+    <view wx:elif="{{activity.address}}" class="section-card venue-card">
+      <view class="section-title-row"><text>活动地址</text></view>
+      <view class="venue-row"><text class="venue-pin">📍</text><view class="venue-info"><view class="venue-name">{{activity.address}}</view></view></view>
+    </view>
+
     <view class="section-card buyers-card">
       <view class="section-title-row"><text>{{activity.soldCount || activity.buyers.length}}人已购买</text><text class="muted-link">查看全部 ›</text></view>
       <view wx:for="{{activity.buyers}}" wx:key="time" class="buyer-row"><text class="buyer-avatar">{{item.avatar}}</text><text class="buyer-name">{{item.name}}</text><text class="buyer-time">{{item.time}} 买了1件</text><button class="buyer-go" catchtap="openSku">去下单</button></view>
@@ -65,6 +79,6 @@
   </view>
 
   <view wx:if="{{skuOpen}}" class="sheet-mask" bindtap="closeSku">
-    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.sellType === 'sku' ? '请选择规格' : '确认购买'}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><button class="sheet-confirm" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
+    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.skus.length ? '请选择' + (activity.skuLabel || '规格') : '确认购买'}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options {{hasVenue ? 'stacked' : ''}}"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><view wx:if="{{selectedSku && selectedSku.address}}" class="sheet-venue"><text class="sheet-venue-pin">📍</text><view class="sheet-venue-body"><view class="sheet-venue-label">本次活动场地</view><view class="sheet-venue-text">{{selectedSku.address}}</view></view></view><button class="sheet-confirm" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
   </view>
 </view>

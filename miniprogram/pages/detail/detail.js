@@ -35,6 +35,8 @@ Page({
     cartIntent: false,
     selectedSkuId: '',
     selectedSku: null,
+    venues: [],
+    hasVenue: false,
     memberSaving: 0,
     serviceText: '',
     buyNowText: '立即购买'
@@ -82,6 +84,9 @@ Page({
       .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
     const rankLabel = rank.length && String(rank[0].id) === String(id) ? '本店销量榜第1' : ''
     const hasSku = activity.hasSku || activity.sellType === 'sku'
+    const venues = (activity.skus || [])
+      .filter((s) => s.address)
+      .map((s) => ({ id: s.id, name: s.name, district: s.district || '', address: s.address }))
     this.setData({
       activity,
       category: store.getCategory(activity.category),
@@ -90,6 +95,8 @@ Page({
       reviews,
       recommend,
       rankLabel,
+      venues,
+      hasVenue: venues.length > 0,
       memberSaving: Math.max(0, Number(activity.price || activity.originalPrice || 0) - Number(activity.memberPrice || 0)),
       serviceText: activity.category === 5 ? '支持配送 · 收货后可申请售后' : (activity.sellType === 'sku' ? '规格可选 · 下单后客服确认' : '线下服务 · 凭订单签到核销'),
       buyNowText: activity.category === 5 ? '立即购买' : '立即报名',

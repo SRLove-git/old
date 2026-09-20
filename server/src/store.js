@@ -401,6 +401,8 @@ export function createOrder(payload) {
   const memberPrice = sku ? sku.memberPrice : activity.memberPrice
   const schedule = isSkuOnly ? null : activity.schedules.find((s) => s.id === payload.scheduleId) || activity.schedules[0] || null
   if (schedule && schedule.remaining < payload.count) throw new Error('该时间段名额不足')
+  const venueAddress = (sku && sku.address) || activity.address || ''
+  const venueDistrict = (sku && sku.district) || ''
   let coupon = null
   let discount = 0
   if (payload.couponId) {
@@ -422,6 +424,8 @@ export function createOrder(payload) {
     cover: activity.cover,
     coverTone: activity.coverTone,
     skuName: sku ? sku.name : '',
+    venueAddress,
+    venueDistrict,
     schedule,
     participants: payload.participants,
     count: payload.count,

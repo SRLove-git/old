@@ -476,3 +476,60 @@
   color: var(--color-text-3);
   margin: 16rpx 0 36rpx;
 }
+
+.sku-options.stacked {
+  flex-direction: column;
+}
+
+.sku-options.stacked .sku-option {
+  margin-right: 0;
+  margin-bottom: 16rpx;
+}
+
+.sku-options.stacked .sku-option:last-child {
+  margin-bottom: 0;
+}
+
+.sku-option-addr {
+  display: block;
+  margin: 8rpx 0;
+  color: var(--color-text-3);
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.venue-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin-bottom: 24rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 16rpx;
+  background: var(--color-primary-light);
+}
+
+.venue-hint-pin {
+  font-size: 28rpx;
+}
+
+.venue-hint-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.venue-hint-label {
+  color: var(--color-primary);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.venue-hint-text {
+  margin-top: 6rpx;
+  color: var(--color-text-1);
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.venue-strong {
+  color: var(--color-primary) !important;
+}

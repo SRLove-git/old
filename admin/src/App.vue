@@ -501,7 +501,7 @@ const filteredCommissions = computed(() => {
 function openActivity(a) {
   activityForm.value = a
     ? { ...a, regionIds: inferRegionIds(a), sellType: a.sellType || 'date' }
-    : { title: '', category: 1, city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, schedules: [], skus: [], points: [], detail: '' }
+    : { title: '', category: 1, city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
   activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
@@ -1375,11 +1375,12 @@ function exportCsv(filename, rows) {
         <a-col :span="12"><a-form-item label="商品级分佣比例（%）"><a-input-number v-model="activityForm.managerCommissionRate" :min="0" :max="100" style="width: 100%" placeholder="留空用全局" /></a-form-item></a-col>
       </a-row>
       <a-row :gutter="12">
-        <a-col :span="12"><a-form-item label="状态"><a-select v-model="activityForm.status" :options="publishOptions" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="购买方式"><a-select v-model="activityForm.sellType" :options="sellTypeOptions" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="状态"><a-select v-model="activityForm.status" :options="publishOptions" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="购买方式"><a-select v-model="activityForm.sellType" :options="sellTypeOptions" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="规格称谓"><a-input v-model="activityForm.skuLabel" placeholder="如：场地 / 房型 / 规格" /></a-form-item></a-col>
       </a-row>
       <a-form-item label="排班 JSON（预约日期用，高级）"><a-textarea v-model="activitySchedulesJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
-      <a-form-item label="SKU JSON（SKU/房型用，高级）"><a-textarea v-model="activitySkusJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
+      <a-form-item label="SKU JSON（每个 SKU 可加 address 场地地址、district 区域名）"><a-textarea v-model="activitySkusJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
     </a-form>
     <template #footer>
       <a-button @click="activityForm = null">取消</a-button>
