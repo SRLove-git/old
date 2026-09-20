@@ -55,21 +55,27 @@ Page({
   },
 
   drawQr() {
-    const size = 200
-    const ctx = wx.createCanvasContext('memberQr', this)
-    const n = 21
-    const quiet = 4
-    const cell = size / (n + quiet * 2)
-    ctx.setFillStyle('#ffffff')
-    ctx.fillRect(0, 0, size, size)
-    ctx.setFillStyle('#141821')
-    const matrix = this.qrMatrix(this.data.memberId)
-    matrix.forEach((row, r) => {
-      row.forEach((v, c) => {
-        if (v) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell + 0.5, cell + 0.5)
+    wx.createSelectorQuery()
+      .in(this)
+      .select('.qr-canvas')
+      .boundingClientRect((rect) => {
+        const size = (rect && rect.width) || 200
+        const ctx = wx.createCanvasContext('memberQr', this)
+        const n = 21
+        const quiet = 4
+        const cell = size / (n + quiet * 2)
+        ctx.setFillStyle('#ffffff')
+        ctx.fillRect(0, 0, size, size)
+        ctx.setFillStyle('#141821')
+        const matrix = this.qrMatrix(this.data.memberId)
+        matrix.forEach((row, r) => {
+          row.forEach((v, c) => {
+            if (v) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell + 0.5, cell + 0.5)
+          })
+        })
+        ctx.draw()
       })
-    })
-    ctx.draw()
+      .exec()
   },
 
   qrMatrix(seed) {

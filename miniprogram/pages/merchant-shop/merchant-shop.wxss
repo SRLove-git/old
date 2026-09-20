@@ -1,7 +1,7 @@
-.shop-page { min-height: 100vh; padding: 20rpx 22rpx 120rpx; background: #f7f6f3; }
+.shop-page { min-height: 100vh; padding: 20rpx 22rpx 120rpx; background: #fff; }
 .shop-hero { position: relative; overflow: hidden; padding: 32rpx; border-radius: 30rpx; background: linear-gradient(135deg,#293633,#557169); color: #fff; }
 .shop-head { position: relative; z-index: 2; display: flex; align-items: center; }
-.shop-logo { flex-shrink: 0; width: 92rpx; height: 92rpx; border: 4rpx solid rgba(255,255,255,.25); border-radius: 24rpx; background: #e9c694; color: #5d4429; text-align: center; line-height: 92rpx; font-size: 42rpx; font-weight: 700; }
+.shop-logo { flex-shrink: 0; width: 92rpx; height: 92rpx; border: 4rpx solid rgba(255,255,255,.25); border-radius: 24rpx; background: #f3d2a7; color: var(--color-primary-text); text-align: center; line-height: 92rpx; font-size: 42rpx; font-weight: 700; }
 .shop-info { flex: 1; min-width: 0; margin-left: 18rpx; }
 .shop-name { font-size: 34rpx; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shop-owner { margin-top: 6rpx; color: rgba(255,255,255,.7); font-size: 20rpx; }
@@ -15,7 +15,7 @@
 .ring-one { right: -80rpx; top: -100rpx; width: 250rpx; height: 250rpx; }
 .ring-two { left: -100rpx; bottom: -140rpx; width: 220rpx; height: 220rpx; }
 .shop-notice { display: flex; align-items: center; margin: 18rpx 0 24rpx; padding: 18rpx 22rpx; border-radius: 18rpx; background: #fff; color: #777e7b; font-size: 21rpx; }
-.notice-icon { width: 38rpx; height: 38rpx; margin-right: 11rpx; border-radius: 50%; background: #edf4ee; color: #66806c; text-align: center; line-height: 38rpx; font-size: 19rpx; font-weight: 700; }
+.notice-icon { width: 38rpx; height: 38rpx; margin-right: 11rpx; border-radius: 50%; background: #edf4ef; color: #66806c; text-align: center; line-height: 38rpx; font-size: 19rpx; font-weight: 700; }
 .shop-tabs { display: flex; gap: 30rpx; border-bottom: 1rpx solid #e2dfd9; }
 .shop-tab { position: relative; padding: 14rpx 4rpx 18rpx; color: #858b88; font-size: 27rpx; }
 .shop-tab.active { color: #2e3532; font-weight: 700; }
@@ -33,4 +33,4 @@
 .price { color: var(--color-primary); font-size: 31rpx; font-weight: 700; }
 .offering-foot button { width: 42rpx; height: 42rpx; border-radius: 50%; background: #f2e8dc; color: var(--color-primary); line-height: 42rpx; font-size: 27rpx; }
 .empty { padding: 110rpx 20rpx; color: #969b98; text-align: center; font-size: 24rpx; }
-.cart-fab { position: fixed; right: 25rpx; bottom: 35rpx; z-index: 50; padding: 18rpx 26rpx; border-radius: 999rpx; background: #293633; color: #fff; box-shadow: 0 9rpx 28rpx rgba(36,47,44,.22); font-size: 23rpx; font-weight: 700; }
+.cart-fab { position: fixed; right: 25rpx; bottom: 35rpx; z-index: 50; padding: 18rpx 26rpx; border-radius: 999rpx; background: var(--color-ink); color: #fff; box-shadow: 0 9rpx 28rpx rgba(36,47,44,.22); font-size: 23rpx; font-weight: 700; }

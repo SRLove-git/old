@@ -162,6 +162,8 @@ async function ready() {
     cache.isManager = profile.isManager
     cache.application = profile.application
     cache.bindLogs = profile.bindLogs
+    cache.pendingUnbind = profile.pendingUnbind || null
+    cache.providerApplication = profile.providerApplication || null
     cache.orders = orders
     cache.participants = participants
     cache.reviews = reviews
@@ -248,7 +250,8 @@ function getCoursePurchases() {
 }
 
 function isCoursePurchased(id) {
-  return getCoursePurchases().some((record) => String(record.courseId) === String(id))
+  if (getCoursePurchases().some((record) => String(record.courseId) === String(id))) return true
+  return (cache.cards || []).some((card) => String(card.liveId) === String(id))
 }
 
 function purchaseCourse(course) {
@@ -401,6 +404,10 @@ async function unbindManager() {
 async function createOrder(payload) {
   const order = await api.post('/orders', { ...payload, userId: CURRENT_USER_ID })
   cache.orders.unshift(order)
+  if (payload.couponId) {
+    const coupon = cache.coupons.find((c) => String(c.id) === String(payload.couponId))
+    if (coupon) coupon.used = true
+  }
   return order
 }
 
@@ -459,6 +466,59 @@ async function saveAddress(address) {
   const addr = await api.post('/addresses', { ...address, userId: CURRENT_USER_ID })
   if (!cache.addresses.some((a) => a.id === addr.id)) cache.addresses.push(addr)
   return addr
+}
+
+async function updateAddress(id, form) {
+  const addr = await api.put(`/addresses/${id}`, form)
+  const idx = cache.addresses.findIndex((a) => String(a.id) === String(id))
+  if (idx >= 0) cache.addresses[idx] = addr
+  return addr
+}
+
+async function deleteAddress(id) {
+  await api.del(`/addresses/${id}`)
+  cache.addresses = cache.addresses.filter((a) => String(a.id) !== String(id))
+}
+
+async function unbindApply(reason) {
+  const application = await api.post(`/customers/${CURRENT_USER_ID}/unbind-apply`, { reason })
+  cache.pendingUnbind = application
+  return application
+}
+
+async function purchaseLive(liveId) {
+  const card = await api.post(`/lives/${liveId}/purchase`, { userId: CURRENT_USER_ID })
+  if (card && !cache.cards.some((c) => String(c.id) === String(card.id))) cache.cards.push(card)
+  return card
+}
+
+function refundRuleText(rule) {
+  if (!rule || !rule.type) return ''
+  if (rule.type === 'always') return '随时可退，全额退款'
+  if (rule.type === 'day') {
+    const fullDays = Number(rule.fullDays || 0)
+    const partialDays = Number(rule.partialDays || 0)
+    const partialRate = Number(rule.partialRate || 0)
+    if (fullDays <= 0) return '不可退款'
+    if (partialDays > 0 && partialRate > 0) {
+      return `活动开始前${fullDays}天（含）可全额退款，前${partialDays}天退${Math.round(partialRate * 100)}%，之后不可退`
+    }
+    return `活动开始前${fullDays}天（含）可全额退款，之后不可退`
+  }
+  if (rule.type === 'ladder') {
+    const ladder = (rule.ladder || []).slice().sort((a, b) => b.days - a.days)
+    if (!ladder.length) return '不可退款'
+    const parts = ladder.map((rung) => (rung.rate >= 1 ? `提前${rung.days}天全退` : `提前${rung.days}天退${Math.round(rung.rate * 100)}%`))
+    const last = ladder[ladder.length - 1]
+    if (!last.rate || last.rate <= 0) parts.push('之后不可退')
+    return parts.join('；')
+  }
+  return ''
+}
+
+function displayStatus(order) {
+  if (order.status === '待收货' && order.category !== 5 && order.category !== 4) return '待出行/待使用'
+  return order.status
 }
 
 async function submitManagerApply(form) {
@@ -533,6 +593,12 @@ module.exports = {
   saveParticipant,
   deleteParticipant,
   saveAddress,
+  updateAddress,
+  deleteAddress,
+  unbindApply,
+  purchaseLive,
+  refundRuleText,
+  displayStatus,
   submitManagerApply,
   loadManagerDashboard,
   applyWithdraw

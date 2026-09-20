@@ -103,7 +103,7 @@
 }
 
 .commission-box {
-  background: #f6f7f8;
+  background: var(--color-fill);
   border-radius: 18rpx;
   padding: 20rpx;
   text-align: center;
@@ -274,16 +274,6 @@
   letter-spacing: 3rpx;
 }
 
-.share-btn {
-  width: 100%;
-  background: var(--color-primary);
-  color: #ffffff;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  font-weight: 700;
-  font-size: 34rpx;
-}
-
 .promote-activity {
   display: flex;
   align-items: center;
@@ -356,27 +346,6 @@
   line-height: 1.5;
 }
 
-.pay-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(20, 22, 26, 0.45);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 50rpx;
-}
-
-.pay-modal {
-  width: 100%;
-  background: #ffffff;
-  border-radius: 30rpx;
-  padding: 34rpx;
-}
-
 .modal-title {
   font-size: 36rpx;
   font-weight: 700;
@@ -397,7 +366,7 @@
 }
 
 .withdraw-calc {
-  background: #f6f7f8;
+  background: var(--color-fill);
   border-radius: 18rpx;
   padding: 20rpx 24rpx;
   margin-bottom: 20rpx;

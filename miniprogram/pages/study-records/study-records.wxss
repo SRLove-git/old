@@ -1,0 +1,92 @@
+.course-card {
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.course-title {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.course-sub {
+  margin-top: 8rpx;
+  color: var(--color-text-3);
+  font-size: 26rpx;
+}
+
+.course-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.course-remain {
+  color: var(--color-primary);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.course-valid {
+  color: var(--color-text-3);
+  font-size: 24rpx;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  color: var(--color-text-3);
+  font-size: 28rpx;
+  margin-bottom: 30rpx;
+}
+
+.record-card {
+  position: relative;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.record-date {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.record-time {
+  color: var(--color-text-3);
+  font-size: 24rpx;
+  font-weight: 400;
+}
+
+.record-lesson {
+  margin-top: 8rpx;
+  color: var(--color-text-2);
+  font-size: 26rpx;
+}
+
+.record-status {
+  position: absolute;
+  right: 28rpx;
+  top: 28rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.record-status.green {
+  color: var(--color-success);
+}
+
+.record-status.red {
+  color: var(--color-danger);
+}
+
+.record-status.gray {
+  color: var(--color-text-3);
+}

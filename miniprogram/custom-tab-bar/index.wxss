@@ -1,10 +1,3 @@
-:host {
-  --color-primary: #b98555;
-  --color-primary-light: #f8efe5;
-  --color-text-3: #747a77;
-  --color-border: #ece8e2;
-}
-
 .tab-bar {
   position: fixed;
   left: 0;
@@ -12,7 +5,7 @@
   bottom: 0;
   height: 126rpx;
   background: rgba(255, 255, 255, 0.98);
-  border-top: 1rpx solid var(--color-border);
+  border-top: 1rpx solid #e9e5de;
   display: flex;
   padding-bottom: 0;
   z-index: 100;
@@ -24,13 +17,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-3);
+  color: #7a817f;
   font-size: 23rpx;
   font-weight: 500;
 }
 
 .tab-item.active {
-  color: var(--color-primary);
+  color: #b98555;
 }
 
 .tab-emoji {

@@ -31,7 +31,7 @@
   <view class="show-tip">到店消费或参加活动时，出示此会员码给工作人员核销</view>
 
   <view class="benefits card">
-    <view class="benefits-title">会员专属权益</view>
+    <view class="benefits-title heading-cn">会员专属权益</view>
     <view wx:for="{{benefits}}" wx:key="text" class="benefit">
       <text class="benefit-emoji">{{item.emoji}}</text>
       <text class="benefit-text">{{item.text}}</text>

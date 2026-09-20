@@ -1,4 +1,5 @@
-const STORAGE_KEY = 'suiyueli_provider_applications_v1'
+const store = require('../../utils/store.js')
+const { api } = require('../../utils/request.js')
 
 Page({
   data: {
@@ -14,7 +15,14 @@ Page({
       products: ''
     },
     errors: {},
-    submitting: false
+    submitting: false,
+    application: null
+  },
+
+  async onLoad() {
+    await store.ready()
+    const application = store.get().providerApplication || null
+    if (application) this.setData({ application })
   },
 
   selectType(e) {
@@ -38,28 +46,31 @@ Page({
     return Object.keys(errors).length === 0
   },
 
-  submit() {
+  async submit() {
     if (this.data.submitting || !this.validate()) {
       if (Object.keys(this.data.errors).length) wx.showToast({ title: '请补全必填信息', icon: 'none' })
       return
     }
     this.setData({ submitting: true })
-    const records = wx.getStorageSync(STORAGE_KEY)
-    const applications = Array.isArray(records) ? records : []
-    applications.unshift({
-      id: `PROVIDER${Date.now()}`,
-      ...this.data.form,
-      status: '待审核',
-      submittedAt: new Date().toLocaleString('zh-CN', { hour12: false })
-    })
-    wx.setStorageSync(STORAGE_KEY, applications)
-    wx.showModal({
-      title: '提交成功',
-      content: '服务商申请已提交，我们会尽快与您联系。',
-      showCancel: false,
-      confirmText: '好的',
-      success: () => wx.navigateBack()
-    })
-    this.setData({ submitting: false })
+    try {
+      const form = this.data.form
+      const record = await api.post('/provider-applications', {
+        userId: 'u1',
+        name: form.name.trim(),
+        phone: form.phone,
+        type: form.type,
+        intro: form.products.trim(),
+        address: form.address.trim()
+      })
+      store.get().providerApplication = record
+      this.setData({ application: record, submitting: false })
+    } catch (e) {
+      this.setData({ submitting: false })
+      wx.showToast({ title: e.message || '提交失败', icon: 'none' })
+    }
+  },
+
+  reapply() {
+    this.setData({ application: null })
   }
 })

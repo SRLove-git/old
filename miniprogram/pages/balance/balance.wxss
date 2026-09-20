@@ -1,0 +1,45 @@
+.balance-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 70rpx 28rpx;
+  background: linear-gradient(135deg, var(--color-primary), #d4aa7e);
+  color: #ffffff;
+}
+
+.balance-label {
+  font-size: 26rpx;
+  opacity: 0.85;
+}
+
+.balance-value {
+  margin-top: 16rpx;
+  font-size: 80rpx;
+  font-weight: 700;
+}
+
+.balance-symbol {
+  font-size: 44rpx;
+  margin-right: 8rpx;
+}
+
+.balance-points {
+  margin-top: 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 24rpx;
+}
+
+.balance-tip {
+  margin-top: 24rpx;
+  padding: 34rpx 28rpx;
+}
+
+.tip-text {
+  color: var(--color-text-2);
+  font-size: 28rpx;
+  line-height: 1.6;
+  margin-bottom: 28rpx;
+  text-align: center;
+}

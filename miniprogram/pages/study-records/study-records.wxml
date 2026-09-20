@@ -1,0 +1,31 @@
+<view class="page">
+  <view class="section-title">我的课程</view>
+  <block wx:if="{{cards.length > 0}}">
+    <view wx:for="{{cards}}" wx:key="id" class="course-card card">
+      <view class="course-head">
+        <view class="course-title">{{item.title}}</view>
+        <view wx:if="{{item.courseName || item.teacher}}" class="course-sub">{{item.courseName}}{{item.teacher ? ' · ' + item.teacher : ''}}</view>
+      </view>
+      <view class="course-meta">
+        <text class="course-remain">剩余 {{item.remain}}/{{item.total}} 次</text>
+        <text wx:if="{{item.validUntil}}" class="course-valid">有效期至 {{item.validUntil}}</text>
+      </view>
+    </view>
+  </block>
+  <view wx:else class="empty-card card">
+    <view class="empty-text">暂无课程，去线上学堂看看</view>
+    <button class="btn btn-primary" bindtap="goAcademy">去线上学堂</button>
+  </view>
+
+  <view class="section-title">学习记录</view>
+  <block wx:if="{{records.length > 0}}">
+    <view wx:for="{{records}}" wx:key="index" class="record-card card">
+      <view class="record-date">{{item.date}}<text wx:if="{{item.time}}" class="record-time"> {{item.time}}</text></view>
+      <view class="record-lesson">{{item.cardTitle}} · {{item.lesson}}</view>
+      <text class="record-status {{item.statusCls}}">{{item.statusLabel}}</text>
+    </view>
+  </block>
+  <view wx:else class="empty-card card">
+    <view class="empty-text">暂无学习记录</view>
+  </view>
+</view>

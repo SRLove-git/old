@@ -88,3 +88,9 @@
 .city-sheet { width: 100%; padding: 30rpx 30rpx 50rpx; border-radius: 36rpx 36rpx 0 0; background: #fff; } .city-sheet-title { margin-bottom: 24rpx; text-align: center; font-size: 36rpx; font-weight: 700; }
 .city-list { margin-bottom: 20rpx; } .city-item { display: flex; align-items: center; justify-content: space-between; padding: 27rpx 22rpx; border-bottom: 1rpx solid var(--color-border); font-size: 32rpx; }
 .city-item.selected { border-radius: 18rpx; background: var(--color-primary-light); color: var(--color-primary); font-weight: 700; } .city-check { color: var(--color-primary); }
+
+.assistant-panel { display: flex; flex-direction: column; align-items: center; margin: 8rpx 24rpx 44rpx; padding: 42rpx 34rpx; border-radius: 28rpx; background: #fff; box-shadow: 0 10rpx 34rpx rgba(55,44,31,.06); }
+.assistant-title { color: #292f2d; font-size: 31rpx; font-weight: 700; }
+.assistant-qr { width: 360rpx; height: 360rpx; margin-top: 26rpx; border-radius: 20rpx; }
+.assistant-tip { margin-top: 22rpx; color: #505b58; font-size: 26rpx; }
+.assistant-wechat { margin-top: 8rpx; color: #979c99; font-size: 23rpx; }

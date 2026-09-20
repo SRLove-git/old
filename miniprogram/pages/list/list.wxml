@@ -20,7 +20,7 @@
 
   <view wx:if="{{groups.length}}" class="date-groups">
     <view wx:for="{{groups}}" wx:key="key" wx:for-item="group" class="date-group">
-      <view class="date-heading"><text class="calendar-icon">▣</text><text>{{group.label}}</text></view>
+      <view class="section-heading"><text class="heading-cn">{{group.label}}</text></view>
       <view wx:for="{{group.items}}" wx:key="id" class="activity-card" data-id="{{item.id}}" bindtap="goDetail">
         <view class="card-main">
           <view class="cover-wrap"><image class="cover-image" src="{{item.art}}" mode="aspectFill" /><text class="status-ribbon {{item.status}}">{{item.statusLabel}}</text></view>
@@ -36,13 +36,13 @@
             <text class="signup-count">{{item.soldCount}}人已报名</text>
           </view>
           <view class="starting-price"><text class="price-dot">¥</text><text>{{item.memberPrice}}</text><text class="price-suffix">起</text></view>
-          <button class="signup-button {{item.status === 'full' || item.status === 'ended' ? 'disabled' : ''}}" data-id="{{item.id}}" catchtap="goBooking" disabled="{{item.status === 'full' || item.status === 'ended'}}">{{item.status === 'full' ? '已满' : item.status === 'ended' ? '已结束' : '立即报名'}}</button>
+          <button class="signup-button btn btn-primary btn-pill {{item.status === 'full' || item.status === 'ended' ? 'disabled' : ''}}" data-id="{{item.id}}" catchtap="goBooking" disabled="{{item.status === 'full' || item.status === 'ended'}}">{{item.status === 'full' ? '已满' : item.status === 'ended' ? '已结束' : '立即报名'}}</button>
         </view>
       </view>
     </view>
   </view>
 
-  <view wx:else class="empty"><view class="empty-icon">⌕</view><view class="empty-title">没有找到相关线下活动</view><view class="empty-sub">换个地区、时间或状态试试</view><button class="reset-button" bindtap="clearFilter">清空筛选</button></view>
+  <view wx:else class="empty"><view class="empty-icon">⌕</view><view class="empty-title">没有找到相关线下活动</view><view class="empty-sub">换个地区、时间或状态试试</view><button class="reset-button btn btn-primary btn-pill" bindtap="clearFilter">清空筛选</button></view>
 
   <button class="share-fab" open-type="share">↗</button>
 </view>

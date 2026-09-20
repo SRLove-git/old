@@ -1,11 +1,4 @@
-<view wx:if="{{payDone}}" class="pay-success">
-  <view class="success-icon">✓</view>
-  <view class="success-title">报名成功</view>
-  <view class="success-sub">已为您锁定名额，活动开始前我们会提醒您。</view>
-  <button class="btn btn-primary" bindtap="goAppointments">查看我的预约</button>
-</view>
-
-<view wx:else class="booking-page">
+<view class="booking-page">
   <view class="steps">
     <view class="step {{step >= 1 ? 'active' : ''}}">1 {{isSkuOnly ? '选规格' : '选时间'}}</view>
     <view class="step {{step >= 2 ? 'active' : ''}}">2 填信息</view>
@@ -116,6 +109,18 @@
         <text class="field-label">优待证<text class="required">*</text></text>
         <input class="field-input" value="{{info.discount}}" data-field="discount" bindinput="onInput" placeholder="有优待证可享门票优惠" />
       </view>
+
+      <block wx:for="{{memberList}}" wx:key="index">
+        <view class="member-title">第{{index + 2}}位报名人</view>
+        <view class="field">
+          <text class="field-label">姓名<text class="required">*</text></text>
+          <input class="field-input" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onMemberInput" placeholder="请输入真实姓名" />
+        </view>
+        <view wx:if="{{needIdCard}}" class="field">
+          <text class="field-label">身份证号<text class="required">*</text></text>
+          <input class="field-input" value="{{item.idCard}}" data-index="{{index}}" data-field="idCard" bindinput="onMemberInput" placeholder="用于购买旅游意外险" />
+        </view>
+      </block>
     </block>
 
     <view class="refund-note">退改规则：{{refundText}}</view>
@@ -152,8 +157,8 @@
     <button class="btn btn-primary main-btn" bindtap="nextStep">{{step === 3 ? '确认支付 ¥' + total : '下一步'}}</button>
   </view>
 
-  <view wx:if="{{payOpen}}" class="pay-mask" bindtap="closePay">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{payOpen}}" class="mask" bindtap="closePay">
+    <view class="sheet" catchtap="noop">
       <view class="pay-title">确认支付</view>
       <view class="pay-amount">¥{{total}}</view>
       <view class="pay-tip">支付后名额立即锁定，30分钟内有效</view>
@@ -162,8 +167,8 @@
     </view>
   </view>
 
-  <view wx:if="{{addressOpen}}" class="pay-mask" bindtap="closeAddress">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{addressOpen}}" class="mask" bindtap="closeAddress">
+    <view class="sheet" catchtap="noop">
       <view class="modal-title">收货地址</view>
       <view class="field">
         <text class="field-label">收货人<text class="required">*</text></text>

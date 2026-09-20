@@ -112,15 +112,15 @@ const products = [
 ]
 
 const managers = [
-  { id: 1001, name: '李秀兰', shopName: '秀兰乐活活动社', shopIntro: '专注同城兴趣活动与品质研学旅行，用心陪伴每一次出发。', phone: '138****2035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }
+  { id: 1001, name: '李秀兰', shopName: '秀兰乐活活动社', shopIntro: '专注同城兴趣活动与品质研学旅行，用心陪伴每一次出发。', phone: '13867892035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }
   ,
-  { id: 1002, name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '139****7782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 9260, totalCommission: 7220.4, totalCustomers: 42, customers: 42, monthPerformance: 9260, monthCommission: 740.8, pending: 322, available: 588, total: 7220.4 }
+  { id: 1002, name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '13913577782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 9260, totalCommission: 7220.4, totalCustomers: 42, customers: 42, monthPerformance: 9260, monthCommission: 740.8, pending: 322, available: 588, total: 7220.4 }
 ]
 
 const customers = [
-  { id: 'u1', name: '张桂芳', phone: '138****6688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
-  { id: 'u2', name: '刘淑华', phone: '136****2031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
-  { id: 'u3', name: '李建国', phone: '135****8820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false }
+  { id: 'u1', name: '张桂芳', phone: '13812346688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
+  { id: 'u2', name: '刘淑华', phone: '13656782031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
+  { id: 'u3', name: '李建国', phone: '13523458820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false }
 ]
 
 const coupons = [
@@ -131,13 +131,13 @@ const coupons = [
 ]
 
 const participants = [
-  { id: 1, name: '张桂芳', idCard: '1101**********4821', phone: '138****6688' },
-  { id: 2, name: '李明', idCard: '', phone: '136****2210' },
-  { id: 3, name: '王秀英', idCard: '1101**********9302', phone: '135****3401' }
+  { id: 1, name: '张桂芳', idCard: '110101196203084821', phone: '13812346688' },
+  { id: 2, name: '李明', idCard: '', phone: '13634562210' },
+  { id: 3, name: '王秀英', idCard: '110101195811129302', phone: '13545673401' }
 ]
 
 const addresses = [
-  { id: 'addr1', userId: 'u1', name: '张桂芳', phone: '138****6688', province: '北京市', city: '北京市', district: '朝阳区', detail: '幸福里小区1号楼1单元101', isDefault: true }
+  { id: 'addr1', userId: 'u1', name: '张桂芳', phone: '13812346688', province: '北京市', city: '北京市', district: '朝阳区', detail: '幸福里小区1号楼1单元101', isDefault: true }
 ]
 
 const cards = [
@@ -180,7 +180,7 @@ const commissions = [
 
 const withdraws = []
 const managerApplications = [
-  { id: 'APP1', name: '赵淑敏', phone: '137****1122', scale: '5个群，约800人', fields: ['徒步', '合唱'], intro: '退休教师，喜欢组织活动', status: '待审核', submittedAt: '2026-09-10 09:00' }
+  { id: 'APP1', name: '赵淑敏', phone: '13724681122', scale: '5个群，约800人', fields: ['徒步', '合唱'], intro: '退休教师，喜欢组织活动', status: '待审核', submittedAt: '2026-09-10 09:00' }
 ]
 const bindings = [
   { id: 'B1', customerId: 'u2', customerName: '刘淑华', managerId: 1001, bindSource: 1, bindTime: '2026-08-18 10:00', status: 1 },
@@ -350,6 +350,7 @@ const config = {
   withdrawMonthlyLimit: 1,
   withdrawTaxRate: 20,
   managerApplyFee: 199,
+  couponRefundReturn: 'auto',
   brand: {
     slogan: '和同龄人一起，玩得开心又省心'
   },

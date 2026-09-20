@@ -1,4 +1,11 @@
 <view class="page">
+  <block wx:if="{{statusView}}">
+    <view class="form-card card">
+      <view class="apply-status">{{statusView}}</view>
+    </view>
+  </block>
+
+  <block wx:else>
   <view class="intro">
     <view class="intro-title">一起把好活动带给更多人</view>
     <view class="intro-sub">审核通过后，您将获得专属推广码、邀请码和分佣权限</view>
@@ -13,18 +20,23 @@
   <view class="form-card card">
     <view class="field">
       <text class="field-label">姓名<text class="required">*</text></text>
-      <input class="field-input" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="真实姓名" />
-      <text wx:if="{{errors.name}}" class="field-error">{{errors.name}}</text>
+      <input class="field-input readonly" value="{{form.name}}" disabled placeholder="真实姓名" />
+      <text class="field-hint">与账号信息一致</text>
     </view>
     <view class="field">
       <text class="field-label">手机号<text class="required">*</text></text>
-      <input class="field-input" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="联系电话" />
-      <text wx:if="{{errors.phone}}" class="field-error">{{errors.phone}}</text>
+      <input class="field-input readonly" value="{{form.phone}}" disabled placeholder="联系电话" />
+      <text class="field-hint">与账号信息一致</text>
     </view>
     <view class="field">
-      <text class="field-label">社群规模<text class="required">*</text></text>
-      <input class="field-input" value="{{form.scale}}" data-field="scale" bindinput="onInput" placeholder="例如：3个群，约500人" />
-      <text wx:if="{{errors.scale}}" class="field-error">{{errors.scale}}</text>
+      <text class="field-label">微信群数量<text class="required">*</text></text>
+      <input class="field-input" type="number" value="{{form.groupCount}}" data-field="groupCount" bindinput="onInput" placeholder="最多50个群" />
+      <text wx:if="{{errors.groupCount}}" class="field-error">{{errors.groupCount}}</text>
+    </view>
+    <view class="field">
+      <text class="field-label">社群总人数<text class="required">*</text></text>
+      <input class="field-input" type="number" value="{{form.memberCount}}" data-field="memberCount" bindinput="onInput" placeholder="最多5000人" />
+      <text wx:if="{{errors.memberCount}}" class="field-error">{{errors.memberCount}}</text>
     </view>
     <view class="field">
       <text class="field-label">擅长领域</text>
@@ -51,12 +63,13 @@
 
   <button class="btn btn-primary btn-block" bindtap="submit">提交申请</button>
 
-  <view wx:if="{{payOpen}}" class="pay-mask" bindtap="closePay">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{payOpen}}" class="mask" bindtap="closePay">
+    <view class="sheet" catchtap="noop">
       <view class="pay-title">支付主理人申请费用</view>
       <view class="pay-amount">¥{{fee}}</view>
       <view class="pay-tip">支付后提交申请，审核通过即成为主理人</view>
       <button class="btn btn-wechat btn-block" bindtap="confirmPay">微信支付</button>
     </view>
   </view>
+  </block>
 </view>

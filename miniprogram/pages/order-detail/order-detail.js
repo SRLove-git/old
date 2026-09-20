@@ -12,6 +12,7 @@ Page({
     reviewOpen: false,
     reviewRating: 5,
     reviewContent: '',
+    displayStatus: '',
     actionLabel: '',
     payRemain: ''
   },
@@ -34,6 +35,7 @@ Page({
       order,
       timeText,
       refundInfo,
+      displayStatus: store.displayStatus(order),
       actionLabel: this.actionLabel(order),
       payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : ''
     })
@@ -48,7 +50,7 @@ Page({
 
   actionLabel(order) {
     if (order.status === '待付款') return '去支付'
-    if (order.status === '待发货') return order.category === 4 ? '模拟到店核销' : '模拟发货/活动结束'
+    if (order.status === '待发货') return ''
     if (order.status === '待收货') return '确认收货'
     if (order.status === '已核销') return '确认完成'
     if (order.status === '待评价') return '去评价'
@@ -104,7 +106,7 @@ Page({
     wx.showModal({
       title: '取消订单',
       content: '取消后名额将释放，确定取消吗？',
-      confirmColor: '#d74a4a',
+      confirmColor: '#f53f3f',
       success: (res) => {
         if (!res.confirm) return
         store.cancelOrder(this.data.id).then((order) => {

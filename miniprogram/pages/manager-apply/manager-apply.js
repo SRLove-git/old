@@ -5,7 +5,8 @@ Page({
     form: {
       name: '',
       phone: '',
-      scale: '',
+      groupCount: '',
+      memberCount: '',
       fields: [],
       intro: ''
     },
@@ -13,6 +14,7 @@ Page({
     fee: 0,
     payOpen: false,
     errors: {},
+    statusView: '',
     fieldOptions: [
       { name: '徒步', selected: false },
       { name: '掼蛋', selected: false },
@@ -25,8 +27,17 @@ Page({
 
   async onLoad() {
     await store.ready()
-    const config = store.get().config || {}
-    this.setData({ fee: Number(config.managerApplyFee ?? 0) })
+    const state = store.get()
+    const config = state.config || {}
+    const statusView = state.isManager
+      ? '您已经是主理人，可在个人中心进入主理人工作台'
+      : (state.application && state.application.status === '待审核' ? '申请已提交，预计1-2个工作日审核' : '')
+    this.setData({
+      fee: Number(config.managerApplyFee ?? 0),
+      statusView,
+      'form.name': state.user.name || '',
+      'form.phone': state.user.phone || ''
+    })
   },
 
   onInput(e) {
@@ -56,9 +67,10 @@ Page({
   async submit() {
     const { form, agree } = this.data
     const errors = {}
-    if (!form.name) errors.name = '请填写姓名'
-    if (!form.phone) errors.phone = '请填写手机号'
-    if (!form.scale) errors.scale = '请填写社群规模'
+    const groupCount = Number(form.groupCount)
+    const memberCount = Number(form.memberCount)
+    if (!form.groupCount || !Number.isInteger(groupCount) || groupCount < 1 || groupCount > 50) errors.groupCount = '请填写1-50的微信群数量'
+    if (!form.memberCount || !Number.isInteger(memberCount) || memberCount < 1 || memberCount > 5000) errors.memberCount = '请填写1-5000的社群总人数'
     if (!agree) errors.agree = '请先阅读并同意协议'
     this.setData({ errors })
     if (Object.keys(errors).length) {
@@ -85,7 +97,19 @@ Page({
 
   async doSubmit() {
     const { form } = this.data
-    await store.submitManagerApply({ ...form, paid: true })
+    const groupCount = Number(form.groupCount)
+    const memberCount = Number(form.memberCount)
+    await store.submitManagerApply({
+      userId: 'u1',
+      name: form.name,
+      phone: form.phone,
+      groupCount,
+      memberCount,
+      scale: `${groupCount}个群，约${memberCount}人`,
+      fields: form.fields,
+      intro: form.intro,
+      paid: true
+    })
     wx.showToast({ title: '申请已提交，请等待审核', icon: 'none' })
     setTimeout(() => {
       wx.navigateBack()

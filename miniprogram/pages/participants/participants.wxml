@@ -11,8 +11,8 @@
 
   <button class="btn btn-secondary btn-block" bindtap="openAdd">＋ 添加报名人</button>
 
-  <view wx:if="{{editingId}}" class="pay-mask" bindtap="closeModal">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{editingId}}" class="mask" bindtap="closeModal">
+    <view class="sheet" catchtap="noop">
       <view class="modal-title">{{editingId === 'new' ? '添加报名人' : '编辑报名人'}}</view>
       <view class="field">
         <text class="field-label">姓名<text class="required">*</text></text>

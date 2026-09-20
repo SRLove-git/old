@@ -36,8 +36,8 @@ Page({
     visibleSchedules: [],
     hasMore: false,
     refundText: '',
-    payOpen: false,
-    payDone: false
+    memberList: [],
+    payOpen: false
   },
 
   async onLoad(options) {
@@ -74,10 +74,10 @@ Page({
       needDiscount: !!(activity.participantFields && activity.participantFields.discount),
       isGoods: activity.category === 5,
       address: activity.category === 5 ? store.getDefaultAddress() : null,
-      refundText: activity.refund || '',
+      refundText: store.refundRuleText(activity.refundRule) || activity.refund || '',
       info: {
         name: firstParticipant.name || '',
-        phone: firstParticipant.phone || '',
+        phone: state.user.phone || '',
         idCard: firstParticipant.idCard || '',
         discount: ''
       }
@@ -147,7 +147,9 @@ Page({
       wx.showToast({ title: `最多可报名${limit}人`, icon: 'none' })
       return
     }
-    this.setData({ count }, () => this.recalc())
+    const memberList = this.data.memberList.slice(0, count - 1)
+    while (memberList.length < count - 1) memberList.push({ name: '', idCard: '' })
+    this.setData({ count, memberList }, () => this.recalc())
   },
 
   selectParticipant(e) {
@@ -161,7 +163,7 @@ Page({
       selectedParticipantId: id,
       info: {
         name: participant.name,
-        phone: participant.phone,
+        phone: store.get().user.phone || '',
         idCard: participant.idCard || '',
         discount: ''
       }
@@ -171,6 +173,12 @@ Page({
   onInput(e) {
     const field = e.currentTarget.dataset.field
     this.setData({ [`info.${field}`]: e.detail.value })
+  },
+
+  onMemberInput(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    const field = e.currentTarget.dataset.field
+    this.setData({ [`memberList[${index}].${field}`]: e.detail.value })
   },
 
   selectCoupon(e) {
@@ -237,9 +245,20 @@ Page({
           wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
           return
         }
+        if (info.phone !== store.get().user.phone) {
+          wx.showToast({ title: '手机号需与账号绑定手机一致', icon: 'none' })
+          return
+        }
         if ((needIdCard && !info.idCard) || (needDiscount && !info.discount)) {
           wx.showToast({ title: '请先填写完整报名信息', icon: 'none' })
           return
+        }
+        for (let i = 0; i < this.data.memberList.length; i++) {
+          const member = this.data.memberList[i]
+          if (!member.name || (needIdCard && !member.idCard)) {
+            wx.showToast({ title: `请填写第${i + 2}位报名人信息`, icon: 'none' })
+            return
+          }
         }
       }
       this.setData({ step: 3 })
@@ -303,7 +322,7 @@ Page({
   },
 
   async confirmPay() {
-    const { activity, scheduleId, count, info, couponId, isGoods, address } = this.data
+    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList } = this.data
     wx.showLoading({ title: '提交中', mask: true })
     try {
       const order = await store.createOrder({
@@ -314,17 +333,14 @@ Page({
         couponId,
         deferred: false,
         address: isGoods ? address : null,
-        participants: isGoods ? `${address.name} ${address.phone}` : `${info.name}${count > 1 ? `等${count}人` : ''}`
+        participants: isGoods ? `${address.name} ${address.phone}` : [info.name, ...memberList.map((m) => m.name)].join('、')
       })
       wx.hideLoading()
       if (!order) {
         wx.showToast({ title: '下单失败，请重试', icon: 'none' })
         return
       }
-      this.setData({ payOpen: false, payDone: true })
-      setTimeout(() => {
-        wx.redirectTo({ url: '/pages/appointments/appointments' })
-      }, 800)
+      wx.redirectTo({ url: `/pages/booking-success/booking-success?orderId=${order.id}&deferred=0` })
     } catch (e) {
       wx.hideLoading()
       wx.showToast({ title: e.message || '下单失败', icon: 'none' })
@@ -332,7 +348,7 @@ Page({
   },
 
   async deferPay() {
-    const { activity, scheduleId, count, info, couponId, isGoods, address } = this.data
+    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList } = this.data
     wx.showLoading({ title: '提交中', mask: true })
     try {
       const order = await store.createOrder({
@@ -343,17 +359,14 @@ Page({
         couponId,
         deferred: true,
         address: isGoods ? address : null,
-        participants: isGoods ? `${address.name} ${address.phone}` : `${info.name}${count > 1 ? `等${count}人` : ''}`
+        participants: isGoods ? `${address.name} ${address.phone}` : [info.name, ...memberList.map((m) => m.name)].join('、')
       })
       wx.hideLoading()
       if (!order) {
         wx.showToast({ title: '下单失败，请重试', icon: 'none' })
         return
       }
-      this.setData({ payOpen: false, payDone: true })
-      setTimeout(() => {
-        wx.redirectTo({ url: '/pages/orders/orders' })
-      }, 800)
+      wx.redirectTo({ url: `/pages/booking-success/booking-success?orderId=${order.id}&deferred=1` })
     } catch (e) {
       wx.hideLoading()
       wx.showToast({ title: e.message || '下单失败', icon: 'none' })
@@ -367,9 +380,5 @@ Page({
       content: `客服电话：${a.phone}`,
       showCancel: false
     })
-  },
-
-  goAppointments() {
-    wx.redirectTo({ url: '/pages/appointments/appointments' })
   }
 })

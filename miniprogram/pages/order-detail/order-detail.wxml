@@ -1,7 +1,7 @@
 <view wx:if="{{order}}" class="order-detail-page">
   <view class="status-hero">
     <view class="status-icon">✓</view>
-    <view class="status-text">{{order.status}}</view>
+    <view class="status-text">{{displayStatus}}</view>
     <view class="status-sub">{{refundInfo.reason || '请按时参加活动'}}</view>
   </view>
 
@@ -45,7 +45,12 @@
       <button class="btn btn-primary" bindtap="payNow">去支付</button>
     </block>
 
-    <block wx:elif="{{order.status === '待发货' || order.status === '待收货'}}">
+    <block wx:elif="{{order.status === '待发货'}}">
+      <button wx:if="{{refundInfo.can}}" class="btn btn-danger" bindtap="openRefund">申请退款</button>
+      <view wx:if="{{order.category !== 4}}" class="ship-hint">等待商家发货</view>
+    </block>
+
+    <block wx:elif="{{order.status === '待收货'}}">
       <button wx:if="{{refundInfo.can}}" class="btn btn-danger" bindtap="openRefund">申请退款</button>
       <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
     </block>
@@ -59,8 +64,8 @@
     </block>
   </view>
 
-  <view wx:if="{{refundOpen}}" class="pay-mask" bindtap="closeRefund">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{refundOpen}}" class="mask" bindtap="closeRefund">
+    <view class="sheet" catchtap="noop">
       <view class="modal-title">申请退款</view>
       <view class="refund-rule">预计可退 ¥{{refundInfo.amount}}（{{refundInfo.reason}}）</view>
       <view class="field">
@@ -74,8 +79,8 @@
     </view>
   </view>
 
-  <view wx:if="{{reviewOpen}}" class="pay-mask" bindtap="closeReview">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{reviewOpen}}" class="mask" bindtap="closeReview">
+    <view class="sheet" catchtap="noop">
       <view class="modal-title">评价本次活动</view>
       <view class="stars">
         <text

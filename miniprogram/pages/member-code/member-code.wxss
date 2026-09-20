@@ -10,7 +10,7 @@
   padding: 34rpx 30rpx;
   color: #ffffff;
   overflow: hidden;
-  box-shadow: 0 22rpx 48rpx rgba(26, 34, 45, 0.22);
+  box-shadow: 0 16rpx 40rpx rgba(55, 44, 31, 0.18);
 }
 
 .member-card::before {
@@ -25,23 +25,39 @@
 }
 
 .member-card.level-1 {
-  background: linear-gradient(135deg, #6b7280, #9aa3b0);
+  background: linear-gradient(135deg, #c7b299, #dcc9ad);
 }
 
 .member-card.level-2 {
-  background: linear-gradient(135deg, #5b6472, #a5adb9);
+  background: linear-gradient(135deg, var(--color-sage), #a4b8a7);
 }
 
 .member-card.level-3 {
-  background: linear-gradient(135deg, #8a6d3b, #d0a94e);
+  background: linear-gradient(135deg, var(--color-primary), #d4aa7e);
 }
 
 .member-card.level-4 {
-  background: linear-gradient(135deg, #343d49, #8f9aa8);
+  background: linear-gradient(135deg, #c79a58, #e2c188);
 }
 
 .member-card.level-5 {
-  background: linear-gradient(135deg, #15213c, #3f5b83);
+  background: linear-gradient(135deg, var(--color-ink), #4a5a55);
+}
+
+.member-card.level-1,
+.member-card.level-4 {
+  color: #6f451f;
+}
+
+.member-card.level-1 .level-badge,
+.member-card.level-4 .level-badge {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(111, 69, 31, 0.35);
+}
+
+.member-card.level-1 .card-foot,
+.member-card.level-4 .card-foot {
+  border-top-color: rgba(111, 69, 31, 0.25);
 }
 
 .card-top {
@@ -101,18 +117,18 @@
 }
 
 .qr-box {
-  width: 200rpx;
-  height: 200rpx;
-  border-radius: 20rpx;
+  width: 440rpx;
+  height: 440rpx;
+  border-radius: 24rpx;
   background: #ffffff;
-  padding: 10rpx;
-  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.18);
+  padding: 20rpx;
+  box-shadow: 0 10rpx 28rpx rgba(55, 44, 31, 0.12);
   flex-shrink: 0;
 }
 
 .qr-canvas {
-  width: 180rpx;
-  height: 180rpx;
+  width: 400rpx;
+  height: 400rpx;
 }
 
 .member-no-label {
@@ -152,16 +168,14 @@
 }
 
 .benefits-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  margin-bottom: 12rpx;
+  margin-bottom: 18rpx;
 }
 
 .benefit {
   display: flex;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #eeeeee;
+  border-bottom: 1rpx solid var(--color-border);
 }
 
 .benefit:last-child {

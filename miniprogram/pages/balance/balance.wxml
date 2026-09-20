@@ -1,0 +1,12 @@
+<view class="page balance-page">
+  <view class="balance-hero card">
+    <view class="balance-label">我的余额（元）</view>
+    <view class="balance-value"><text class="balance-symbol">¥</text>{{balanceText}}</view>
+    <view class="balance-points">当前积分：{{points}}</view>
+  </view>
+
+  <view class="balance-tip card">
+    <view class="tip-text">余额可用于报名活动、购买课程；充值请联系客服</view>
+    <button class="btn btn-primary btn-block" bindtap="showService">联系客服</button>
+  </view>
+</view>

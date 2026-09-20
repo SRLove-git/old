@@ -27,7 +27,7 @@
           <view wx:if="{{item.venueAddress}}" class="order-meta">📍 {{item.venueAddress}}</view>
           <view class="order-meta">👥 {{item.participants}}</view>
         </view>
-        <text class="status {{item.statusClass}}">{{item.status}}</text>
+        <text class="status {{item.statusClass}}">{{item.displayStatus}}</text>
       </view>
       <view class="order-foot">
         <text class="amount">¥{{item.payAmount}}</text>

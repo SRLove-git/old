@@ -153,12 +153,32 @@ app.post('/api/addresses', wrap((req) => {
   store.save()
   return a
 }))
+app.put('/api/addresses/:id', wrap((req) => {
+  const db = store.get()
+  const a = db.addresses.find((x) => String(x.id) === String(req.params.id))
+  if (!a) return null
+  Object.assign(a, req.body, { id: a.id })
+  if (a.isDefault) {
+    db.addresses.forEach((x) => {
+      if (String(x.id) !== String(a.id) && x.userId === a.userId) x.isDefault = false
+    })
+  }
+  store.save()
+  return a
+}))
+app.delete('/api/addresses/:id', wrap((req) => {
+  const db = store.get()
+  db.addresses = db.addresses.filter((x) => String(x.id) !== String(req.params.id))
+  store.save()
+  return { ok: true }
+}))
 
 // 订单
 app.get('/api/orders', wrap(() => {
   store.autoCancelExpired()
   return store.get().orders
 }))
+app.get('/api/orders/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
 app.get('/api/orders/:id', wrap((req) => {
   store.autoCancelExpired()
   return store.get().orders.find((o) => o.id === req.params.id)
@@ -168,6 +188,7 @@ app.post('/api/orders/:id/pay', wrap((req) => store.payOrder(req.params.id)))
 app.post('/api/orders/:id/cancel', wrap((req) => store.cancelOrder(req.params.id)))
 app.post('/api/orders/:id/refund', wrap((req) => store.refundOrder(req.params.id, req.body.reason)))
 app.post('/api/orders/:id/refund-audit', adminAuth, wrap((req) => store.auditRefund(req.params.id, req.body.approve, req.body.reason)))
+app.post('/api/orders/:id/verify', adminAuth, wrap((req) => store.verifyOrder(req.params.id)))
 app.post('/api/orders/:id/advance', wrap((req) => store.advanceOrder(req.params.id)))
 app.post('/api/orders/:id/review', wrap((req) => store.submitReview(req.params.id, req.body)))
 app.get('/api/orders/:id/refund-calc', wrap((req) => {
@@ -202,7 +223,19 @@ app.get('/api/users/:id', wrap((req) => store.getUserProfile(req.params.id)))
 app.post('/api/cards/:id/checkin', adminAuth, wrap((req) => store.checkInCard(req.params.id, req.body)))
 app.post('/api/customers/:id/bind', wrap((req) => store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)))
 app.post('/api/customers/:id/unbind', wrap((req) => store.unbindCustomerByUser(req.params.id, req.body.reason)))
+app.post('/api/customers/:id/unbind-apply', wrap((req) => store.applyUnbind(req.params.id, req.body.reason)))
 app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id)))
+
+// 解绑申请
+app.get('/api/unbind-applications', adminAuth, wrap(() => store.get().unbindApplications || []))
+app.post('/api/unbind-applications/:id/approve', adminAuth, wrap((req) => store.auditUnbind(req.params.id, true)))
+app.post('/api/unbind-applications/:id/reject', adminAuth, wrap((req) => store.auditUnbind(req.params.id, false, req.body.reason)))
+
+// 服务商申请
+app.post('/api/provider-applications', wrap((req) => store.applyProvider(req.body)))
+app.get('/api/provider-applications', adminAuth, wrap(() => store.get().providerApplications || []))
+app.post('/api/provider-applications/:id/approve', adminAuth, wrap((req) => store.auditProvider(req.params.id, true)))
+app.post('/api/provider-applications/:id/reject', adminAuth, wrap((req) => store.auditProvider(req.params.id, false, req.body.reason)))
 
 // 佣金
 app.get('/api/commissions', wrap(() => store.get().commissions))
@@ -230,6 +263,7 @@ app.get('/api/logs', wrap(() => store.getLogs()))
 
 // 私域直播
 app.get('/api/lives', wrap((req) => store.listLives(req.query.userId || null)))
+app.post('/api/lives/:id/purchase', wrap((req) => store.purchaseLive(req.params.id, req.body.userId || 'u1')))
 app.post('/api/lives', adminAuth, wrap((req) => store.createLive(req.body)))
 app.put('/api/lives/:id', adminAuth, wrap((req) => store.updateLive(req.params.id, req.body)))
 app.delete('/api/lives/:id', adminAuth, wrap((req) => store.deleteLive(req.params.id)))

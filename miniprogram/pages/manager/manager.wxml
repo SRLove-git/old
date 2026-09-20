@@ -109,7 +109,7 @@
         </view>
         <button class="small-btn" bindtap="copyLink">复制链接</button>
       </view>
-      <button class="share-btn" bindtap="shareCard">分享活动卡片</button>
+      <button class="btn btn-primary" bindtap="shareCard">分享活动卡片</button>
     </view>
 
     <view wx:if="{{tab === 'promote'}}" class="section card">
@@ -133,8 +133,8 @@
     <button class="btn btn-primary btn-block" bindtap="openWithdraw">申请提现</button>
   </view>
 
-  <view wx:if="{{withdrawOpen}}" class="pay-mask" bindtap="closeWithdraw">
-    <view class="pay-modal" catchtap="noop">
+  <view wx:if="{{withdrawOpen}}" class="mask" bindtap="closeWithdraw">
+    <view class="sheet" catchtap="noop">
       <view class="modal-title">申请提现</view>
       <view class="withdraw-sub">可结算余额：¥{{manager.available}}</view>
       <input class="field-input" type="number" value="{{withdrawAmount}}" bindinput="onAmount" placeholder="最低{{config.minWithdraw || 100}}元" />

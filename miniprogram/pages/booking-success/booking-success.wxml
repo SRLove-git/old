@@ -1,0 +1,15 @@
+<view class="success-page">
+  <view class="success-icon">✓</view>
+  <view class="success-title">{{deferred ? '已提交，请尽快支付' : '报名成功'}}</view>
+  <view class="success-sub">{{deferred ? '名额已为您预留，请在30分钟内完成支付。' : '已为您锁定名额，活动开始前我们会提醒您。'}}</view>
+
+  <view wx:if="{{order}}" class="order-card card">
+    <view class="order-title">{{order.title}}</view>
+    <view class="order-row"><text class="order-label">场次</text><text class="order-value">{{timeText || '无需预约'}}</text></view>
+    <view class="order-row"><text class="order-label">人数</text><text class="order-value">{{order.count}}人</text></view>
+    <view class="order-row"><text class="order-label">实付</text><text class="order-value price">¥{{order.payAmount}}</text></view>
+  </view>
+
+  <button class="btn btn-primary btn-block" bindtap="goAppointments">查看预约单</button>
+  <button class="btn btn-ghost btn-block home-btn" bindtap="goHome">返回首页</button>
+</view>

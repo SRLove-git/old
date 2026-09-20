@@ -12,7 +12,7 @@
     </view>
 
     <view class="stats-card">
-      <view class="stats-title">消课与出勤统计</view>
+      <view class="section-heading"><view class="heading-cn">消课与出勤统计</view></view>
       <view class="stats-grid">
         <view><text class="stat-value">{{summary.total}}</text><text class="stat-label">购买次数</text></view>
         <view><text class="stat-value primary">{{summary.used}}</text><text class="stat-label">已核销</text></view>
@@ -28,7 +28,7 @@
       <view class="code-icon">▦</view><view class="code-copy"><view>出示会员码签到</view><text>到课后请向老师出示，由工作人员完成核销</text></view><text class="code-arrow">›</text>
     </view>
 
-    <view class="records-head"><view><view class="records-title">签到记录</view><view class="records-sub">共签到 {{summary.checked}} 次 · 缺勤 {{summary.absent}} 次</view></view></view>
+    <view class="records-head section-heading"><view><view class="heading-cn">签到记录</view><view class="records-sub">共签到 {{summary.checked}} 次 · 缺勤 {{summary.absent}} 次</view></view></view>
     <scroll-view scroll-x class="filter-scroll" enhanced show-scrollbar="{{false}}"><view class="filter-row"><view wx:for="{{filters}}" wx:key="key" class="filter-item {{filter === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="setFilter">{{item.label}}</view></view></scroll-view>
 
     <view wx:if="{{records.length}}" class="record-list">

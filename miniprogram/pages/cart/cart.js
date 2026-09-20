@@ -61,7 +61,7 @@ Page({
     wx.showModal({
       title: '移出购物车',
       content: '确定移除这个项目吗？',
-      confirmColor: '#d36151',
+      confirmColor: '#f53f3f',
       success: (res) => {
         if (!res.confirm) return
         store.removeCartItems([id])
@@ -93,7 +93,7 @@ Page({
       title: `合并付款（${selected.length}项）`,
       content: `本次共需支付 ¥${this.data.total}。活动将使用最近一期排班和默认报名人。`,
       confirmText: '确认付款',
-      confirmColor: '#293633',
+      confirmColor: '#b98555',
       success: (res) => {
         if (res.confirm) this.paySelected(selected)
       }
@@ -110,8 +110,11 @@ Page({
       const participant = state.participants[0] || { name: state.user.name || '报名人', phone: state.user.phone || '' }
       for (const item of selected) {
         if (item.kind === 'course') {
-          const course = store.getLive(item.targetId) || { id: item.targetId, title: item.title, memberPrice: item.price }
-          if (!store.isCoursePurchased(item.targetId)) store.purchaseCourse(course)
+          try {
+            await store.purchaseLive(item.targetId)
+          } catch (err) {
+            if (!err.message || !err.message.includes('已购买过')) throw err
+          }
         } else {
           const activity = store.getActivity(item.targetId)
           if (!activity) throw new Error(`${item.title} 已下架`)

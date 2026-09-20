@@ -85,16 +85,17 @@ Page({
       title: '确认购买课程',
       content: `${course.title}\n会员价 ¥${course.memberPrice}，购买后可永久回看。`,
       confirmText: '立即支付',
-      confirmColor: '#293633',
-      success: (res) => {
+      confirmColor: '#b98555',
+      success: async (res) => {
         if (!res.confirm) return
-        wx.showLoading({ title: '支付中', mask: true })
-        setTimeout(() => {
-          store.purchaseCourse(course)
+        try {
+          await store.purchaseLive(course.id)
           this.setData({ purchased: true })
-          wx.hideLoading()
-          wx.showToast({ title: '购买成功', icon: 'success' })
-        }, 500)
+          wx.showToast({ title: '购买成功，已发放计次卡', icon: 'none' })
+          store.refresh().catch(() => {})
+        } catch (e) {
+          wx.showToast({ title: e.message || '购买失败', icon: 'none' })
+        }
       }
     })
   },

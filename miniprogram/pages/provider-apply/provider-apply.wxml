@@ -1,4 +1,20 @@
 <view class="provider-page">
+  <block wx:if="{{application}}">
+    <view class="apply-head">
+      <view class="head-mark">合作申请</view>
+      <view class="head-title">服务商申请进度</view>
+      <view class="head-sub">提交时间：{{application.submittedAt}}</view>
+    </view>
+    <view class="form-card status-card">
+      <view class="status-value {{application.status === '已拒绝' ? 'rejected' : (application.status === '已通过' ? 'approved' : '')}}">{{application.status}}</view>
+      <view wx:if="{{application.status === '待审核'}}" class="status-tip">申请已提交，我们会尽快与您联系，请保持电话畅通。</view>
+      <view wx:if="{{application.status === '已通过'}}" class="status-tip">恭喜，您的服务商申请已通过，我们会尽快与您联系。</view>
+      <view wx:if="{{application.status === '已拒绝'}}" class="status-tip">{{application.rejectReason || '很抱歉，申请未通过审核。'}}</view>
+      <button wx:if="{{application.status === '已拒绝'}}" class="btn btn-ink btn-pill" bindtap="reapply">修改后重新提交</button>
+    </view>
+  </block>
+
+  <block wx:else>
   <view class="apply-head">
     <view class="head-mark">合作申请</view>
     <view class="head-title">申请成为岁悦里服务商</view>
@@ -44,5 +60,6 @@
   </view>
 
   <view class="privacy-tip">提交即表示您同意平台工作人员通过上述联系方式与您沟通合作事宜</view>
-  <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">提交申请</button>
+  <button class="btn btn-ink btn-pill" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">提交申请</button>
+  </block>
 </view>

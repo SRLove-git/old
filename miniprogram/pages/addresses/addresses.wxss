@@ -1,0 +1,76 @@
+.addr-list {
+  margin-bottom: 24rpx;
+}
+
+.addr-card {
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.addr-top {
+  display: flex;
+  align-items: center;
+}
+
+.addr-name {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.addr-phone {
+  margin-left: 20rpx;
+  color: var(--color-text-3);
+  font-size: 26rpx;
+}
+
+.addr-top .tag {
+  margin-left: 16rpx;
+}
+
+.addr-detail {
+  margin-top: 12rpx;
+  color: var(--color-text-2);
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.addr-actions {
+  display: flex;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.addr-action {
+  margin-right: 40rpx;
+  color: var(--color-primary);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.addr-action.danger {
+  color: var(--color-danger);
+}
+
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  color: var(--color-text-3);
+  font-size: 28rpx;
+}
+
+.add-bar {
+  margin-top: 10rpx;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.required {
+  color: var(--color-danger);
+  margin-left: 4rpx;
+}

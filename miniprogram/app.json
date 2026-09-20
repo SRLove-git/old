@@ -19,7 +19,11 @@
     "pages/provider-apply/provider-apply",
     "pages/manager-apply/manager-apply",
     "pages/manager/manager",
-    "pages/member-code/member-code"
+    "pages/member-code/member-code",
+    "pages/addresses/addresses",
+    "pages/study-records/study-records",
+    "pages/booking-success/booking-success",
+    "pages/balance/balance"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

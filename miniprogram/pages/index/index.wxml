@@ -103,6 +103,13 @@
     <view class="highlight-sub">每一次出发，都有熟悉的人和贴心的陪伴</view><button class="highlight-btn" bindtap="showService">联系小助理</button>
   </view>
 
+  <view class="assistant-panel">
+    <view class="assistant-title">小助理服务</view>
+    <image class="assistant-qr" src="/assets/assistant-qr.png" show-menu-by-longpress mode="aspectFit" />
+    <view class="assistant-tip">长按二维码，添加小助理微信</view>
+    <view class="assistant-wechat">微信号：suiyueli6070（长按识别或保存二维码）</view>
+  </view>
+
   <view class="brand-footer">
     <view class="brand-word">SUI YUE LI</view><view class="brand-slogan">和同龄人一起，玩得开心又省心</view>
     <view wx:if="{{filing.companyName || filing.icp || filing.police}}" class="filing">

@@ -18,7 +18,7 @@ function decorateCourse(course) {
     lessonCount: Number(data.lessonCount || fallback.lessonCount),
     duration: data.duration || fallback.duration,
     courseType: data.status === 'live' ? '直播课' : (data.status === 'scheduled' ? '即将开课' : '视频课'),
-    purchased: store.isCoursePurchased(data.id)
+    purchased: typeof data.purchased === 'boolean' ? data.purchased : store.isCoursePurchased(data.id)
   }
 }
 

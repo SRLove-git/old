@@ -92,31 +92,10 @@
   background: var(--color-primary);
 }
 
-.pay-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(20, 22, 26, 0.45);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 50rpx;
-}
-
-.pay-modal {
-  width: 100%;
-  background: #ffffff;
-  border-radius: 30rpx;
-  padding: 34rpx;
-  text-align: center;
-}
-
 .pay-title {
   font-size: 36rpx;
   font-weight: 700;
+  text-align: center;
 }
 
 .pay-amount {
@@ -124,10 +103,32 @@
   font-size: 64rpx;
   font-weight: 700;
   margin: 18rpx 0;
+  text-align: center;
 }
 
 .pay-tip {
   color: var(--color-text-3);
   font-size: 26rpx;
   margin-bottom: 26rpx;
+}
+
+.apply-status {
+  padding: 34rpx;
+  border-radius: 14rpx;
+  background: var(--color-success-light);
+  color: var(--color-success);
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 8rpx;
+  color: var(--color-text-3);
+  font-size: 22rpx;
+}
+
+.field-input.readonly {
+  background: var(--color-fill);
+  color: var(--color-text-3);
 }

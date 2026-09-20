@@ -387,27 +387,6 @@
   flex: 1;
 }
 
-.pay-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(20, 22, 26, 0.45);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 50rpx;
-}
-
-.pay-modal {
-  width: 100%;
-  background: #ffffff;
-  border-radius: 30rpx;
-  padding: 34rpx;
-}
-
 .pay-title {
   font-size: 36rpx;
   font-weight: 700;
@@ -444,37 +423,12 @@
   font-size: 30rpx;
 }
 
-.pay-success {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 50rpx;
-  text-align: center;
-}
-
-.success-icon {
-  width: 150rpx;
-  height: 150rpx;
-  border-radius: 50%;
-  background: var(--color-success);
-  color: #ffffff;
-  font-size: 80rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 30rpx;
-}
-
-.success-title {
-  font-size: 42rpx;
+.member-title {
+  font-size: 30rpx;
   font-weight: 700;
-}
-
-.success-sub {
-  color: var(--color-text-3);
-  margin: 16rpx 0 36rpx;
+  margin: 28rpx 0 18rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--color-border);
 }
 
 .sku-options.stacked {

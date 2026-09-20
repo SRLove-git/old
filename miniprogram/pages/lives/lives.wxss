@@ -18,7 +18,7 @@
 .course-cover image, .cover-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .cover-shade { background: linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.34)); }
 .course-type, .owned-badge { position: absolute; top: 18rpx; padding: 7rpx 14rpx; border-radius: 999rpx; color: #fff; font-size: 20rpx; font-weight: 700; }
-.course-type { left: 18rpx; background: rgba(37,48,44,.74); } .owned-badge { right: 18rpx; background: rgba(115,145,120,.9); }
+.course-type { left: 18rpx; background: rgba(37,48,44,.74); } .owned-badge { right: 18rpx; background: rgba(127,154,131,.95); }
 .play-button { position: absolute; left: 50%; top: 50%; width: 72rpx; height: 72rpx; border: 2rpx solid rgba(255,255,255,.7); border-radius: 50%; background: rgba(255,255,255,.9); color: #34413d; text-align: center; line-height: 72rpx; font-size: 27rpx; transform: translate(-50%,-50%); text-indent: 4rpx; }
 .course-body { padding: 24rpx; }
 .course-title { color: #28302e; font-size: 33rpx; font-weight: 700; line-height: 1.4; }
@@ -28,10 +28,10 @@
 .course-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 21rpx; padding-top: 18rpx; border-top: 1rpx solid #f0ede8; }
 .price-symbol { color: var(--color-primary); font-size: 24rpx; } .course-price { color: var(--color-primary); font-size: 40rpx; font-weight: 700; }
 .original-price { margin-left: 10rpx; color: #aaa; font-size: 21rpx; text-decoration: line-through; }
-.continue-text { color: #617a68; font-size: 27rpx; font-weight: 700; } .continue-text text { margin-left: 6rpx; }
-.course-action { padding: 12rpx 22rpx; border-radius: 999rpx; background: #293633; color: #fff; font-size: 23rpx; font-weight: 700; }
+.continue-text { color: var(--color-sage); font-size: 27rpx; font-weight: 700; } .continue-text text { margin-left: 6rpx; }
+.course-action { padding: 12rpx 22rpx; border-radius: 999rpx; background: var(--color-ink); color: #fff; font-size: 23rpx; font-weight: 700; }
 .course-buttons { display: flex; align-items: center; gap: 10rpx; }
 .course-cart { padding: 11rpx 17rpx; border: 1rpx solid var(--color-primary); border-radius: 999rpx; color: var(--color-primary); font-size: 21rpx; font-weight: 700; }
 .empty { padding: 110rpx 30rpx; text-align: center; }
-.empty-icon { color: #baa98f; font-size: 78rpx; } .empty-title { margin-top: 16rpx; color: #333a37; font-size: 32rpx; font-weight: 700; }
-.empty-sub { margin-top: 8rpx; color: #929795; font-size: 24rpx; } .empty-button { display: inline-flex; margin-top: 28rpx; padding: 15rpx 28rpx; border-radius: 999rpx; background: #293633; color: #fff; font-size: 24rpx; }
+.empty-icon { color: var(--color-text-3); font-size: 78rpx; } .empty-title { margin-top: 16rpx; color: #333a37; font-size: 32rpx; font-weight: 700; }
+.empty-sub { margin-top: 8rpx; color: #929795; font-size: 24rpx; } .empty-button { display: inline-flex; margin-top: 28rpx; padding: 15rpx 28rpx; border-radius: 999rpx; background: var(--color-ink); color: #fff; font-size: 24rpx; }

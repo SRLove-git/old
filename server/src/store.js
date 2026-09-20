@@ -70,6 +70,11 @@ function normalizeContent(db) {
   }
 }
 
+function normalizeCollections(db) {
+  db.providerApplications ||= []
+  db.unbindApplications ||= []
+}
+
 function normalizeRegionIds(regionIds) {
   if (!Array.isArray(regionIds)) return []
   return [...new Set(regionIds.map(String).filter(Boolean))]
@@ -127,6 +132,7 @@ export function init() {
       normalizeActivities(db)
       normalizeConfig(db)
       normalizeContent(db)
+      normalizeCollections(db)
       return db
     } catch (e) {
       db = null
@@ -136,6 +142,7 @@ export function init() {
   normalizeActivities(db)
   normalizeConfig(db)
   normalizeContent(db)
+  normalizeCollections(db)
   save()
   return db
 }
@@ -359,11 +366,16 @@ function releaseSchedule(order) {
   }
 }
 
-function returnCoupon(order) {
-  if (order.couponId) {
-    const coupon = db.coupons.find((c) => c.id === order.couponId)
-    if (coupon) coupon.used = false
+function returnCoupon(order, force = false) {
+  if (!order.couponId) return
+  if (!force) {
+    const rule = db.config.couponRefundReturn || 'auto'
+    if (rule === 'never') return
+    // auto 规则：已核销/待评价/已完成 视为已消费，不退券；待发货/待收货 退券
+    if (rule === 'auto' && ['已核销', '待评价', '已完成'].includes(order.status)) return
   }
+  const coupon = db.coupons.find((c) => c.id === order.couponId)
+  if (coupon) coupon.used = false
 }
 
 function generateCommission(order) {
@@ -433,7 +445,7 @@ export function createOrder(payload) {
     payAmount,
     discount,
     address: payload.address || null,
-    status: deferred ? '待付款' : '待发货',
+    status: deferred ? '待付款' : ([4, 5].includes(activity.category) ? '待发货' : '待收货'),
     coupon: coupon ? coupon.title : '未使用',
     couponId: coupon ? coupon.id : null,
     code: `${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`,
@@ -459,7 +471,7 @@ export function autoCancelExpired() {
     if (o.status === '待付款' && o.payDeadline && now > o.payDeadline) {
       o.status = '已取消'
       releaseSchedule(o)
-      returnCoupon(o)
+      returnCoupon(o, true)
     }
   })
   save()
@@ -468,7 +480,7 @@ export function autoCancelExpired() {
 export function payOrder(id) {
   const order = db.orders.find((o) => o.id === id)
   if (!order || order.status !== '待付款') return null
-  order.status = '待发货'
+  order.status = [4, 5].includes(order.category) ? '待发货' : '待收货'
   order.payDeadline = null
   generateCommission(order)
   save()
@@ -480,7 +492,7 @@ export function cancelOrder(id) {
   if (!order || order.status !== '待付款') return null
   order.status = '已取消'
   releaseSchedule(order)
-  returnCoupon(order)
+  returnCoupon(order, true)
   save()
   return order
 }
@@ -490,6 +502,7 @@ export function refundOrder(id, reason) {
   if (!order) return { order: null, error: '订单不存在' }
   const calc = calcRefund(order)
   if (!calc.can) return { order, error: calc.reason }
+  returnCoupon(order)
   order.status = '已退款'
   order.refundAmount = calc.amount
   order.refundReason = reason || '用户申请退款'
@@ -499,7 +512,6 @@ export function refundOrder(id, reason) {
     if (calc.ratio >= 1) commission.status = '已扣回'
     else commission.commissionAmount = Number((commission.commissionAmount * (1 - calc.ratio)).toFixed(2))
   }
-  returnCoupon(order)
   save()
   return { order }
 }
@@ -509,6 +521,23 @@ export function advanceOrder(id) {
   if (!order) return null
   if (order.status === '待发货') order.status = order.category === 4 ? '已核销' : '待收货'
   else if (order.status === '待收货' || order.status === '已核销') order.status = '待评价'
+  save()
+  return order
+}
+
+export function getOrderByCode(code) {
+  const normalized = String(code || '').replace(/\s+/g, '')
+  const order = db.orders.find((o) => String(o.code || '').replace(/\s+/g, '') === normalized)
+  if (!order) throw new Error('核销码不存在')
+  return order
+}
+
+export function verifyOrder(orderId) {
+  const order = db.orders.find((o) => String(o.id) === String(orderId))
+  if (!order) throw new Error('订单不存在')
+  if (order.status === '已核销') throw new Error('该订单已核销')
+  if (order.status !== '待发货' && order.status !== '待收货') throw new Error('当前状态不可核销')
+  order.status = '已核销'
   save()
   return order
 }
@@ -609,6 +638,20 @@ export function adjustCommission(id, amount, reason) {
 }
 
 export function applyManager(form) {
+  const userId = form.userId || 'u1'
+  const customer = db.customers.find((c) => String(c.id) === String(userId))
+  if (!customer) throw new Error('用户不存在')
+  if (!/^1\d{10}$/.test(String(form.phone || ''))) throw new Error('请填写正确的11位手机号')
+  if (String(form.name || '') !== String(customer.name) || String(form.phone || '') !== String(customer.phone)) {
+    throw new Error('姓名和手机号需与账号信息一致')
+  }
+  const scaleText = String(form.scale || '')
+  const groupCount = Number(form.groupCount ?? (scaleText.match(/(\d+)\s*个?群/) || [])[1] ?? 0)
+  const memberCount = Number(form.memberCount ?? (scaleText.match(/(\d+)\s*人/) || [])[1] ?? 0)
+  if (groupCount > 50 || memberCount > 5000) throw new Error('社群规模超出限制')
+  const hasPending = db.managerApplications.some((a) => a.status === '待审核' && String(a.userId) === String(userId))
+  const alreadyManager = db.managers.some((m) => String(m.id) === String(userId)) || Boolean(customer.isManager)
+  if (hasPending || alreadyManager) throw new Error('已有待审核的申请或已是主理人')
   const fee = Number(db.config.managerApplyFee ?? 0)
   if (fee > 0 && !form.paid) {
     const err = new Error('请先支付主理人申请费用')
@@ -618,6 +661,7 @@ export function applyManager(form) {
   const app = {
     id: `APP${Date.now()}`,
     ...form,
+    userId,
     paid: fee > 0 ? true : Boolean(form.paid),
     paidAmount: fee,
     paidAt: fee > 0 ? '刚刚' : '',
@@ -625,6 +669,43 @@ export function applyManager(form) {
     submittedAt: '刚刚'
   }
   db.managerApplications.unshift(app)
+  save()
+  return app
+}
+
+function nowText() {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export function applyProvider(payload) {
+  const { userId, name, phone, type, intro } = payload || {}
+  if (!String(name || '').trim() || !String(phone || '').trim()) throw new Error('请填写姓名和手机号')
+  if (!/^1\d{10}$/.test(String(phone || ''))) throw new Error('请填写正确的11位手机号')
+  const hasPending = (db.providerApplications || []).some((a) => a.status === '待审核' && String(a.userId) === String(userId))
+  if (hasPending) throw new Error('已有待审核的申请')
+  const record = {
+    id: `PA${Date.now()}`,
+    userId,
+    name: String(name).trim(),
+    phone: String(phone).trim(),
+    type: type || '',
+    intro: intro || '',
+    status: '待审核',
+    submittedAt: nowText()
+  }
+  db.providerApplications.unshift(record)
+  save()
+  return record
+}
+
+export function auditProvider(id, approve, rejectReason) {
+  const app = (db.providerApplications || []).find((a) => String(a.id) === String(id))
+  if (!app) return null
+  app.status = approve ? '已通过' : '已拒绝'
+  if (!approve) app.rejectReason = rejectReason || ''
+  addLog('服务商审核', `${approve ? '通过' : '拒绝'} ${app.name} 的服务商申请${approve ? '' : `，原因：${rejectReason || ''}`}`)
   save()
   return app
 }
@@ -735,13 +816,13 @@ export function auditRefund(orderId, approve, reason) {
   const order = db.orders.find((o) => o.id === orderId)
   if (!order) return null
   if (approve) {
+    returnCoupon(order)
     order.status = '已退款'
     order.refundAmount = order.payAmount
     order.refundReason = reason || '运营审核退款'
     releaseSchedule(order)
     const commission = db.commissions.find((c) => c.orderId === orderId)
     if (commission) commission.status = '已扣回'
-    returnCoupon(order)
   } else {
     order.status = '待发货'
     order.refundRejected = reason || '审核拒绝'
@@ -797,7 +878,11 @@ function enrichLive(live) {
 }
 
 export function listLives(userId) {
-  const all = (get().lives || []).map(enrichLive)
+  const all = (get().lives || []).map((live) => {
+    const enriched = enrichLive(live)
+    if (userId) enriched.purchased = (db.cards || []).some((c) => String(c.liveId) === String(live.id) && String(c.userId) === String(userId))
+    return enriched
+  })
   if (!userId) return all
   const user = db.customers.find((c) => String(c.id) === String(userId))
   const managerId = user ? user.managerId : null
@@ -925,6 +1010,16 @@ function memberIdentity(user) {
   }
 }
 
+const BIND_SOURCE_LABELS = { 1: '扫码绑定', 2: '链接绑定', 3: '邀请码绑定', 4: '客服调整' }
+
+function bindLogView(b) {
+  const manager = findManager(b.managerId)
+  const managerName = manager ? manager.name : (b.managerName || '')
+  if (b.status === 1) return { id: b.id, time: b.bindTime, action: '绑定', managerName, reason: BIND_SOURCE_LABELS[b.bindSource] || '' }
+  if (b.status === 3) return { id: b.id, time: b.unbindTime, action: '更换主理人', managerName, reason: b.unbindReason || '' }
+  return { id: b.id, time: b.unbindTime, action: '解绑', managerName, reason: b.unbindReason || '' }
+}
+
 export function getUserProfile(userId) {
   const raw = db.customers.find((c) => c.id === userId) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
   const user = { ...raw, ...memberIdentity(raw) }
@@ -932,8 +1027,38 @@ export function getUserProfile(userId) {
   const boundManager = user.managerId ? findManager(user.managerId) : null
   const addresses = db.addresses.filter((a) => a.userId === userId)
   const isManager = db.managers.some((m) => String(m.id) === String(userId)) || Boolean(user.isManager)
-  const application = db.managerApplications.find((a) => String(a.name) === String(user.name)) || null
-  return { user, cards, boundManager, addresses, coupons: db.coupons, isManager, application, bindLogs: db.bindings.filter((b) => b.customerId === userId) }
+  const application = db.managerApplications.find((a) => a.userId && String(a.userId) === String(userId))
+    || db.managerApplications.find((a) => String(a.name) === String(user.name)) || null
+  const pendingUnbind = (db.unbindApplications || []).find((a) => a.status === '待审核' && String(a.customerId) === String(userId)) || null
+  const providerApplication = (db.providerApplications || []).find((a) => String(a.userId) === String(userId)) || null
+  const bindLogs = db.bindings.filter((b) => b.customerId === userId).map(bindLogView)
+  return { user, cards, boundManager, addresses, coupons: db.coupons, isManager, application, pendingUnbind, providerApplication, bindLogs }
+}
+
+export function purchaseLive(liveId, userId) {
+  const live = (db.lives || []).find((l) => String(l.id) === String(liveId))
+  if (!live) throw new Error('课程不存在')
+  const exists = (db.cards || []).some((c) => String(c.liveId) === String(live.id) && String(c.userId) === String(userId))
+  if (exists) throw new Error('已购买过该课程')
+  const total = Number(live.lessonCount || 10)
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 1)
+  const p = (n) => String(n).padStart(2, '0')
+  const card = {
+    id: `card${Date.now()}`,
+    userId,
+    liveId: live.id,
+    title: `${live.title}（${total}次卡）`,
+    courseName: live.title,
+    teacher: live.hostName || '',
+    validUntil: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`,
+    remain: total,
+    total,
+    attendanceRecords: []
+  }
+  db.cards.unshift(card)
+  save()
+  return card
 }
 
 export function checkInCard(cardId, data = {}) {
@@ -979,6 +1104,7 @@ export function bindCustomerByCodeOrId(userId, code, managerId, source) {
     customerId: userId,
     customerName: customer ? customer.name : '用户',
     managerId: manager.id,
+    managerName: manager.name,
     bindSource: source || 3,
     bindTime: '刚刚',
     status: 1
@@ -999,6 +1125,42 @@ export function unbindCustomerByUser(userId, reason) {
   })
   save()
   return customer
+}
+
+export function applyUnbind(userId, reason) {
+  const customer = db.customers.find((c) => String(c.id) === String(userId))
+  if (!customer || !customer.managerId) throw new Error('当前未绑定主理人')
+  if (!String(reason || '').trim()) throw new Error('请填写申请理由')
+  const hasPending = (db.unbindApplications || []).some((a) => a.status === '待审核' && String(a.customerId) === String(userId))
+  if (hasPending) throw new Error('已有待审核的解绑申请')
+  const manager = findManager(customer.managerId)
+  const record = {
+    id: `UB${Date.now()}`,
+    customerId: userId,
+    customerName: customer.name,
+    managerId: customer.managerId,
+    managerName: manager ? manager.name : '',
+    reason: String(reason).trim(),
+    status: '待审核',
+    submittedAt: nowText()
+  }
+  db.unbindApplications.unshift(record)
+  save()
+  return record
+}
+
+export function auditUnbind(id, approve, rejectReason) {
+  const app = (db.unbindApplications || []).find((a) => String(a.id) === String(id))
+  if (!app) return null
+  if (approve) {
+    app.status = '已通过'
+    unbindCustomerByUser(app.customerId, app.reason)
+  } else {
+    app.status = '已拒绝'
+    app.rejectReason = rejectReason || ''
+    save()
+  }
+  return app
 }
 
 export function getManagerDashboard(managerId) {

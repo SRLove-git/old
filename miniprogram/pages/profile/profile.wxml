@@ -8,7 +8,7 @@
         <view class="phone">{{user.phone || '点击完善个人信息'}}</view>
         <view class="member-pill">金穗会员 · 成长值 {{user.points || 0}}</view>
       </view>
-      <view class="code-entry"><text class="code-icon">▦</text><text>会员码</text></view>
+      <view class="code-entry"><text class="code-icon">🔳</text><text>会员码</text></view>
     </view>
     <view class="member-banner" bindtap="goMemberCode">
       <text class="diamond">◆</text><text class="banner-copy">会员价 · 专属优惠 · 活动优先报名</text><text class="banner-link">查看权益 ›</text>
@@ -16,63 +16,82 @@
   </view>
 
   <view class="assets">
-    <view class="asset"><text class="asset-value">{{user.balance || '0.00'}}</text><text class="asset-label">余额</text></view>
-    <view class="asset"><text class="asset-value">{{user.points || 0}}</text><text class="asset-label">积分</text></view>
-    <view class="asset"><text class="asset-value">{{cards.length}}</text><text class="asset-label">计次卡</text></view>
-    <view class="asset"><text class="asset-value">{{couponCount}}</text><text class="asset-label">优惠券</text></view>
+    <view class="asset" hover-class="asset-hover" data-url="/pages/balance/balance" bindtap="go"><text class="asset-value">{{user.balance || '0.00'}}</text><text class="asset-label">余额</text></view>
+    <view class="asset" hover-class="asset-hover" data-url="/pages/member-code/member-code" bindtap="go"><text class="asset-value">{{user.points || 0}}</text><text class="asset-label">积分</text></view>
+    <view class="asset" hover-class="asset-hover" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="asset-value">{{cards.length}}</text><text class="asset-label">计次卡</text></view>
+    <view class="asset" hover-class="asset-hover" data-url="/pages/coupons/coupons" bindtap="go"><text class="asset-value">{{couponCount}}</text><text class="asset-label">优惠券</text></view>
   </view>
 
   <view class="order-panel panel">
-    <view class="panel-head"><text class="panel-title">我的订单</text><text class="panel-more" data-url="/pages/orders/orders" bindtap="go">查看全部订单 ›</text></view>
+    <view class="panel-head"><text class="panel-title heading-cn">我的订单</text><text class="panel-more" data-url="/pages/orders/orders" bindtap="go">查看全部订单 ›</text></view>
     <view class="order-grid">
-      <view class="order-state" data-url="/pages/orders/orders" bindtap="go"><text class="line-icon">▱</text><text>待付款</text></view>
-      <view class="order-state" data-url="/pages/orders/orders" bindtap="go"><text class="line-icon">▰</text><text>待出行</text></view>
-      <view class="order-state" data-url="/pages/orders/orders" bindtap="go"><text class="line-icon">▣</text><text>待完成</text></view>
-      <view class="order-state" data-url="/pages/orders/orders" bindtap="go"><text class="line-icon">♡</text><text>待评价</text></view>
-      <view class="order-state" data-url="/pages/orders/orders" bindtap="go"><text class="line-icon">↻</text><text>退款/售后</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待付款" bindtap="go"><text class="line-icon">💳</text><text>待付款</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待出行" bindtap="go"><text class="line-icon">🗓️</text><text>待出行</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待完成" bindtap="go"><text class="line-icon">✅</text><text>待完成</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待评价" bindtap="go"><text class="line-icon">⭐</text><text>待评价</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=退款售后" bindtap="go"><text class="line-icon">↩️</text><text>退款/售后</text></view>
     </view>
   </view>
 
   <view class="shortcut-panel panel">
-    <view class="shortcut-row" data-url="/pages/appointments/appointments" bindtap="go"><text class="shortcut-icon">▦</text><text class="shortcut-text">我的预约单</text><text class="arrow">›</text></view>
-    <view class="shortcut-row" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="shortcut-icon">▤</text><text class="shortcut-text">课程核销与签到</text><text class="arrow">›</text></view>
+    <view class="shortcut-row" data-url="/pages/appointments/appointments" bindtap="go"><text class="shortcut-icon">📋</text><text class="shortcut-text">我的预约单</text><text class="arrow">›</text></view>
+    <view class="shortcut-row" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="shortcut-icon">🎫</text><text class="shortcut-text">课程核销与签到</text><text class="arrow">›</text></view>
   </view>
 
   <view class="panel services-panel">
-    <view class="panel-title">常用服务</view>
+    <view class="panel-title heading-cn">常用服务</view>
     <view class="service-grid">
-      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><text class="service-icon warm">购</text><text>购物车</text></view>
-      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><text class="service-icon warm">券</text><text>优惠券</text></view>
-      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><text class="service-icon blue">人</text><text>常用报名人</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon coral">礼</text><text>赠品中心</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon green">址</text><text>收货地址</text></view>
-      <view class="service-item" bindtap="goAcademy"><text class="service-icon blue">课</text><text>我的课程</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon green">记</text><text>学习记录</text></view>
-      <view class="service-item" data-url="/pages/manager/manager" bindtap="go"><text class="service-icon coral">理</text><text>主理人工作台</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon warm">电</text><text>联系商家</text></view>
-      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><text class="service-icon green">商</text><text>申请服务商</text></view>
+      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><text class="service-icon tone-0">🛒</text><text>购物车</text></view>
+      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><text class="service-icon tone-1">🎟️</text><text>优惠券</text></view>
+      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><text class="service-icon tone-2">👥</text><text>常用报名人</text></view>
+      <view class="service-item" bindtap="showService"><text class="service-icon tone-3">🎁</text><text>赠品中心</text></view>
+      <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><text class="service-icon tone-4">📍</text><text>收货地址</text></view>
+      <view class="service-item" bindtap="goAcademy"><text class="service-icon tone-0">📚</text><text>我的课程</text></view>
+      <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><text class="service-icon tone-1">📝</text><text>学习记录</text></view>
+      <view class="service-item" data-url="/pages/manager/manager" bindtap="go"><text class="service-icon tone-2">🏪</text><text>主理人工作台</text></view>
+      <view class="service-item" bindtap="showService"><text class="service-icon tone-3">📞</text><text>联系商家</text></view>
+      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><text class="service-icon tone-4">🤝</text><text>申请服务商</text></view>
     </view>
   </view>
 
   <view class="profile-card panel">
-    <view class="panel-title">我的专属主理人</view>
+    <view class="panel-title heading-cn">我的专属主理人</view>
     <block wx:if="{{boundManager}}">
-      <view class="manager-bound"><view class="manager-avatar">悦</view><view class="manager-info"><view class="manager-name">{{boundManager.name}}</view><view class="manager-sub">邀请码 {{boundManager.inviteCode}} · 有问题随时联系</view></view><button class="small-btn" bindtap="unbind">解绑</button></view>
+      <view class="manager-bound"><view class="manager-avatar">悦</view><view class="manager-info"><view class="manager-name">{{boundManager.name}}</view><view class="manager-sub">邀请码 {{boundManager.inviteCode}} · 有问题随时联系</view></view><text wx:if="{{pendingUnbind}}" class="unbind-pending">解绑申请审核中</text><button wx:else class="small-btn" bindtap="unbind">解绑</button></view>
     </block>
     <block wx:else><view class="manager-empty">绑定熟悉的主理人，获得专属活动服务</view><button class="btn btn-primary btn-block" bindtap="openBind">绑定主理人</button></block>
   </view>
 
   <view class="profile-card panel">
-    <view class="panel-title">想一起组织活动？</view><view class="manager-empty">成为主理人，可推广活动并获得服务佣金</view>
+    <view class="panel-title heading-cn">想一起组织活动？</view><view class="manager-empty">成为主理人，可推广活动并获得服务佣金</view>
     <block wx:if="{{isManager}}"><button class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button></block>
     <block wx:elif="{{application}}"><view class="apply-status">{{application.status === '待审核' ? '申请已提交，预计1-2个工作日审核' : (application.status === '已拒绝' ? '申请被拒绝' : '申请已通过')}}</view><button wx:if="{{application.status === '已拒绝'}}" class="btn btn-secondary btn-block" bindtap="goManagerApply">修改后重新提交</button><button wx:if="{{application.status === '已通过'}}" class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button></block>
     <block wx:else><button class="btn btn-secondary btn-block" bindtap="goManagerApply">申请成为主理人</button></block>
   </view>
 
   <view wx:if="{{bindLogs.length > 0}}" class="profile-card panel">
-    <view class="panel-title">主理人归属记录</view>
+    <view class="panel-title heading-cn">主理人归属记录</view>
     <view wx:for="{{bindLogs}}" wx:key="id" class="bind-log"><text>{{item.time}} · {{item.action}} · {{item.managerName}}</text><text class="bind-log-reason">{{item.reason}}</text></view>
   </view>
 
-  <view wx:if="{{bindOpen}}" class="pay-mask" bindtap="closeBind"><view class="pay-modal" catchtap="noop"><view class="bind-title">绑定主理人</view><view class="bind-sub">请输入主理人给您的邀请码</view><input class="field-input" value="{{code}}" bindinput="onCode" placeholder="例如：SYL001" /><button class="btn btn-primary btn-block" bindtap="bindByCode">确认绑定</button></view></view>
+  <view class="profile-card panel">
+    <view class="panel-title heading-cn">关注公众号</view>
+    <view class="official-tip">关注「岁悦里」公众号，获取最新活动与优惠</view>
+    <official-account></official-account>
+  </view>
+
+  <view wx:if="{{products.length > 0}}" class="profile-card panel">
+    <view class="panel-title heading-cn">为您推荐</view>
+    <scroll-view scroll-x class="recommend-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="recommend-row">
+        <view wx:for="{{products}}" wx:key="id" class="recommend-item" data-id="{{item.id}}" bindtap="goDetail">
+          <view class="recommend-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+          <view class="recommend-name">{{item.title}}</view>
+          <view class="recommend-price">¥{{item.memberPrice}} <text class="recommend-price-note">会员价</text></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{bindOpen}}" class="mask" bindtap="closeBind"><view class="sheet" catchtap="noop"><view class="bind-title">绑定主理人</view><view class="bind-sub">请输入主理人给您的邀请码</view><input class="field-input" value="{{code}}" bindinput="onCode" placeholder="例如：SYL001" /><button class="btn btn-primary btn-block" bindtap="bindByCode">确认绑定</button></view></view>
 </view>

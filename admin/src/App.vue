@@ -12,6 +12,8 @@ import {
   IconMessage,
   IconImage,
   IconUserAdd,
+  IconStamp,
+  IconScan,
   IconIdcard,
   IconLink,
   IconSafe,
@@ -37,12 +39,14 @@ const nav = [
   { key: 'categories', name: '分类管理', icon: IconTags },
   { key: 'regions', name: '地区管理', icon: IconLocation },
   { key: 'orders', name: '订单/退款', icon: IconFile },
+  { key: 'verify', name: '核销管理', icon: IconScan },
   { key: 'customers', name: '用户管理', icon: IconUserGroup },
   { key: 'coupons', name: '优惠券管理', icon: IconGift },
   { key: 'reviews', name: '评价管理', icon: IconMessage },
   { key: 'banners', name: 'Banner管理', icon: IconImage },
   { key: 'content', name: '资讯视频', icon: IconFile },
   { key: 'applications', name: '主理人审核', icon: IconUserAdd },
+  { key: 'providers', name: '服务商审核', icon: IconStamp },
   { key: 'managers', name: '主理人管理', icon: IconIdcard },
   { key: 'bindings', name: '归属管理', icon: IconLink },
   { key: 'commissions', name: '佣金管理', icon: IconSafe },
@@ -55,6 +59,8 @@ const stats = ref(null)
 const activities = ref([])
 const orders = ref([])
 const applications = ref([])
+const providerApplications = ref([])
+const unbindApplications = ref([])
 const managers = ref([])
 const customers = ref([])
 const bindings = ref([])
@@ -67,7 +73,11 @@ const products = ref([])
 const regions = ref([])
 const contentPosts = ref([])
 const logs = ref([])
-const config = ref({})
+const config = ref({ couponRefundReturn: 'auto' })
+
+const verifyCode = ref('')
+const verifyOrder = ref(null)
+const verifySearching = ref(false)
 
 const kw = ref('')
 const orderStatusFilter = ref('全部')
@@ -317,6 +327,25 @@ const applicationColumns = [
   { title: '状态', slotName: 'status', width: 100 },
   { title: '操作', slotName: 'actions', width: 160 }
 ]
+const providerColumns = [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: '姓名', dataIndex: 'name', width: 120 },
+  { title: '手机号', dataIndex: 'phone', width: 140 },
+  { title: '服务类型', dataIndex: 'type', width: 120 },
+  { title: '简介', dataIndex: 'intro', ellipsis: true, tooltip: true },
+  { title: '状态', slotName: 'status', width: 100 },
+  { title: '提交时间', dataIndex: 'submittedAt', width: 160 },
+  { title: '操作', slotName: 'actions', width: 160 }
+]
+const unbindColumns = [
+  { title: '申请ID', dataIndex: 'id', width: 90 },
+  { title: '客户', dataIndex: 'customerName', width: 120 },
+  { title: '原主理人', dataIndex: 'managerName', width: 120 },
+  { title: '申请理由', dataIndex: 'reason', ellipsis: true, tooltip: true },
+  { title: '状态', slotName: 'status', width: 100 },
+  { title: '申请时间', dataIndex: 'submittedAt', width: 160 },
+  { title: '操作', slotName: 'actions', width: 160 }
+]
 const managerColumns = [
   { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '姓名', dataIndex: 'name', width: 120 },
@@ -387,10 +416,12 @@ async function load() {
     if (view.value === 'banners') banners.value = await api.get('/banners')
     if (view.value === 'content') contentPosts.value = await api.get('/content-posts')
     if (view.value === 'applications') applications.value = await api.get('/manager-applications')
+    if (view.value === 'providers') providerApplications.value = await api.get('/provider-applications')
     if (view.value === 'managers') managers.value = await api.get('/managers')
     if (view.value === 'bindings') {
       customers.value = await api.get('/customers')
       bindings.value = await api.get('/bindings')
+      unbindApplications.value = await api.get('/unbind-applications')
     }
     if (view.value === 'commissions') commissions.value = await api.get('/commissions')
     if (view.value === 'withdraws') withdraws.value = await api.get('/withdraws')
@@ -411,6 +442,9 @@ async function load() {
       }
       if (!config.value.brand) {
         config.value.brand = { slogan: '和同龄人一起，玩得开心又省心' }
+      }
+      if (!config.value.couponRefundReturn) {
+        config.value.couponRefundReturn = 'auto'
       }
     }
   } catch (e) {
@@ -621,6 +655,46 @@ function refundOrder(id) {
   )
 }
 
+async function searchVerify() {
+  const digits = verifyCode.value.replace(/\s+/g, '')
+  if (!digits) {
+    Message.warning('请输入核销码')
+    return
+  }
+  error.value = ''
+  verifySearching.value = true
+  try {
+    verifyOrder.value = await api.get('/orders/code/' + encodeURIComponent(digits))
+  } catch (e) {
+    verifyOrder.value = null
+    Message.error(e.message)
+  } finally {
+    verifySearching.value = false
+  }
+}
+
+function confirmVerify() {
+  if (!verifyOrder.value) return
+  Modal.confirm({
+    title: '确认核销',
+    content: `确认核销订单「${verifyOrder.value.title}」（核销码 ${verifyOrder.value.code}）？`,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: () => doVerify()
+  })
+}
+
+async function doVerify() {
+  error.value = ''
+  try {
+    verifyOrder.value = await api.post(`/orders/${verifyOrder.value.id}/verify`)
+    Message.success('核销成功')
+  } catch (e) {
+    error.value = e.message
+    Message.error(e.message)
+  }
+}
+
 function openCustomer(c) {
   customerForm.value = { ...c }
 }
@@ -702,6 +776,16 @@ function rejectApp(id) {
   )
 }
 
+function approveProvider(id) {
+  doAction(() => api.post(`/provider-applications/${id}/approve`), '已通过')
+}
+
+function rejectProvider(id) {
+  askReason('拒绝服务商申请', '请输入拒绝原因', (reason) =>
+    doAction(() => api.post(`/provider-applications/${id}/reject`, { reason }), '已拒绝')
+  )
+}
+
 function setManagerStatus(id, status) {
   const action = () => doAction(() => api.post(`/managers/${id}/status`, { status }))
   if (status === 3) {
@@ -714,6 +798,16 @@ function setManagerStatus(id, status) {
 function unbindCustomer(id) {
   askReason('解绑客户', '请输入解绑原因', (reason) =>
     doAction(() => api.post('/bindings/unbind', { customerId: id, reason }), '已解绑')
+  )
+}
+
+function approveUnbind(id) {
+  doAction(() => api.post(`/unbind-applications/${id}/approve`), '已通过')
+}
+
+function rejectUnbind(id) {
+  askReason('拒绝解绑申请', '请输入拒绝原因', (reason) =>
+    doAction(() => api.post(`/unbind-applications/${id}/reject`, { reason }), '已拒绝')
   )
 }
 
@@ -1017,6 +1111,46 @@ function exportCsv(filename, rows) {
             </a-card>
           </section>
 
+          <section v-if="view === 'verify'">
+            <a-card :bordered="false">
+              <div class="toolbar">
+                <a-input-search
+                  v-model="verifyCode"
+                  placeholder="输入或扫描核销码"
+                  search-button
+                  allow-clear
+                  style="width: 320px"
+                  :loading="verifySearching"
+                  @search="searchVerify"
+                >
+                  <template #button-default>查询</template>
+                </a-input-search>
+              </div>
+              <a-empty v-if="!verifyOrder" description="输入核销码查询订单信息" />
+              <template v-else>
+                <a-descriptions :column="2" bordered title="订单信息">
+                  <a-descriptions-item label="订单号">{{ verifyOrder.id }}</a-descriptions-item>
+                  <a-descriptions-item label="标题">{{ verifyOrder.title }}</a-descriptions-item>
+                  <a-descriptions-item label="客户">{{ verifyOrder.participants }}</a-descriptions-item>
+                  <a-descriptions-item label="人数">{{ verifyOrder.count }}</a-descriptions-item>
+                  <a-descriptions-item label="实付"><span class="num">¥{{ verifyOrder.payAmount }}</span></a-descriptions-item>
+                  <a-descriptions-item label="状态"><a-tag :color="orderChip(verifyOrder.status)">{{ verifyOrder.status }}</a-tag></a-descriptions-item>
+                  <a-descriptions-item label="核销码">{{ verifyOrder.code }}</a-descriptions-item>
+                  <a-descriptions-item label="场次时间">{{ verifyOrder.schedule ? `${verifyOrder.schedule.date || ''} ${verifyOrder.schedule.time || ''}`.trim() || '—' : '—' }}</a-descriptions-item>
+                </a-descriptions>
+                <div class="actions-row">
+                  <a-button
+                    type="primary"
+                    :disabled="!['待发货', '待收货'].includes(verifyOrder.status)"
+                    @click="confirmVerify"
+                  >
+                    确认核销
+                  </a-button>
+                </div>
+              </template>
+            </a-card>
+          </section>
+
           <section v-if="view === 'customers'">
             <div class="toolbar">
               <a-input-search v-model="kw" placeholder="搜索姓名/电话" allow-clear style="width: 280px" />
@@ -1158,6 +1292,29 @@ function exportCsv(filename, rows) {
             </a-card>
           </section>
 
+          <section v-if="view === 'providers'">
+            <a-card :bordered="false">
+              <a-table
+                :columns="providerColumns"
+                :data="providerApplications"
+                :pagination="false"
+                row-key="id"
+                size="middle"
+              >
+                <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
+                <template #actions="{ record }">
+                  <template v-if="record.status === '待审核'">
+                    <a-space :size="0">
+                      <a-button type="primary" size="small" @click="approveProvider(record.id)">通过</a-button>
+                      <a-button size="small" @click="rejectProvider(record.id)">拒绝</a-button>
+                    </a-space>
+                  </template>
+                  <span v-else class="muted">{{ record.rejectReason || '已通过' }}</span>
+                </template>
+              </a-table>
+            </a-card>
+          </section>
+
           <section v-if="view === 'managers'">
             <a-card :bordered="false">
               <a-table
@@ -1182,6 +1339,26 @@ function exportCsv(filename, rows) {
           </section>
 
           <section v-if="view === 'bindings'">
+            <a-card title="解绑申请" :bordered="false" class="unbind-card">
+              <a-table
+                :columns="unbindColumns"
+                :data="unbindApplications"
+                :pagination="false"
+                row-key="id"
+                size="middle"
+              >
+                <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
+                <template #actions="{ record }">
+                  <template v-if="record.status === '待审核'">
+                    <a-space :size="0">
+                      <a-button type="primary" size="small" @click="approveUnbind(record.id)">通过</a-button>
+                      <a-button size="small" @click="rejectUnbind(record.id)">拒绝</a-button>
+                    </a-space>
+                  </template>
+                  <span v-else class="muted">{{ record.rejectReason || '已通过' }}</span>
+                </template>
+              </a-table>
+            </a-card>
             <a-card :bordered="false">
               <a-table
                 :columns="bindingColumns"
@@ -1313,6 +1490,13 @@ function exportCsv(filename, rows) {
                 </a-form-item>
                 <a-form-item label="主理人申请费用（元）">
                   <a-input-number v-model="config.managerApplyFee" :min="0" style="width: 100%" />
+                </a-form-item>
+                <a-form-item label="退款后优惠券退回">
+                  <a-radio-group v-model="config.couponRefundReturn" type="button">
+                    <a-radio value="auto">未出行退款退回（已核销不退）</a-radio>
+                    <a-radio value="always">一律退回</a-radio>
+                    <a-radio value="never">不退回</a-radio>
+                  </a-radio-group>
                 </a-form-item>
               </a-form>
             </a-card>
@@ -1728,6 +1912,10 @@ function exportCsv(filename, rows) {
 
 .config-card {
   max-width: 520px;
+  margin-bottom: 16px;
+}
+
+.unbind-card {
   margin-bottom: 16px;
 }
 
