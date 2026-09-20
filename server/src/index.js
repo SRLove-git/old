@@ -16,12 +16,18 @@ function adminAuth(req, res, next) {
   next()
 }
 
+// 公开接口上的可选管理端身份：Token 正确时返回全量数据（如主理人余额）
+function isAdminRequest(req) {
+  return req.headers['x-admin-token'] === ADMIN_TOKEN
+}
+
 const wrap = (fn) => (req, res) => {
   try {
     const result = fn(req, res)
     if (result !== undefined) res.json({ code: 0, data: result })
   } catch (e) {
-    res.status(500).json({ code: 500, message: e.message })
+    const status = e && e.status ? e.status : 500
+    res.status(status).json({ code: status, message: e.message })
   }
 }
 
@@ -190,6 +196,7 @@ app.post('/api/orders/:id/refund', wrap((req) => store.refundOrder(req.params.id
 app.post('/api/orders/:id/refund-audit', adminAuth, wrap((req) => store.auditRefund(req.params.id, req.body.approve, req.body.reason)))
 app.post('/api/orders/:id/verify', adminAuth, wrap((req) => store.verifyOrder(req.params.id)))
 app.post('/api/orders/:id/advance', wrap((req) => store.advanceOrder(req.params.id)))
+app.post('/api/orders/:id/ship', adminAuth, wrap((req) => store.shipOrder(req.params.id, req.body || {})))
 app.post('/api/orders/:id/review', wrap((req) => store.submitReview(req.params.id, req.body)))
 app.get('/api/orders/:id/refund-calc', wrap((req) => {
   const order = store.get().orders.find((o) => o.id === req.params.id)
@@ -206,8 +213,8 @@ app.delete('/api/reviews/:id', adminAuth, wrap((req) => {
 }))
 
 // 主理人
-app.get('/api/managers', wrap(() => store.get().managers))
-app.get('/api/manager-applications', wrap(() => store.get().managerApplications))
+app.get('/api/managers', wrap((req) => (isAdminRequest(req) ? store.listManagers() : store.listPublicManagers())))
+app.get('/api/manager-applications', adminAuth, wrap(() => store.get().managerApplications))
 app.post('/api/manager-applications', wrap((req) => store.applyManager(req.body)))
 app.post('/api/manager-applications/:id/approve', adminAuth, wrap((req) => store.approveManagerApp(req.params.id)))
 app.post('/api/manager-applications/:id/reject', adminAuth, wrap((req) => store.rejectManagerApp(req.params.id, req.body.reason)))
@@ -224,7 +231,10 @@ app.post('/api/cards/:id/checkin', adminAuth, wrap((req) => store.checkInCard(re
 app.post('/api/customers/:id/bind', wrap((req) => store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)))
 app.post('/api/customers/:id/unbind', wrap((req) => store.unbindCustomerByUser(req.params.id, req.body.reason)))
 app.post('/api/customers/:id/unbind-apply', wrap((req) => store.applyUnbind(req.params.id, req.body.reason)))
-app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id)))
+app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id, {
+  userId: req.query.userId,
+  isAdmin: isAdminRequest(req)
+})))
 
 // 解绑申请
 app.get('/api/unbind-applications', adminAuth, wrap(() => store.get().unbindApplications || []))
@@ -238,13 +248,14 @@ app.post('/api/provider-applications/:id/approve', adminAuth, wrap((req) => stor
 app.post('/api/provider-applications/:id/reject', adminAuth, wrap((req) => store.auditProvider(req.params.id, false, req.body.reason)))
 
 // 佣金
-app.get('/api/commissions', wrap(() => store.get().commissions))
-app.post('/api/commissions/settle', adminAuth, wrap(() => store.settleCommissions()))
+app.get('/api/commissions', adminAuth, wrap(() => store.get().commissions))
+app.get('/api/commission-settlements', adminAuth, wrap((req) => store.getSettlementRecords(req.query.managerId)))
+app.post('/api/commissions/settle', adminAuth, wrap((req) => store.settleCommissions(req.body || {})))
 app.post('/api/commissions/:id/adjust', adminAuth, wrap((req) => store.adjustCommission(req.params.id, req.body.amount, req.body.reason)))
 
 // 提现
-app.get('/api/withdraws', wrap(() => store.get().withdraws))
-app.post('/api/withdraws', wrap((req) => store.applyWithdraw(req.body.managerId, req.body.amount)))
+app.get('/api/withdraws', adminAuth, wrap(() => store.get().withdraws))
+app.post('/api/withdraws', wrap((req) => store.applyWithdraw(req.body.managerId, req.body.amount, { source: req.body.source })))
 app.post('/api/withdraws/:id/approve', adminAuth, wrap((req) => store.approveWithdraw(req.params.id)))
 app.post('/api/withdraws/:id/reject', adminAuth, wrap((req) => store.rejectWithdraw(req.params.id, req.body.reason)))
 

@@ -73,6 +73,84 @@ function normalizeContent(db) {
 function normalizeCollections(db) {
   db.providerApplications ||= []
   db.unbindApplications ||= []
+  db.settlementRecords ||= []
+  db.commissions ||= []
+  db.withdraws ||= []
+}
+
+// 订单状态与品类对齐：「待发货」只属于实物/到店商品类订单（分类 4、5），
+// 活动、研学、学堂类订单付完款就是「待收货」（小程序显示为待出行/待使用）
+function normalizeOrders(database) {
+  let changed = 0
+  ;(database.orders || []).forEach((order) => {
+    const goods = [4, 5].includes(Number(order.category))
+    if (!goods && order.status === '待发货') {
+      order.status = '待收货'
+      order.statusFixedAt = order.statusFixedAt || nowText()
+      changed += 1
+    }
+  })
+  return changed
+}
+
+// 主理人身份绑定：优先沿用已有 userId，缺失时按姓名+手机号认领会员账号
+function normalizeManagers(database) {
+  let changed = false
+  ;(database.managers || []).forEach((m) => {
+    if (managerUserIdOf(m) === null) {
+      const owner = (database.customers || []).find((c) => String(c.name) === String(m.name)
+        && String(c.phone || '') === String(m.phone || ''))
+      if (owner) {
+        m.userId = owner.id
+        changed = true
+      }
+    }
+  })
+  ;(database.customers || []).forEach((c) => {
+    const linked = (database.managers || []).some((m) => managerUserIdOf(m) === String(c.id))
+    if (linked && !c.isManager) {
+      c.isManager = true
+      changed = true
+    }
+  })
+  return changed
+}
+
+const LEGACY_PLACEHOLDER_TIME = '刚刚'
+
+// 历史数据里的「刚刚」占位时间：用数据文件最后一次写入时间兜底，保证台账有时间可审
+function legacyCreatedAtText() {
+  try {
+    const stat = fs.statSync(DATA_FILE)
+    const d = new Date(stat.mtimeMs)
+    const p = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  } catch (e) {
+    return ''
+  }
+}
+
+function normalizeTimestamps(database) {
+  const fallback = legacyCreatedAtText() || new Date().toISOString().slice(0, 16).replace('T', ' ')
+  let migrated = 0
+  const walk = (value) => {
+    if (!value || typeof value !== 'object') return
+    if (Array.isArray(value)) {
+      value.forEach(walk)
+      return
+    }
+    Object.keys(value).forEach((key) => {
+      const item = value[key]
+      if (item === LEGACY_PLACEHOLDER_TIME) {
+        value[key] = fallback
+        migrated += 1
+      } else if (item && typeof item === 'object') {
+        walk(item)
+      }
+    })
+  }
+  walk(database)
+  return migrated
 }
 
 function normalizeRegionIds(regionIds) {
@@ -133,6 +211,11 @@ export function init() {
       normalizeConfig(db)
       normalizeContent(db)
       normalizeCollections(db)
+      normalizeTimestamps(db)
+      normalizeManagers(db)
+      normalizeOrders(db)
+      syncManagerTotals()
+      save()
       return db
     } catch (e) {
       db = null
@@ -143,6 +226,9 @@ export function init() {
   normalizeConfig(db)
   normalizeContent(db)
   normalizeCollections(db)
+  normalizeManagers(db)
+  normalizeOrders(db)
+  syncManagerTotals()
   save()
   return db
 }
@@ -157,6 +243,11 @@ export function save() {
 
 export function reset() {
   db = clone(seed)
+  normalizeCollections(db)
+  normalizeConfig(db)
+  normalizeManagers(db)
+  normalizeOrders(db)
+  syncManagerTotals()
   save()
   return db
 }
@@ -308,6 +399,145 @@ function findManager(id) {
   return db.managers.find((m) => String(m.id) === String(id)) || null
 }
 
+// ---------------------------------------------------------------------------
+// 佣金台账：主理人余额一律由佣金单实时汇总，不再读取 managers 表里的静态字段
+// ---------------------------------------------------------------------------
+
+export const COMMISSION_STATUS = {
+  PENDING: '待结算',
+  AVAILABLE: '可结算',
+  WITHDRAWING: '提现中',
+  SETTLED: '已结算',
+  CLAWED: '已扣回'
+}
+
+function round2(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return 0
+  return Number(n.toFixed(2))
+}
+
+function badRequest(message) {
+  const err = new Error(message)
+  err.status = 400
+  return err
+}
+
+function forbidden(message) {
+  const err = new Error(message)
+  err.status = 403
+  return err
+}
+
+// ---------------------------------------------------------------------------
+// 主理人身份：主理人记录通过 userId 与登录会员绑定，工作台只能看自己的账本
+// ---------------------------------------------------------------------------
+
+const MANAGER_PUBLIC_FIELDS = ['id', 'name', 'phone', 'shopName', 'shopIntro', 'avatar', 'inviteCode', 'status', 'totalCustomers']
+
+export function publicManager(manager) {
+  if (!manager) return null
+  const view = {}
+  MANAGER_PUBLIC_FIELDS.forEach((key) => {
+    if (manager[key] !== undefined) view[key] = manager[key]
+  })
+  return view
+}
+
+function managerUserIdOf(manager) {
+  return manager && manager.userId != null && manager.userId !== '' ? String(manager.userId) : null
+}
+
+export function findManagerByUser(userId, options = {}) {
+  const key = String(userId == null ? '' : userId)
+  if (!key) return null
+  // 已清退（status 3）的主理人不再拥有工作台权限
+  return db.managers.find((m) => (managerUserIdOf(m) === key || String(m.id) === key)
+    && (options.includeRevoked || Number(m.status) !== 3)) || null
+}
+
+export function isManagerUser(userId) {
+  return Boolean(findManagerByUser(userId))
+}
+
+export function listPublicManagers() {
+  return db.managers.filter((m) => Number(m.status) !== 3).map(publicManager)
+}
+
+export function commissionAmountOf(record) {
+  return round2(record && record.commissionAmount)
+}
+
+function sumCommissions(rows) {
+  return round2(rows.reduce((total, row) => total + commissionAmountOf(row), 0))
+}
+
+export function managerBalance(managerId) {
+  const rows = db.commissions.filter((c) => String(c.managerId) === String(managerId))
+  const pick = (...statuses) => rows.filter((c) => statuses.includes(c.status))
+  const pending = sumCommissions(pick(COMMISSION_STATUS.PENDING))
+  const available = sumCommissions(pick(COMMISSION_STATUS.AVAILABLE))
+  const withdrawing = sumCommissions(pick(COMMISSION_STATUS.WITHDRAWING))
+  const settled = sumCommissions(pick(COMMISSION_STATUS.SETTLED))
+  const month = currentMonthKey()
+  const monthRows = rows.filter((c) => String(c.createTime || '').slice(0, 7) === month && c.status !== COMMISSION_STATUS.CLAWED)
+  const monthCommission = sumCommissions(monthRows)
+  const monthPerformance = round2(monthRows.reduce((total, c) => total + Number(c.payAmount || 0), 0))
+  const clawedBack = round2(Math.abs(sumCommissions(pick(COMMISSION_STATUS.CLAWED))))
+  // 已打款后又发生退款，会生成负向「待结算」佣金单，形成需要抵扣的负债
+  const debt = round2(Math.abs(sumCommissions(rows.filter((c) => c.status === COMMISSION_STATUS.PENDING && commissionAmountOf(c) < 0))))
+  const availableTotal = round2(available)
+  return {
+    pending,
+    available: availableTotal,
+    withdrawable: round2(Math.max(0, availableTotal)),
+    withdrawing,
+    settled,
+    clawedBack,
+    debt,
+    monthCommission,
+    monthPerformance,
+    total: round2(pending + availableTotal + withdrawing + settled),
+    commissionCount: rows.length
+  }
+}
+
+export function listManagers() {
+  return db.managers.map((m) => ({ ...m, ...managerBalance(m.id) }))
+}
+
+function syncManagerTotals() {
+  let changed = false
+  db.managers.forEach((m) => {
+    const balance = managerBalance(m.id)
+    const next = {
+      totalCommission: balance.total,
+      total: balance.total,
+      available: balance.available,
+      pending: balance.pending,
+      withdrawing: balance.withdrawing,
+      settled: balance.settled,
+      clawback: balance.clawedBack
+    }
+    Object.keys(next).forEach((key) => {
+      if (m[key] !== next[key]) {
+        m[key] = next[key]
+        changed = true
+      }
+    })
+    const performance = round2(
+      db.commissions
+        .filter((c) => String(c.managerId) === String(m.id) && c.status !== COMMISSION_STATUS.CLAWED)
+        .reduce((total, c) => total + Number(c.payAmount || 0), 0)
+    )
+    m.totalPerformance = performance
+    const boundCustomers = db.customers.filter((c) => String(c.managerId) === String(m.id)).length
+    m.totalCustomers = boundCustomers
+    m.customers = boundCustomers
+  })
+  return changed
+}
+
 function resolveRate(activity, manager) {
   if (activity && activity.managerCommissionRate) return Number(activity.managerCommissionRate)
   if (manager && manager.commissionRate) return Number(manager.commissionRate)
@@ -331,7 +561,7 @@ export function scheduleDaysUntil(schedule) {
 export function calcRefund(order) {
   const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(order.activityId))
   if (!activity) return { can: false, ratio: 0, amount: 0, reason: '活动不存在' }
-  if (['已核销', '待评价', '已完成', '已退款', '已取消'].includes(order.status)) {
+  if (['已核销', '待评价', '已完成', '已退款', '已取消', '退款中'].includes(order.status)) {
     return { can: false, ratio: 0, amount: 0, reason: '当前状态不可退款' }
   }
   const rule = activity.refundRule || {}
@@ -385,6 +615,7 @@ function generateCommission(order) {
   const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(order.activityId))
   const rate = resolveRate(activity, manager)
   const amount = Number((order.payAmount * rate / 100).toFixed(2))
+  const buyer = db.customers.find((c) => String(c.id) === String(order.userId)) || null
   order.commissionRate = rate
   order.commissionAmount = amount
   db.commissions.unshift({
@@ -392,13 +623,15 @@ function generateCommission(order) {
     managerId: manager.id,
     orderId: order.id,
     customerId: order.userId,
-    customerName: order.participants,
+    // 客户名取下单会员，报名人（可能多人）单独保留，便于对账
+    customerName: (buyer && buyer.name) || order.buyerName || '会员',
+    participantText: order.participants || '',
     productName: order.title,
     payAmount: order.payAmount,
     commissionRate: rate,
     commissionAmount: amount,
-    status: '待结算',
-    createTime: '刚刚'
+    status: COMMISSION_STATUS.PENDING,
+    createTime: nowText()
   })
 }
 
@@ -452,7 +685,7 @@ export function createOrder(payload) {
     managerId: db.customers.find((c) => c.id === (payload.userId || 'u1'))?.managerId || null,
     commissionRate: 0,
     commissionAmount: 0,
-    createdAt: '刚刚',
+    createdAt: nowText(),
     payDeadline: deferred ? Date.now() + 30 * 60 * 1000 : null
   }
   db.orders.unshift(order)
@@ -497,23 +730,129 @@ export function cancelOrder(id) {
   return order
 }
 
+// 已打款佣金被扣回时形成负债：写一张负向「待结算」佣金单，抵扣后续佣金
+function pushClawbackDebt(commission, amount, order) {
+  const debt = round2(amount)
+  if (debt <= 0) return
+  db.commissions.unshift({
+    id: `CMR${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    managerId: commission.managerId,
+    orderId: order ? order.id : commission.orderId,
+    customerId: commission.customerId,
+    customerName: commission.customerName,
+    productName: `${commission.productName}（退款扣回）`,
+    payAmount: 0,
+    commissionRate: 0,
+    commissionAmount: -debt,
+    status: COMMISSION_STATUS.PENDING,
+    type: 'refund-clawback',
+    sourceCommissionId: commission.id,
+    createTime: nowText(),
+    remark: '佣金已打款后发生退款，转为负债抵扣后续佣金'
+  })
+  addLog('佣金扣回', `已打款佣金扣回 ¥${debt}（原佣金单 ${commission.id}），计入负债抵扣后续佣金`)
+}
+
+// 提现中的佣金被扣回时，同步下调提现单金额与税费，必要时撤销提现单
+function reduceWithdrawForClawback(commission, amount, order) {
+  const record = db.withdraws.find((w) => String(w.id) === String(commission.withdrawId))
+  if (!record) return
+  const deduction = round2(Math.min(round2(amount), round2(record.amount)))
+  if (deduction <= 0) return
+  record.amount = round2(round2(record.amount) - deduction)
+  record.tax = round2(record.amount * Number(record.taxRate || 0) / 100)
+  record.actualAmount = round2(record.amount - record.tax)
+  record.clawbackAmount = round2(round2(record.clawbackAmount || 0) + deduction)
+  record.commissionIds = (record.commissionIds || []).filter((cid) => String(cid) !== String(commission.id))
+  record.commissionCount = record.commissionIds.length
+  record.adjustNote = `订单 ${order ? order.id : commission.orderId} 退款，扣减 ¥${deduction}`
+  record.adjustTime = nowText()
+  if (record.amount <= 0 && record.status === '待审核') {
+    record.status = '已撤销'
+    record.rejectReason = '关联佣金已全额退款扣回，提现单自动撤销'
+    record.amount = 0
+    record.tax = 0
+    record.actualAmount = 0
+  }
+  addLog('提现调整', `提现单 ${record.id} 因订单退款扣减 ¥${deduction}，剩余 ¥${record.amount}（状态：${record.status}）`)
+}
+
+export function clawbackCommission(order, ratio = 1) {
+  if (!order) return []
+  const rows = db.commissions.filter((c) => String(c.orderId) === String(order.id)
+    && c.status !== COMMISSION_STATUS.CLAWED
+    && c.type !== 'refund-clawback'
+    && commissionAmountOf(c) > 0)
+  const touched = []
+  rows.forEach((c) => {
+    const amount = commissionAmountOf(c)
+    const deduct = round2(amount * ratio)
+    if (deduct <= 0) return
+    const originalStatus = c.status
+    c.clawbackAmount = round2(round2(c.clawbackAmount || 0) + deduct)
+    c.clawedAt = nowText()
+    c.clawbackReason = `订单 ${order.id} ${ratio >= 1 ? '全额退款' : `按 ${Math.round(ratio * 100)}% 退款`}扣回`
+    c.preClawbackStatus = originalStatus
+    if (ratio >= 1) {
+      c.status = COMMISSION_STATUS.CLAWED
+    } else {
+      c.commissionAmount = round2(amount - deduct)
+    }
+    if (originalStatus === COMMISSION_STATUS.WITHDRAWING) {
+      reduceWithdrawForClawback(c, deduct, order)
+    } else if (originalStatus === COMMISSION_STATUS.SETTLED) {
+      pushClawbackDebt(c, deduct, order)
+    }
+    touched.push(c.id)
+  })
+  if (touched.length) {
+    addLog('佣金扣回', `订单 ${order.id} 退款，处理佣金单 ${touched.join('、')}`)
+  }
+  return touched
+}
+
+function refundNeedAudit() {
+  return db.config.refundNeedAudit !== false
+}
+
+// 真正执行退款：退券、释放名额、按比例扣回佣金、写入退款时间
+function applyRefund(order, ratio, reason) {
+  const value = Number(ratio == null ? 1 : ratio)
+  returnCoupon(order)
+  order.refundRatio = value
+  order.refundAmount = value >= 1 ? Number(order.payAmount) : Number((order.payAmount * value).toFixed(2))
+  order.refundReason = reason
+  order.refundTime = nowText()
+  order.status = '已退款'
+  order.refundPrevStatus = null
+  order.refundAuditRequired = false
+  releaseSchedule(order)
+  clawbackCommission(order, value)
+  return order
+}
+
+// 用户申请退款：默认进入「退款中」等待运营审核（config.refundNeedAudit 关闭后为即时退款）
 export function refundOrder(id, reason) {
   const order = db.orders.find((o) => o.id === id)
   if (!order) return { order: null, error: '订单不存在' }
   const calc = calcRefund(order)
   if (!calc.can) return { order, error: calc.reason }
-  returnCoupon(order)
-  order.status = '已退款'
+  order.refundRatio = calc.ratio
   order.refundAmount = calc.amount
   order.refundReason = reason || '用户申请退款'
-  releaseSchedule(order)
-  const commission = db.commissions.find((c) => c.orderId === id)
-  if (commission) {
-    if (calc.ratio >= 1) commission.status = '已扣回'
-    else commission.commissionAmount = Number((commission.commissionAmount * (1 - calc.ratio)).toFixed(2))
+  order.refundApplyTime = nowText()
+  if (!refundNeedAudit()) {
+    applyRefund(order, calc.ratio, order.refundReason)
+    addLog('订单退款', `订单 ${order.id} 即时退款 ¥${order.refundAmount}`)
+    save()
+    return { order }
   }
+  order.refundPrevStatus = order.status
+  order.status = '退款中'
+  order.refundAuditRequired = true
+  addLog('退款申请', `订单 ${order.id} 申请退款 ¥${order.refundAmount}（${calc.reason}）`)
   save()
-  return { order }
+  return { order, pending: true }
 }
 
 export function advanceOrder(id) {
@@ -521,6 +860,47 @@ export function advanceOrder(id) {
   if (!order) return null
   if (order.status === '待发货') order.status = order.category === 4 ? '已核销' : '待收货'
   else if (order.status === '待收货' || order.status === '已核销') order.status = '待评价'
+  save()
+  return order
+}
+
+function orderReceiverText(order) {
+  const address = order.address || {}
+  const parts = [address.province, address.city, address.district, address.detail].filter(Boolean)
+  return {
+    receiver: address.name || address.receiver || '',
+    receiverPhone: address.phone || '',
+    receiverAddress: parts.join('')
+  }
+}
+
+// 后台发货：快递单号（或标记无需物流），只允许从「待发货」发出，可在「待收货」阶段改单号
+export function shipOrder(orderId, payload = {}) {
+  const order = db.orders.find((o) => String(o.id) === String(orderId))
+  if (!order) throw badRequest('订单不存在')
+  const isUpdate = payload.update === true && order.status === '待收货'
+  if (order.status !== '待发货' && !isUpdate) {
+    throw badRequest(`订单当前状态为「${order.status}」，不可发货`)
+  }
+  const noLogistics = payload.deliveryType === 'self' || payload.noLogistics === true
+  const carrier = String(payload.carrier || '').trim()
+  const trackingNo = String(payload.trackingNo || '').trim()
+  if (!noLogistics) {
+    if (!carrier) throw badRequest('请填写快递公司')
+    if (!/^[A-Za-z0-9-]{6,32}$/.test(trackingNo)) throw badRequest('快递单号格式不正确（6-32位字母/数字/短横线）')
+    if (!order.address) throw badRequest('该订单没有收货地址，如为线下交付请选择「无需物流」')
+  }
+  const receiver = orderReceiverText(order)
+  order.deliveryType = noLogistics ? 'self' : 'express'
+  order.carrier = noLogistics ? '无需物流' : carrier
+  order.trackingNo = noLogistics ? '' : trackingNo
+  order.shippingNote = String(payload.note || '').trim()
+  order.shipTime = nowText()
+  order.shippedBy = payload.operator || 'admin'
+  if (!isUpdate) order.status = '待收货'
+  addLog('订单发货', isUpdate
+    ? `订单 ${order.id} 物流信息更新为 ${order.carrier} ${order.trackingNo || ''}`.trim()
+    : `订单 ${order.id} 已发货：${order.carrier} ${order.trackingNo || ''} → ${receiver.receiver} ${receiver.receiverPhone}`.trim())
   save()
   return order
 }
@@ -554,77 +934,197 @@ export function submitReview(orderId, review) {
       name: review.name || '用户',
       rating: review.rating || 5,
       content: review.content || '',
-      time: '刚刚'
+      time: nowText()
     })
   }
   save()
   return order
 }
 
-export function applyWithdraw(managerId, amount) {
+function currentMonthKey() {
+  return nowText().slice(0, 7)
+}
+
+// 只锁定与本次申请金额等额的佣金单；跨单据时把边界上的佣金单拆成两张
+function lockCommissionsForWithdraw(managerId, amount, record) {
+  const locked = []
+  let remaining = round2(amount)
+  const pool = db.commissions
+    .filter((c) => c.status === COMMISSION_STATUS.AVAILABLE && String(c.managerId) === String(managerId))
+    .sort((a, b) => String(a.createTime || '').localeCompare(String(b.createTime || '')))
+  pool.forEach((c) => {
+    if (remaining <= 0) return
+    const value = commissionAmountOf(c)
+    if (value <= 0) return
+    if (value <= remaining) {
+      c.status = COMMISSION_STATUS.WITHDRAWING
+      c.withdrawId = record.id
+      c.withdrawTime = record.applyTime
+      remaining = round2(remaining - value)
+      locked.push(c)
+      return
+    }
+    const index = db.commissions.indexOf(c)
+    const partial = {
+      ...c,
+      id: `${c.id}-W${Date.now()}${locked.length}`,
+      commissionAmount: remaining,
+      status: COMMISSION_STATUS.WITHDRAWING,
+      withdrawId: record.id,
+      withdrawTime: record.applyTime,
+      splitFrom: c.id,
+      splitRemainder: false
+    }
+    c.commissionAmount = round2(value - remaining)
+    c.splitRemainder = true
+    db.commissions.splice(index + 1, 0, partial)
+    locked.push(partial)
+    remaining = 0
+  })
+  return locked
+}
+
+function commissionRowsOf(withdrawId, status) {
+  return db.commissions.filter((c) => String(c.withdrawId) === String(withdrawId)
+    && (!status || c.status === status))
+}
+
+export function applyWithdraw(managerId, amount, options = {}) {
+  const manager = findManager(managerId)
+  if (!manager) throw badRequest('主理人不存在')
+  if (Number(manager.status) !== 1) throw badRequest('当前主理人状态不可发起提现')
+  const value = round2(amount)
+  if (!(value > 0)) throw badRequest('提现金额必须大于 0')
+  const minWithdraw = round2(db.config.minWithdraw ?? 100)
+  if (value < minWithdraw) throw badRequest(`最低提现金额为 ¥${minWithdraw}`)
+  const monthlyLimit = Number(db.config.withdrawMonthlyLimit ?? 1)
+  const month = currentMonthKey()
+  const usedThisMonth = db.withdraws.filter((w) => String(w.managerId) === String(managerId)
+    && !['已拒绝', '已撤销'].includes(w.status)
+    && String(w.applyTime || '').slice(0, 7) === month).length
+  if (monthlyLimit > 0 && usedThisMonth >= monthlyLimit) throw badRequest(`每月最多提现 ${monthlyLimit} 次`)
+  const balance = managerBalance(managerId)
+  if (value > balance.withdrawable) throw badRequest(`超出可结算余额 ¥${balance.withdrawable}`)
+
   const taxRate = Number(db.config.withdrawTaxRate ?? 20)
-  const tax = Number((amount * taxRate / 100).toFixed(2))
-  const actualAmount = Number((amount - tax).toFixed(2))
+  const tax = round2(value * taxRate / 100)
   const record = {
     id: `WD${Date.now()}`,
-    managerId,
-    amount,
+    managerId: manager.id,
+    managerName: manager.name,
+    amount: value,
     taxRate,
     tax,
-    actualAmount,
+    actualAmount: round2(value - tax),
     status: '待审核',
-    applyTime: '刚刚',
-    payChannel: '微信零钱'
+    applyTime: nowText(),
+    payChannel: '微信零钱',
+    availableBefore: balance.withdrawable,
+    commissionIds: [],
+    commissionCount: 0,
+    source: options.source || 'miniprogram'
   }
+  const lockable = db.commissions.filter((c) => c.status === COMMISSION_STATUS.AVAILABLE && String(c.managerId) === String(manager.id))
+  if (sumCommissions(lockable) + 0.01 < value) throw badRequest('可结算佣金不足，请刷新后重试')
+  const locked = lockCommissionsForWithdraw(manager.id, value, record)
+  if (!locked.length) throw badRequest('没有可锁定的可结算佣金')
+  record.commissionIds = locked.map((c) => c.id)
+  record.commissionCount = locked.length
   db.withdraws.unshift(record)
-  db.commissions.forEach((c) => {
-    if (c.status === '可结算' && String(c.managerId) === String(managerId)) {
-      c.status = '提现中'
-      c.withdrawId = record.id
-    }
-  })
+  addLog('提现申请', `${manager.name} 申请提现 ¥${value}，锁定佣金单 ${record.commissionCount} 笔（实付 ¥${record.actualAmount}）`)
   save()
   return record
 }
 
-export function approveWithdraw(id) {
-  const record = db.withdraws.find((w) => w.id === id)
-  if (!record) return null
+export function approveWithdraw(id, operator = 'admin') {
+  const record = db.withdraws.find((w) => String(w.id) === String(id))
+  if (!record) throw badRequest('提现单不存在')
+  if (record.status !== '待审核') throw badRequest(`提现单当前状态为「${record.status}」，不可重复打款`)
+  const rows = commissionRowsOf(record.id, COMMISSION_STATUS.WITHDRAWING)
+  const lockedTotal = sumCommissions(rows)
+  if (!rows.length || lockedTotal <= 0) throw badRequest('该提现单没有锁定中的佣金，不能打款')
+  if (Math.abs(lockedTotal - round2(record.amount)) > 0.01) {
+    record.amount = lockedTotal
+    record.tax = round2(lockedTotal * Number(record.taxRate || 0) / 100)
+    record.actualAmount = round2(lockedTotal - record.tax)
+    addLog('提现审核', `提现单 ${record.id} 金额按锁定佣金校正为 ¥${record.amount}`)
+  }
   record.status = '已到账'
-  record.payTime = '刚刚'
-  db.commissions.forEach((c) => {
-    if (c.withdrawId === id) {
-      c.status = '已结算'
-      c.settleTime = '刚刚'
-    }
+  record.payTime = nowText()
+  record.operator = operator
+  record.settledCommissionIds = rows.map((c) => c.id)
+  rows.forEach((c) => {
+    c.status = COMMISSION_STATUS.SETTLED
+    c.settleTime = nowText()
   })
-  addLog('提现审核', `提现单 ${id} 已打款 ¥${record.amount}`)
+  addLog('提现审核', `提现单 ${record.id} 已打款 ¥${record.amount}（代扣税 ¥${record.tax}，实付 ¥${record.actualAmount}）`)
   save()
   return record
 }
 
-export function rejectWithdraw(id, reason) {
-  const record = db.withdraws.find((w) => w.id === id)
-  if (!record) return null
+export function rejectWithdraw(id, reason, operator = 'admin') {
+  const record = db.withdraws.find((w) => String(w.id) === String(id))
+  if (!record) throw badRequest('提现单不存在')
+  if (record.status !== '待审核') throw badRequest(`提现单当前状态为「${record.status}」，不可重复审核`)
   record.status = '已拒绝'
   record.rejectReason = reason || '资料不全'
-  db.commissions.forEach((c) => {
-    if (c.withdrawId === id) {
-      c.status = '可结算'
-      c.withdrawId = null
-    }
+  record.auditTime = nowText()
+  record.operator = operator
+  commissionRowsOf(record.id, COMMISSION_STATUS.WITHDRAWING).forEach((c) => {
+    c.status = COMMISSION_STATUS.AVAILABLE
+    c.withdrawId = null
+    c.withdrawTime = null
   })
-  addLog('提现审核', `提现单 ${id} 已拒绝，原因：${reason}`)
+  addLog('提现审核', `提现单 ${record.id} 已拒绝并释放锁定佣金，原因：${record.rejectReason}`)
   save()
   return record
 }
 
-export function settleCommissions() {
-  db.commissions.forEach((c) => {
-    if (c.status === '待结算') c.status = '可结算'
+export function settleCommissions(options = {}) {
+  const managerId = options.managerId
+  const orderId = options.orderId
+  const ids = Array.isArray(options.ids) ? options.ids.map(String) : null
+  const from = options.from || options.periodStart || null
+  const to = options.to || options.periodEnd || null
+  const rows = db.commissions.filter((c) => {
+    if (c.status !== COMMISSION_STATUS.PENDING) return false
+    if (managerId && String(c.managerId) !== String(managerId)) return false
+    if (orderId && String(c.orderId) !== String(orderId)) return false
+    if (ids && !ids.includes(String(c.id))) return false
+    const time = String(c.createTime || '')
+    if (from && time < from) return false
+    if (to && time > to) return false
+    return true
   })
+  if (!rows.length) throw badRequest('没有符合条件的待结算佣金')
+  rows.forEach((c) => {
+    c.status = COMMISSION_STATUS.AVAILABLE
+    c.settleTime = nowText()
+  })
+  const manager = managerId ? findManager(managerId) : null
+  const record = {
+    id: `ST${Date.now()}`,
+    managerId: manager ? manager.id : null,
+    managerName: manager ? manager.name : (managerId ? String(managerId) : '全部主理人'),
+    orderId: orderId || null,
+    commissionIds: rows.map((c) => c.id),
+    count: rows.length,
+    amount: sumCommissions(rows),
+    period: from || to ? `${from || '期初'} ~ ${to || '至今'}` : '按条件结算',
+    operator: options.operator || 'admin',
+    settledAt: nowText()
+  }
+  db.settlementRecords = db.settlementRecords || []
+  db.settlementRecords.unshift(record)
+  addLog('佣金结算', `${record.managerName} 结算 ${rows.length} 笔佣金，合计 ¥${record.amount}（结算单 ${record.id}）`)
   save()
-  return db.commissions
+  return { record, settled: rows }
+}
+
+export function getSettlementRecords(managerId) {
+  const rows = db.settlementRecords || []
+  if (!managerId) return rows
+  return rows.filter((r) => String(r.managerId) === String(managerId))
 }
 
 export function adjustCommission(id, amount, reason) {
@@ -639,19 +1139,38 @@ export function adjustCommission(id, amount, reason) {
 
 export function applyManager(form) {
   const userId = form.userId || 'u1'
-  const customer = db.customers.find((c) => String(c.id) === String(userId))
-  if (!customer) throw new Error('用户不存在')
-  if (!/^1\d{10}$/.test(String(form.phone || ''))) throw new Error('请填写正确的11位手机号')
-  if (String(form.name || '') !== String(customer.name) || String(form.phone || '') !== String(customer.phone)) {
-    throw new Error('姓名和手机号需与账号信息一致')
+  let customer = db.customers.find((c) => String(c.id) === String(userId)) || null
+  const name = String(form.name || '').trim()
+  const phone = normalizePhone(form.phone)
+  const accountName = customer ? String(customer.name || '').trim() : ''
+  const accountPhone = customer ? normalizePhone(customer.phone) : ''
+  const accountPhoneValid = /^1\d{10}$/.test(accountPhone)
+  if (!name) throw badRequest('请填写真实姓名')
+  if (!/^1\d{10}$/.test(phone)) throw badRequest('手机号格式不正确，请填写11位手机号（如 13812346688）')
+  // 账号已有资料时以账号为准，避免冒用他人身份申请
+  if (accountName && accountName !== name) throw badRequest(`姓名需与账号信息一致（当前账号：${accountName}）`)
+  // 账号手机号本身不合法（缺失/残缺/被脱敏）时不作为身份依据，允许本人补填并覆盖
+  if (accountPhoneValid && accountPhone !== phone) {
+    throw badRequest(`手机号需与账号信息一致（当前账号：${maskPhone(accountPhone)}）`)
+  }
+  if (!customer) {
+    // 登录用户还没有会员档案时补建一条，避免申请流程走不通
+    customer = { id: userId, name, phone, member: true, balance: 0, points: 0, managerId: null, isManager: false }
+    db.customers.push(customer)
+    addLog('用户管理', `补建会员档案：${name} ${maskPhone(phone)}`)
+  } else if (!accountName || !accountPhoneValid) {
+    // 账号缺姓名或手机号不可用时，用本次申请填写的信息补齐
+    if (!accountName) customer.name = name
+    if (!accountPhoneValid) customer.phone = phone
+    addLog('用户管理', `完善会员资料：${name} ${maskPhone(phone)}`)
   }
   const scaleText = String(form.scale || '')
   const groupCount = Number(form.groupCount ?? (scaleText.match(/(\d+)\s*个?群/) || [])[1] ?? 0)
   const memberCount = Number(form.memberCount ?? (scaleText.match(/(\d+)\s*人/) || [])[1] ?? 0)
-  if (groupCount > 50 || memberCount > 5000) throw new Error('社群规模超出限制')
+  if (groupCount > 50 || memberCount > 5000) throw badRequest('社群规模超出限制')
   const hasPending = db.managerApplications.some((a) => a.status === '待审核' && String(a.userId) === String(userId))
-  const alreadyManager = db.managers.some((m) => String(m.id) === String(userId)) || Boolean(customer.isManager)
-  if (hasPending || alreadyManager) throw new Error('已有待审核的申请或已是主理人')
+  const alreadyManager = Boolean(findManagerByUser(userId)) || Boolean(customer.isManager)
+  if (hasPending || alreadyManager) throw badRequest('已有待审核的申请或已是主理人')
   const fee = Number(db.config.managerApplyFee ?? 0)
   if (fee > 0 && !form.paid) {
     const err = new Error('请先支付主理人申请费用')
@@ -662,11 +1181,13 @@ export function applyManager(form) {
     id: `APP${Date.now()}`,
     ...form,
     userId,
+    name,
+    phone,
     paid: fee > 0 ? true : Boolean(form.paid),
     paidAmount: fee,
-    paidAt: fee > 0 ? '刚刚' : '',
+    paidAt: fee > 0 ? nowText() : '',
     status: '待审核',
-    submittedAt: '刚刚'
+    submittedAt: nowText()
   }
   db.managerApplications.unshift(app)
   save()
@@ -677,6 +1198,19 @@ function nowText() {
   const d = new Date()
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// 手机号统一成 11 位数字：容忍空格、短横线、+86 前缀等写法
+export function normalizePhone(value) {
+  let digits = String(value == null ? '' : value).replace(/\D/g, '')
+  if (digits.length === 13 && digits.startsWith('86')) digits = digits.slice(2)
+  return digits
+}
+
+export function maskPhone(value) {
+  const phone = normalizePhone(value)
+  if (phone.length !== 11) return phone || '未绑定'
+  return `${phone.slice(0, 3)}****${phone.slice(7)}`
 }
 
 export function applyProvider(payload) {
@@ -713,9 +1247,12 @@ export function auditProvider(id, approve, rejectReason) {
 export function approveManagerApp(id) {
   const app = db.managerApplications.find((a) => a.id === id)
   if (!app) return null
+  const existing = app.userId ? findManagerByUser(app.userId) : null
+  if (existing) throw badRequest(`${app.name} 已是主理人，无需重复通过`)
   app.status = '已通过'
   const manager = {
     id: Date.now(),
+    userId: app.userId || null,
     name: app.name,
     phone: app.phone,
     inviteCode: `SYL${Math.floor(100 + Math.random() * 900)}`,
@@ -723,9 +1260,13 @@ export function approveManagerApp(id) {
     status: 1,
     totalPerformance: 0,
     totalCommission: 0,
+    available: 0,
+    pending: 0,
     totalCustomers: 0
   }
   db.managers.push(manager)
+  const customer = db.customers.find((c) => String(c.id) === String(manager.userId))
+  if (customer) customer.isManager = true
   addLog('主理人审核', `通过 ${app.name} 的主理人申请`)
   save()
   return manager
@@ -748,6 +1289,7 @@ export function setManagerStatus(id, status) {
   if (status === 3) {
     db.customers.forEach((c) => {
       if (String(c.managerId) === String(id)) c.managerId = null
+      if (managerUserIdOf(m) && String(c.id) === managerUserIdOf(m)) c.isManager = false
     })
     db.bindings.forEach((b) => {
       if (String(b.managerId) === String(id)) b.status = 2
@@ -765,7 +1307,7 @@ export function unbindCustomer(customerId, reason) {
   const b = db.bindings.find((x) => x.customerId === customerId && x.status === 1)
   if (b) {
     b.status = 2
-    b.unbindTime = '刚刚'
+    b.unbindTime = nowText()
     b.unbindReason = reason
   }
   addLog('归属管理', `解除客户 ${c.name} 的主理人归属，原因：${reason}`)
@@ -780,7 +1322,7 @@ export function rebindCustomer(customerId, managerId, reason) {
   db.bindings.forEach((b) => {
     if (b.customerId === customerId && b.status === 1) {
       b.status = 3
-      b.unbindTime = '刚刚'
+      b.unbindTime = nowText()
       b.unbindReason = reason
     }
   })
@@ -790,7 +1332,7 @@ export function rebindCustomer(customerId, managerId, reason) {
     customerName: c.name,
     managerId,
     bindSource: 4,
-    bindTime: '刚刚',
+    bindTime: nowText(),
     status: 1
   })
   addLog('归属管理', `客户 ${c.name} 变更归属到主理人 ${managerId}，原因：${reason}`)
@@ -816,18 +1358,21 @@ export function auditRefund(orderId, approve, reason) {
   const order = db.orders.find((o) => o.id === orderId)
   if (!order) return null
   if (approve) {
-    returnCoupon(order)
-    order.status = '已退款'
-    order.refundAmount = order.payAmount
-    order.refundReason = reason || '运营审核退款'
-    releaseSchedule(order)
-    const commission = db.commissions.find((c) => c.orderId === orderId)
-    if (commission) commission.status = '已扣回'
+    if (order.status === '已退款') throw badRequest('该订单已退款，无需重复操作')
+    // 用户申请的按算好的比例退，运营直接退的全额退
+    const ratio = order.status === '退款中' && order.refundRatio != null ? Number(order.refundRatio) : 1
+    applyRefund(order, ratio, reason || order.refundReason || '运营退款')
+    order.refundAuditTime = nowText()
+    addLog('退款审核', `订单 ${orderId} 同意退款 ¥${order.refundAmount}`)
   } else {
-    order.status = '待发货'
+    // 拒绝后回到申请前的状态，订单继续正常履约
+    order.status = order.refundPrevStatus || '待发货'
+    order.refundPrevStatus = null
     order.refundRejected = reason || '审核拒绝'
+    order.refundAuditTime = nowText()
+    order.refundAuditRequired = false
+    addLog('退款审核', `订单 ${orderId} 拒绝退款：${order.refundRejected}`)
   }
-  addLog('退款审核', `订单 ${orderId} ${approve ? '同意退款' : '拒绝退款'}`)
   save()
   return order
 }
@@ -846,10 +1391,26 @@ export function dashboardStats() {
   db.activities.forEach((a) => {
     byCategory[a.category] = (byCategory[a.category] || 0) + 1
   })
+  const balances = new Map(db.managers.map((m) => [String(m.id), managerBalance(m.id)]))
   const managerRanking = db.managers
     .slice()
-    .sort((a, b) => (b.totalCommission || 0) - (a.totalCommission || 0))
-    .map((m) => ({ id: m.id, name: m.name, totalCommission: m.totalCommission, totalCustomers: m.totalCustomers }))
+    .sort((a, b) => (balances.get(String(b.id)).total || 0) - (balances.get(String(a.id)).total || 0))
+    .map((m) => {
+      const balance = balances.get(String(m.id))
+      return {
+        id: m.id,
+        name: m.name,
+        totalCommission: balance.total,
+        available: balance.available,
+        pending: balance.pending,
+        settling: balance.withdrawing,
+        settled: balance.settled,
+        totalCustomers: m.totalCustomers
+      }
+    })
+  const activeOrders = db.orders.filter((o) => !['已取消', '已退款'].includes(o.status))
+  const totalCommission = round2([...balances.values()].reduce((s, b) => s + b.total, 0))
+  const settledWithdraws = db.withdraws.filter((w) => w.status === '已到账')
   return {
     activityCount: db.activities.length,
     orderCount: db.orders.length,
@@ -857,10 +1418,18 @@ export function dashboardStats() {
     managerCount: db.managers.length,
     pendingApply: db.managerApplications.filter((a) => a.status === '待审核').length,
     pendingWithdraw: db.withdraws.filter((w) => w.status === '待审核').length,
-    totalCommission: db.commissions.reduce((s, c) => s + Number(c.commissionAmount || 0), 0),
-    totalRevenue: db.orders.filter((o) => !['已取消', '已退款'].includes(o.status)).reduce((s, o) => s + Number(o.payAmount || 0), 0),
+    pendingShipCount: db.orders.filter((o) => o.status === '待发货').length,
+    pendingRefundCount: db.orders.filter((o) => o.status === '退款中').length,
+    pendingWithdrawAmount: round2(db.withdraws.filter((w) => w.status === '待审核').reduce((s, w) => s + Number(w.amount || 0), 0)),
+    totalCommission,
+    pendingCommission: round2([...balances.values()].reduce((s, b) => s + b.pending, 0)),
+    availableCommission: round2([...balances.values()].reduce((s, b) => s + b.available, 0)),
+    withdrawnCommission: round2(settledWithdraws.reduce((s, w) => s + Number(w.amount || 0), 0)),
+    clawbackCommission: round2([...balances.values()].reduce((s, b) => s + b.clawedBack, 0)),
+    totalRevenue: round2(activeOrders.reduce((s, o) => s + Number(o.payAmount || 0), 0)),
     byCategory,
     managerRanking,
+    settlementCount: (db.settlementRecords || []).length,
     orderStatus: db.orders.reduce((acc, o) => {
       acc[o.status] = (acc[o.status] || 0) + 1
       return acc
@@ -1024,15 +1593,29 @@ export function getUserProfile(userId) {
   const raw = db.customers.find((c) => c.id === userId) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
   const user = { ...raw, ...memberIdentity(raw) }
   const cards = db.cards.filter((c) => c.userId === userId)
-  const boundManager = user.managerId ? findManager(user.managerId) : null
+  const boundManager = user.managerId ? publicManager(findManager(user.managerId)) : null
   const addresses = db.addresses.filter((a) => a.userId === userId)
-  const isManager = db.managers.some((m) => String(m.id) === String(userId)) || Boolean(user.isManager)
+  const ownManagerRecord = findManagerByUser(userId)
+  const ownManager = ownManagerRecord ? { ...ownManagerRecord, ...managerBalance(ownManagerRecord.id) } : null
+  const isManager = Boolean(ownManagerRecord) || Boolean(user.isManager)
   const application = db.managerApplications.find((a) => a.userId && String(a.userId) === String(userId))
     || db.managerApplications.find((a) => String(a.name) === String(user.name)) || null
   const pendingUnbind = (db.unbindApplications || []).find((a) => a.status === '待审核' && String(a.customerId) === String(userId)) || null
   const providerApplication = (db.providerApplications || []).find((a) => String(a.userId) === String(userId)) || null
   const bindLogs = db.bindings.filter((b) => b.customerId === userId).map(bindLogView)
-  return { user, cards, boundManager, addresses, coupons: db.coupons, isManager, application, pendingUnbind, providerApplication, bindLogs }
+  return {
+    user,
+    cards,
+    boundManager,
+    addresses,
+    coupons: db.coupons,
+    isManager,
+    manager: ownManager,
+    application,
+    pendingUnbind,
+    providerApplication,
+    bindLogs
+  }
 }
 
 export function purchaseLive(liveId, userId) {
@@ -1057,6 +1640,44 @@ export function purchaseLive(liveId, userId) {
     attendanceRecords: []
   }
   db.cards.unshift(card)
+  // 购课同样走订单 + 佣金体系，避免课程销售游离在分佣之外
+  const buyer = db.customers.find((c) => String(c.id) === String(userId)) || null
+  const price = round2(live.memberPrice || live.originalPrice || 0)
+  const order = {
+    id: `SYL${Date.now()}`,
+    userId,
+    source: 'live',
+    liveId: live.id,
+    activityId: live.activityId != null ? live.activityId : null,
+    title: `${live.title}（${total}次卡）`,
+    category: 3,
+    cover: live.cover,
+    coverTone: live.coverTone,
+    skuName: '',
+    venueAddress: '',
+    venueDistrict: '',
+    schedule: null,
+    participants: buyer ? buyer.name : '会员',
+    count: 1,
+    memberPrice: price,
+    payAmount: price,
+    discount: 0,
+    status: '已完成',
+    coupon: '未使用',
+    couponId: null,
+    code: `${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`,
+    managerId: buyer ? buyer.managerId : null,
+    commissionRate: 0,
+    commissionAmount: 0,
+    createdAt: nowText(),
+    payTime: nowText(),
+    payDeadline: null,
+    cardId: card.id
+  }
+  db.orders.unshift(order)
+  card.orderId = order.id
+  live.soldCount = Number(live.soldCount || 0) + 1
+  if (price > 0) generateCommission(order)
   save()
   return card
 }
@@ -1095,7 +1716,7 @@ export function bindCustomerByCodeOrId(userId, code, managerId, source) {
   db.bindings.forEach((b) => {
     if (b.customerId === userId && b.status === 1) {
       b.status = 3
-      b.unbindTime = '刚刚'
+      b.unbindTime = nowText()
       b.unbindReason = '重新绑定'
     }
   })
@@ -1106,7 +1727,7 @@ export function bindCustomerByCodeOrId(userId, code, managerId, source) {
     managerId: manager.id,
     managerName: manager.name,
     bindSource: source || 3,
-    bindTime: '刚刚',
+    bindTime: nowText(),
     status: 1
   })
   save()
@@ -1119,7 +1740,7 @@ export function unbindCustomerByUser(userId, reason) {
   db.bindings.forEach((b) => {
     if (b.customerId === userId && b.status === 1) {
       b.status = 2
-      b.unbindTime = '刚刚'
+      b.unbindTime = nowText()
       b.unbindReason = reason
     }
   })
@@ -1163,8 +1784,14 @@ export function auditUnbind(id, approve, rejectReason) {
   return app
 }
 
-export function getManagerDashboard(managerId) {
+export function getManagerDashboard(managerId, viewer = {}) {
   const manager = db.managers.find((m) => String(m.id) === String(managerId)) || null
+  if (!manager) throw badRequest('主理人不存在')
+  if (!viewer.isAdmin) {
+    if (!viewer.userId) throw forbidden('请先登录后再查看主理人工作台')
+    const own = findManagerByUser(viewer.userId)
+    if (!own || String(own.id) !== String(manager.id)) throw forbidden('只能查看自己的主理人工作台')
+  }
   const customers = db.customers.filter((c) => String(c.managerId) === String(managerId))
   const commissions = db.commissions.filter((c) => String(c.managerId) === String(managerId))
   const withdraws = db.withdraws.filter((w) => String(w.managerId) === String(managerId))
@@ -1190,5 +1817,55 @@ export function getManagerDashboard(managerId) {
     withdrawTaxRate: Number(db.config.withdrawTaxRate ?? 20),
     globalCommissionRate: Number(db.config.globalCommissionRate ?? 8)
   }
-  return { manager, customers, commissions, withdraws, activities, config }
+  // 可推广对象：活动 + 商品 + 课程，统一带出该主理人的佣金比例与预估佣金
+  const promotions = [
+    ...activities,
+    ...(db.products || []).map((p) => {
+      const rate = resolveRate(p, manager)
+      const basePrice = Number(p.memberPrice || p.price || 0)
+      return {
+        id: p.id,
+        title: p.title,
+        cover: p.cover,
+        coverTone: p.coverTone,
+        category: p.category,
+        city: p.city,
+        type: 'product',
+        memberPrice: p.memberPrice,
+        price: p.price,
+        commissionRate: rate,
+        commissionAmount: Number((basePrice * rate / 100).toFixed(2))
+      }
+    }),
+    ...(db.lives || []).map((l) => {
+      const rate = resolveRate(null, manager)
+      const basePrice = Number(l.memberPrice || l.originalPrice || 0)
+      return {
+        id: l.id,
+        title: l.title,
+        cover: l.cover,
+        coverTone: l.coverTone,
+        category: l.category,
+        city: '线上课程',
+        type: 'live',
+        memberPrice: l.memberPrice,
+        price: l.originalPrice,
+        commissionRate: rate,
+        commissionAmount: Number((basePrice * rate / 100).toFixed(2))
+      }
+    })
+  ]
+  const balance = managerBalance(managerId)
+  const managerView = manager ? { ...manager, ...balance } : { id: managerId, name: '主理人', ...balance }
+  return {
+    manager: managerView,
+    balance,
+    customers,
+    commissions,
+    withdraws,
+    settlements: getSettlementRecords(managerId),
+    activities,
+    promotions,
+    config
+  }
 }

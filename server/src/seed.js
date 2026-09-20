@@ -112,15 +112,18 @@ const products = [
 ]
 
 const managers = [
-  { id: 1001, name: '李秀兰', shopName: '秀兰乐活活动社', shopIntro: '专注同城兴趣活动与品质研学旅行，用心陪伴每一次出发。', phone: '13867892035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 18640, totalCommission: 12840.6, totalCustomers: 86, customers: 86, monthPerformance: 18640, monthCommission: 1491.2, pending: 648, available: 1260.5, total: 12840.6 }
+  { id: 1001, userId: 'u4', name: '李秀兰', shopName: '秀兰乐活活动社', shopIntro: '专注同城兴趣活动与品质研学旅行，用心陪伴每一次出发。', phone: '13867892035', inviteCode: 'SYL001', commissionRate: 8, status: 1, totalPerformance: 0, totalCommission: 0, totalCustomers: 3, customers: 3, monthPerformance: 0, monthCommission: 0, pending: 0, available: 0, total: 0 }
   ,
-  { id: 1002, name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '13913577782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 9260, totalCommission: 7220.4, totalCustomers: 42, customers: 42, monthPerformance: 9260, monthCommission: 740.8, pending: 322, available: 588, total: 7220.4 }
+  { id: 1002, userId: 'u5', name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '13913577782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 0, totalCommission: 0, totalCustomers: 0, customers: 0, monthPerformance: 0, monthCommission: 0, pending: 0, available: 0, total: 0 }
 ]
 
 const customers = [
   { id: 'u1', name: '张桂芳', phone: '13812346688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
   { id: 'u2', name: '刘淑华', phone: '13656782031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
-  { id: 'u3', name: '李建国', phone: '13523458820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false }
+  { id: 'u3', name: '李建国', phone: '13523458820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
+  // 主理人同时也是平台会员，工作台用它来判断「是不是我自己的账本」
+  { id: 'u4', name: '李秀兰', phone: '13867892035', member: true, balance: 0, points: 0, memberLevel: 3, memberSince: '2026年8月', memberExpireAt: '长期有效', managerId: null, isManager: true },
+  { id: 'u5', name: '王建国', phone: '13913577782', member: true, balance: 0, points: 0, memberLevel: 3, memberSince: '2026年8月', memberExpireAt: '长期有效', managerId: null, isManager: true }
 ]
 
 const coupons = [
@@ -169,7 +172,7 @@ const orders = [
   {
     id: 'SYL20260908001', userId: 'u1', activityId: 1, title: '秋日徒步 · 香山赏红叶（15人成团）', category: 1, cover: '🍁', coverTone: 'linear-gradient(135deg,#c96b2a,#f1b35a)',
     skuName: '', schedule: activities[0].schedules[0], participants: '张桂芳、李明', count: 2, memberPrice: 79, payAmount: 148, discount: 10,
-    status: '待发货', coupon: '10元无门槛券', couponId: 1, code: '8236 1940', managerId: 1001, commissionRate: 12, commissionAmount: 17.76, address: null, createdAt: '2026-09-08 10:26', payDeadline: null
+    status: '待收货', coupon: '10元无门槛券', couponId: 1, code: '8236 1940', managerId: 1001, commissionRate: 12, commissionAmount: 17.76, address: null, createdAt: '2026-09-08 10:26', payDeadline: null
   }
 ]
 
@@ -351,6 +354,8 @@ const config = {
   withdrawTaxRate: 20,
   managerApplyFee: 199,
   couponRefundReturn: 'auto',
+  // 用户申请退款是否需要运营审核（true：先进入「退款中」，false：即时退款）
+  refundNeedAudit: true,
   brand: {
     slogan: '和同龄人一起，玩得开心又省心'
   },
