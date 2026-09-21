@@ -9,7 +9,7 @@
 3. AppID 可使用测试号，或在 `project.config.json` 中替换为你的小程序 AppID。
 4. 点击编译即可预览。
 
-当前使用本地 mock 数据，不依赖线上服务端。
+当前通过 `utils/request.js` 调用后端 API（见 `utils/config.js` 的 `API_BASE`），数据由 `server/` 后端持久化。
 
 ## 已实现功能
 
@@ -35,10 +35,14 @@
 
 ## 业务数据位置
 
-- `utils/mock.js`：活动、排班、主理人、优惠券、报名人等 mock 数据
-- `utils/store.js`：本地状态、下单、退款、绑定、佣金、提现等业务逻辑
-- `app.js`：全局启动与 `ref` 参数处理
+- `utils/request.js`：统一 `wx.request` 封装，路径以 `/api` 开头
+- `utils/config.js`：后端地址 `API_BASE`（本地联调改成 `http://127.0.0.1:3000`）
+- `utils/store.js`：客户端缓存与业务封装（下单、退款、绑定、佣金、提现等均调用后端）
+- `utils/qrcode.js`：会员码 / 推广码的二维码绘制
+- `app.js`：全局启动、预取与 `ref` 参数处理
+
+后端种子数据位于 `server/src/seed.js`，首次启动自动写入 `server/data.json`。
 
 ## 说明
 
-真实微信支付、服务通知、核销、线上服务端、平台 Web 后台等能力，需要接入微信商户号、服务器和数据库。当前代码保留了清晰的业务边界，后续可以替换 `utils/store.js` 中的本地逻辑为 `wx.request` 接口调用。
+真实微信支付、订阅消息服务通知等能力仍需接入微信商户号与模板消息。当前订单支付为模拟支付（`POST /api/orders/:id/pay`），核销、退款、佣金、提现等业务逻辑已由 `server/` 后端提供并落盘到 `data.json`。

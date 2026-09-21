@@ -257,22 +257,6 @@ function isCoursePurchased(id) {
   return (cache.cards || []).some((card) => String(card.liveId) === String(id))
 }
 
-function purchaseCourse(course) {
-  if (!course || !course.id) throw new Error('课程不存在')
-  const purchases = getCoursePurchases()
-  if (!purchases.some((record) => String(record.courseId) === String(course.id))) {
-    purchases.unshift({
-      id: `COURSE${Date.now()}`,
-      courseId: course.id,
-      title: course.title,
-      amount: Number(course.memberPrice || course.price || 0),
-      purchasedAt: new Date().toLocaleString('zh-CN', { hour12: false })
-    })
-    wx.setStorageSync(COURSE_PURCHASE_KEY, purchases)
-  }
-  return purchases.find((record) => String(record.courseId) === String(course.id))
-}
-
 function getCart() {
   const value = wx.getStorageSync(CART_KEY)
   return Array.isArray(value) ? value : []
@@ -370,6 +354,13 @@ function getOwnManager() {
 
 function getCurrentUserId() {
   return CURRENT_USER_ID
+}
+
+async function joinMember() {
+  const result = await api.post('/members/join', { userId: CURRENT_USER_ID })
+  cache.user = result.user
+  cache.coupons = result.coupons || cache.coupons
+  return result
 }
 
 // 手机号统一成 11 位数字，容忍空格、短横线、+86 前缀等写法
@@ -636,7 +627,6 @@ module.exports = {
   getLive,
   getCoursePurchases,
   isCoursePurchased,
-  purchaseCourse,
   getCart,
   addCartItem,
   updateCartItem,
@@ -646,6 +636,7 @@ module.exports = {
   getManagers,
   getOwnManager,
   getCurrentUserId,
+  joinMember,
   normalizePhone,
   maskPhone,
   getDefaultAddress,

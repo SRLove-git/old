@@ -1,4 +1,5 @@
 const store = require('../../utils/store.js')
+const qrcode = require('../../utils/qrcode.js')
 
 Page({
   data: {
@@ -70,7 +71,9 @@ Page({
   },
 
   setTab(e) {
-    this.setData({ tab: e.currentTarget.dataset.id })
+    const id = e.currentTarget.dataset.id
+    this.setData({ tab: id })
+    if (id === 'promote') this.drawPromoQr()
   },
 
   openWithdraw() {
@@ -148,8 +151,47 @@ Page({
     })
   },
 
+  promoText() {
+    return `/pages/index/index?ref=${this.data.manager.id}`
+  },
+
+  drawPromoQr(onDone) {
+    const ctx = wx.createCanvasContext('promoQr', this)
+    qrcode.draw(ctx, this.promoText(), 240)
+    ctx.draw(false, typeof onDone === 'function' ? onDone : undefined)
+  },
+
   saveQr() {
-    wx.showToast({ title: '推广码已保存到相册', icon: 'none' })
+    this.drawPromoQr(() => {
+      wx.canvasToTempFilePath({
+        canvasId: 'promoQr',
+        x: 0,
+        y: 0,
+        width: 240,
+        height: 240,
+        destWidth: 480,
+        destHeight: 480,
+        success: (res) => {
+          wx.saveImageToPhotosAlbum({
+            filePath: res.tempFilePath,
+            success: () => wx.showToast({ title: '推广码已保存到相册', icon: 'success' }),
+            fail: (err) => {
+              if (err && err.errMsg && err.errMsg.includes('auth')) {
+                wx.showModal({
+                  title: '需要相册权限',
+                  content: '请允许保存图片到相册，才能保存推广码。',
+                  confirmText: '去设置',
+                  success: (r) => { if (r.confirm) wx.openSetting() }
+                })
+              } else {
+                wx.showToast({ title: '保存失败，请稍后重试', icon: 'none' })
+              }
+            }
+          })
+        },
+        fail: () => wx.showToast({ title: '生成图片失败，请稍后重试', icon: 'none' })
+      }, this)
+    })
   },
 
   shareCard() {

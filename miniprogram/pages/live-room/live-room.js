@@ -110,6 +110,14 @@ Page({
   },
 
   remind() {
+    const live = this.data.live
+    if (!live || !live.id) return
+    const key = `suiyueli_live_remind_${live.id}`
+    if (wx.getStorageSync(key)) {
+      wx.showToast({ title: '已预约过开播提醒', icon: 'none' })
+      return
+    }
+    wx.setStorageSync(key, { title: live.title, startAt: live.startAt, remindedAt: Date.now() })
     wx.showToast({ title: '已预约开播提醒', icon: 'none' })
   },
 

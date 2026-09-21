@@ -81,6 +81,11 @@ const verifyCode = ref('')
 const verifyOrder = ref(null)
 const verifySearching = ref(false)
 
+const cardCustomerId = ref('')
+const cardProfile = ref(null)
+const cardList = ref([])
+const cardLoading = ref(false)
+
 const kw = ref('')
 const orderStatusFilter = ref('全部')
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '待评价', '已完成', '已核销', '退款中', '已退款', '已取消']
@@ -143,6 +148,12 @@ function inferRegionIds(record) {
 }
 const managerOptions = computed(() =>
   managers.value.map((m) => ({ label: m.name, value: String(m.id) }))
+)
+const customerOptions = computed(() =>
+  customers.value.map((c) => ({
+    label: `${c.name}（${c.phone || '无手机号'}）`,
+    value: String(c.id)
+  }))
 )
 const couponTypeOptions = Object.keys(couponTypes).map((k) => ({
   label: couponTypes[k],
@@ -284,6 +295,12 @@ const contentColumns = [
   { title: '发布日期', dataIndex: 'publishedAt', width: 120 },
   { title: '状态', slotName: 'status', width: 90 },
   { title: '操作', slotName: 'actions', width: 140 }
+]
+const cardColumns = [
+  { title: '课程/计次卡', dataIndex: 'title', ellipsis: true, tooltip: true },
+  { title: '剩余/总次数', slotName: 'remain', width: 140, align: 'right' },
+  { title: '有效期', dataIndex: 'validUntil', width: 130 },
+  { title: '操作', slotName: 'actions', width: 120 }
 ]
 const orderColumns = [
   { title: '订单号', dataIndex: 'id', width: 100 },
@@ -439,6 +456,7 @@ async function load() {
     if (view.value === 'activities') activities.value = await api.get('/activities')
     if (view.value === 'products') products.value = await api.get('/products')
     if (view.value === 'orders') orders.value = await api.get('/orders')
+    if (view.value === 'verify') customers.value = await api.get('/customers')
     if (view.value === 'customers') {
       customers.value = await api.get('/customers')
       bindings.value = await api.get('/bindings')
@@ -813,6 +831,56 @@ async function doVerify() {
   try {
     verifyOrder.value = await api.post(`/orders/${verifyOrder.value.id}/verify`)
     Message.success('核销成功')
+  } catch (e) {
+    error.value = e.message
+    Message.error(e.message)
+  }
+}
+
+async function loadCardCustomer(id) {
+  const value = id ? String(id) : ''
+  cardCustomerId.value = value
+  if (!value) {
+    cardProfile.value = null
+    cardList.value = []
+    return
+  }
+  cardLoading.value = true
+  try {
+    const profile = await api.get('/users/' + encodeURIComponent(value))
+    cardProfile.value = profile
+    cardList.value = Array.isArray(profile.cards) ? profile.cards : []
+  } catch (e) {
+    cardProfile.value = null
+    cardList.value = []
+    Message.error(e.message)
+  } finally {
+    cardLoading.value = false
+  }
+}
+
+function confirmCheckin(card) {
+  const remain = Number(card.remain || 0)
+  if (remain <= 0) {
+    Message.warning('该计次卡已无剩余次数')
+    return
+  }
+  Modal.confirm({
+    title: '计次卡签到',
+    content: `确认为「${card.title}」核销 1 次？（当前剩余 ${remain} 次）`,
+    okText: '确认签到',
+    cancelText: '取消',
+    onOk: () => doCheckin(card)
+  })
+}
+
+async function doCheckin(card) {
+  error.value = ''
+  try {
+    const updated = await api.post(`/cards/${card.id}/checkin`, {})
+    const idx = cardList.value.findIndex((c) => String(c.id) === String(card.id))
+    if (idx >= 0) cardList.value[idx] = updated
+    Message.success('签到成功')
   } catch (e) {
     error.value = e.message
     Message.error(e.message)
@@ -1320,6 +1388,29 @@ function exportCsv(filename, rows) {
                   </a-button>
                 </div>
               </template>
+            </a-card>
+            <a-card :bordered="false" title="计次卡核销" style="margin-top: 16px">
+              <div class="toolbar">
+                <a-select
+                  v-model="cardCustomerId"
+                  :options="customerOptions"
+                  placeholder="选择会员"
+                  allow-search
+                  allow-clear
+                  style="width: 340px"
+                  @change="loadCardCustomer"
+                />
+              </div>
+              <a-spin :loading="cardLoading" style="width: 100%">
+                <a-empty v-if="!cardCustomerId" description="选择会员后查看其计次卡" />
+                <a-empty v-else-if="cardList.length === 0" description="该会员暂无计次卡" />
+                <a-table v-else :columns="cardColumns" :data="cardList" :pagination="false" row-key="id">
+                  <template #remain="{ record }">{{ record.remain }} / {{ record.total }}</template>
+                  <template #actions="{ record }">
+                    <a-button size="small" type="primary" @click="confirmCheckin(record)">签到</a-button>
+                  </template>
+                </a-table>
+              </a-spin>
             </a-card>
           </section>
 

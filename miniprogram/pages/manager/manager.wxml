@@ -100,7 +100,7 @@
     <view wx:if="{{tab === 'promote'}}" class="section card">
       <view class="panel-title">我的推广工具</view>
       <view class="promote-card">
-        <view class="qr">二维码</view>
+        <canvas canvas-id="promoQr" class="qr" width="240" height="240"></canvas>
         <view class="promote-info">
           <view class="promote-name">专属推广码</view>
           <view class="promote-sub">客户扫码即可绑定为您名下客户</view>

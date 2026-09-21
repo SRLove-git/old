@@ -1618,6 +1618,39 @@ export function getUserProfile(userId) {
   }
 }
 
+export function joinMember(userId) {
+  const user = db.customers.find((c) => String(c.id) === String(userId))
+  if (!user) throw new Error('会员不存在')
+  const wasMember = Boolean(user.member)
+  user.member = true
+  const now = new Date()
+  if (!user.memberSince) user.memberSince = `${now.getFullYear()}年${now.getMonth() + 1}月`
+  if (!user.memberLevel) user.memberLevel = 2
+  if (!user.memberExpireAt) user.memberExpireAt = '长期有效'
+  // 首次入会赠送 2 张无门槛券；已入会则不重复发放
+  if (!wasMember) {
+    const granted = db.coupons.filter((c) => c.welcomeFor && String(c.welcomeFor) === String(userId))
+    if (granted.length === 0) {
+      const base = {
+        type: 1,
+        title: '入会专享10元券',
+        desc: '全场通用',
+        value: 10,
+        minAmount: 0,
+        expireAt: '2026-12-31',
+        used: false,
+        welcomeFor: userId
+      }
+      db.coupons.push(
+        { id: `welcome${Date.now()}a`, ...base },
+        { id: `welcome${Date.now()}b`, ...base }
+      )
+    }
+  }
+  save()
+  return { user: { ...user, ...memberIdentity(user) }, coupons: db.coupons, alreadyMember: wasMember }
+}
+
 export function purchaseLive(liveId, userId) {
   const live = (db.lives || []).find((l) => String(l.id) === String(liveId))
   if (!live) throw new Error('课程不存在')
