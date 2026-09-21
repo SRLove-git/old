@@ -1,6 +1,6 @@
-const { api } = require('./request.js')
+// 登录会员身份由 request.js 统一携带（请求头 x-user-id），这里复用同一个常量
+const { api, CURRENT_USER_ID } = require('./request.js')
 
-const CURRENT_USER_ID = 'u1'
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
 
@@ -93,8 +93,11 @@ function getBrand() {
   }
 }
 
-function couponApplicable(coupon, activity, amount) {
+function couponApplicable(coupon, activity, amount, userId) {
   if (!coupon || coupon.used) return false
+  // 入会赠送券等带 welcomeFor 的券只属于指定会员
+  const owner = coupon.welcomeFor ? String(coupon.welcomeFor) : ''
+  if (owner && owner !== String(userId == null ? CURRENT_USER_ID : userId)) return false
   if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
   if (coupon.minAmount && amount < coupon.minAmount) return false
   if (coupon.type === 3 && coupon.scopeCategory && activity.category !== coupon.scopeCategory) return false
