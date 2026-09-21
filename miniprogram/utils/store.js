@@ -463,6 +463,7 @@ async function submitReview(orderId, review) {
   const order = await api.post(`/orders/${orderId}/review`, { ...review, name: cache.user.name })
   const idx = cache.orders.findIndex((o) => o.id === orderId)
   if (idx >= 0) cache.orders[idx] = order
+  cache.reviews = await api.get('/reviews')
   return order
 }
 

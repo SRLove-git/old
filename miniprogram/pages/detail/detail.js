@@ -40,7 +40,12 @@ Page({
     memberSaving: 0,
     serviceText: '',
     refundText: '',
-    buyNowText: '立即购买'
+    buyNowText: '立即购买',
+    reviewOpen: false,
+    reviewRating: 5,
+    reviewContent: '',
+    reviewableOrderId: '',
+    reviewSubmitting: false
   },
 
   async onLoad(options) {
@@ -75,6 +80,7 @@ Page({
     ).map((b, i) => ({ ...b, _key: `${activity.id}-${i}` }))
     const merchant = store.getManagers().find((m) => String(m.id) === String(activity.managerId)) || null
     const reviews = store.getReviews(id)
+    const reviewableOrder = (store.get().orders || []).find((order) => String(order.activityId) === String(id) && order.status === '待评价') || null
     const allOfferings = [...store.getActivities(), ...(store.get().products || [])].filter((item) => String(item.id) !== String(id))
     const recommend = allOfferings
       .sort((a, b) => Number(b.category === activity.category) - Number(a.category === activity.category) || (b.soldCount || 0) - (a.soldCount || 0))
@@ -94,6 +100,7 @@ Page({
       merchant,
       assistant: store.getAssistant(),
       reviews,
+      reviewableOrderId: reviewableOrder ? reviewableOrder.id : '',
       recommend,
       rankLabel,
       venues,
@@ -105,6 +112,49 @@ Page({
       selectedSkuId: hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
       selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
     })
+  },
+
+  openReview() {
+    if (!this.data.reviewableOrderId) {
+      wx.showToast({ title: '购买并完成后可评价', icon: 'none' })
+      return
+    }
+    this.setData({ reviewOpen: true, reviewRating: 5, reviewContent: '' })
+  },
+
+  closeReview() {
+    if (!this.data.reviewSubmitting) this.setData({ reviewOpen: false })
+  },
+
+  onReviewRating(e) {
+    this.setData({ reviewRating: Number(e.currentTarget.dataset.rating) })
+  },
+
+  onReviewInput(e) {
+    this.setData({ reviewContent: e.detail.value })
+  },
+
+  async submitDetailReview() {
+    if (this.data.reviewSubmitting) return
+    const content = String(this.data.reviewContent || '').trim()
+    if (!content) {
+      wx.showToast({ title: '请写下您的体验', icon: 'none' })
+      return
+    }
+    this.setData({ reviewSubmitting: true })
+    try {
+      await store.submitReview(this.data.reviewableOrderId, {
+        rating: this.data.reviewRating,
+        content
+      })
+      this.setData({ reviewOpen: false, reviewContent: '', tab: 'review' })
+      this.loadActivity(this.data.id)
+      wx.showToast({ title: '评价成功', icon: 'success' })
+    } catch (e) {
+      wx.showToast({ title: e.message || '评价提交失败', icon: 'none' })
+    } finally {
+      this.setData({ reviewSubmitting: false })
+    }
   },
 
   goDetailFromRec(e) {
