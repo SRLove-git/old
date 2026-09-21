@@ -172,6 +172,10 @@ Page({
     this.setData({ keyword: e.detail.value }, () => this.refresh())
   },
 
+  clearKeyword() {
+    this.setData({ keyword: '' }, () => this.refresh())
+  },
+
   setCat(e) {
     this.setData({ cat: String(e.currentTarget.dataset.id) }, () => this.refresh())
   },

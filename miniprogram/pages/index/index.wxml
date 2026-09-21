@@ -1,7 +1,7 @@
 <view class="home-page">
   <view class="home-tools">
-    <view class="city-pill" bindtap="openCity"><text class="pin">⌖</text><text>{{city}}</text><text class="chevron">⌄</text></view>
-    <view class="search-box" bindtap="goList"><text class="search-icon">⌕</text><text class="search-placeholder">搜索活动、旅行、课程</text></view>
+    <view class="city-pill" bindtap="openCity"><view class="pin-icon"><view class="pin-dot"></view></view><text class="city-name">{{city}}</text><view class="chevron"></view></view>
+    <view class="search-box" bindtap="goList"><view class="search-line-icon"></view><text class="search-placeholder">搜索活动、旅行、课程</text></view>
   </view>
 
   <view class="hero" bindtap="goList">
@@ -11,13 +11,13 @@
       <text class="hero-kicker">岁悦里 · 乐活俱乐部</text>
       <view class="hero-title">把闲暇过成<text>闪亮日常</text></view>
       <view class="hero-sub">和同龄人一起，看山河、学新知、交朋友</view>
-      <view class="hero-action">发现本周活动 <text>→</text></view>
+      <view class="hero-action">发现本周活动 <view class="arrow-line"></view></view>
     </view>
     <view class="hero-dots"><text></text><text></text><text></text></view>
   </view>
 
   <view wx:if="{{newsPosts.length}}" class="home-content-section policy-section">
-    <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><text class="official-badge">权威来源</text></view>
+    <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><view class="content-head-actions"><text class="official-badge">权威来源</text><view class="content-more" data-type="news" bindtap="goContentList">查看全部 <text>›</text></view></view></view>
     <view class="policy-list">
       <view wx:for="{{newsPosts}}" wx:key="id" class="policy-card" data-id="{{item.id}}" bindtap="goContent">
         <image class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
@@ -27,20 +27,21 @@
   </view>
 
   <view wx:if="{{videoPosts.length}}" class="home-content-section video-section">
-    <view class="content-section-head"><view><view class="content-section-title">视频推荐</view><view class="content-section-en">FEATURED VIDEOS</view></view></view>
+    <view class="content-section-head"><view><view class="content-section-title">视频推荐</view><view class="content-section-en">FEATURED VIDEOS</view></view><view class="content-more" data-type="video" bindtap="goContentList">查看全部 <text>›</text></view></view>
     <scroll-view scroll-x class="video-scroll" enhanced show-scrollbar="{{false}}">
       <view class="video-row">
         <view wx:for="{{videoPosts}}" wx:key="id" class="video-card" data-id="{{item.id}}" bindtap="goContent">
-          <view class="video-cover-wrap"><image class="video-cover" src="{{item.coverImage}}" mode="aspectFill" /><view class="video-play">▶</view><text class="video-label">视频</text></view>
+          <view class="video-cover-wrap"><image class="video-cover" src="{{item.coverImage}}" mode="aspectFill" /><view class="video-play"><view class="play-triangle"></view></view><text class="video-label">视频</text></view>
           <view class="video-title">{{item.title}}</view><view class="video-meta">{{item.source}} · {{item.publishedAt}}</view>
         </view>
       </view>
     </scroll-view>
   </view>
 
+  <view class="quick-heading"><view><view class="quick-title">按兴趣发现</view><view class="quick-sub">从喜欢的生活方式开始</view></view><text>5 类精选</text></view>
   <view class="category-grid">
     <view wx:for="{{categories}}" wx:key="id" class="category-item" data-id="{{item.id}}" bindtap="goCategory">
-      <view class="category-icon tone-{{index}}">{{item.emoji}}</view><text class="category-name">{{item.name}}</text>
+      <view class="category-icon tone-{{index}}"><view class="category-glyph category-glyph-{{index}}"></view></view><text class="category-name">{{item.name}}</text>
     </view>
   </view>
 
@@ -90,7 +91,7 @@
             <view class="mini-body">
               <view class="mini-title">{{item.title}}</view>
               <view class="mini-date">{{item.schedules[0].date}} · {{item.schedules[0].time}}</view>
-              <view class="mini-foot"><text class="mini-price">¥{{item.memberPrice}}</text><button class="mini-arrow" data-id="{{item.id}}" catchtap="addCart">＋</button></view>
+              <view class="mini-foot"><text class="mini-price">¥{{item.memberPrice}}</text><button class="mini-arrow" aria-label="加入购物车" data-id="{{item.id}}" catchtap="addCart"><view class="plus-icon"></view></button></view>
             </view>
           </view>
         </view>
@@ -117,11 +118,11 @@
     </view>
   </view>
 
-  <button class="service-fab" bindtap="showService">•••</button>
+  <button class="service-fab" aria-label="联系小助理" bindtap="showService"><view class="service-bubble-icon"><text></text><text></text><text></text></view></button>
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
       <view class="city-sheet-title">选择所在区域</view>
-      <view class="city-list"><view wx:for="{{cities}}" wx:key="*this" class="city-item {{city === item ? 'selected' : ''}}" data-city="{{item}}" bindtap="selectCity"><text>{{item}}</text><text wx:if="{{city === item}}" class="city-check">✓</text></view></view>
+      <scroll-view scroll-y class="city-list" enhanced show-scrollbar="{{false}}"><view wx:for="{{cities}}" wx:key="*this" class="city-item {{city === item ? 'selected' : ''}}" data-city="{{item}}" bindtap="selectCity"><text>{{item}}</text><text wx:if="{{city === item}}" class="city-check">✓</text></view></scroll-view>
       <button class="btn btn-ghost btn-block" bindtap="closeCity">取消</button>
     </view>
   </view>

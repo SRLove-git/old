@@ -30,7 +30,7 @@ page {
   --color-fill: #f3f1ec;
   --color-border: #e9e5de;
 
-  background: var(--color-bg);
+  background: #f8f7f3;
   color: var(--color-text-1);
   font-size: 32rpx;
   line-height: 1.5;
@@ -72,8 +72,9 @@ textarea {
 
 .card {
   background: #ffffff;
-  border-radius: 28rpx;
-  box-shadow: 0 10rpx 34rpx rgba(55, 44, 31, 0.06);
+  border: 1rpx solid rgba(81, 69, 54, 0.08);
+  border-radius: 26rpx;
+  box-shadow: 0 10rpx 30rpx rgba(55, 44, 31, 0.045);
 }
 
 .btn {
@@ -90,7 +91,7 @@ textarea {
 .btn-primary {
   background: var(--color-primary);
   color: #ffffff;
-  box-shadow: 0 10rpx 24rpx rgba(194, 94, 61, 0.22);
+  box-shadow: 0 8rpx 20rpx rgba(121, 80, 47, 0.16);
 }
 
 .btn-primary:active {

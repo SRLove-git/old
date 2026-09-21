@@ -58,7 +58,7 @@ Page({
 
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 0 })
+      this.getTabBar().setData({ selected: 0, hidden: false })
     }
     await store.ready()
     this.setData({
@@ -70,6 +70,11 @@ Page({
     this.buildGroups()
     this.buildContent()
     this.checkPendingBind()
+  },
+
+  onHide() {
+    this.setTabBarVisible(true)
+    if (this.data.cityOpen) this.setData({ cityOpen: false })
   },
 
   buildCategories() {
@@ -121,10 +126,18 @@ Page({
 
   openCity() {
     this.setData({ cityOpen: true })
+    this.setTabBarVisible(false)
   },
 
   closeCity() {
     this.setData({ cityOpen: false })
+    this.setTabBarVisible(true)
+  },
+
+  setTabBarVisible(visible) {
+    if (typeof this.getTabBar !== 'function') return
+    const tabBar = this.getTabBar()
+    if (tabBar) tabBar.setData({ hidden: !visible })
   },
 
   noop() {},
@@ -134,10 +147,16 @@ Page({
       this.buildGroups()
       this.buildContent()
     })
+    this.setTabBarVisible(true)
   },
 
   goContent(e) {
     wx.navigateTo({ url: `/pages/content-detail/content-detail?id=${e.currentTarget.dataset.id}` })
+  },
+
+  goContentList(e) {
+    const type = e.currentTarget.dataset.type === 'video' ? 'video' : 'news'
+    wx.navigateTo({ url: `/pages/content-list/content-list?type=${type}` })
   },
 
   checkPendingBind() {

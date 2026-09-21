@@ -1,4 +1,4 @@
-<view class="tab-bar">
+<view wx:if="{{!hidden}}" class="tab-bar">
   <view
     wx:for="{{list}}"
     wx:key="pagePath"
@@ -6,7 +6,7 @@
     data-index="{{index}}"
     bindtap="switchTab"
   >
-    <text class="tab-emoji">{{item.emoji}}</text>
+    <view class="tab-icon tab-icon-{{item.icon}}"><view class="tab-icon-inner"></view></view>
     <text class="tab-text">{{item.text}}</text>
   </view>
 </view>

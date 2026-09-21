@@ -8,6 +8,7 @@ server/data.json
 
 # 小程序本地私有配置
 miniprogram/project.private.config.json
+/project.private.config.json
 
 # 系统与日志
 .DS_Store

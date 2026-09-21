@@ -1,0 +1,23 @@
+<view class="content-list-page">
+  <view class="list-intro">
+    <view class="list-kicker">{{type === 'video' ? 'FEATURED VIDEOS' : 'GOVERNMENT NEWS'}}</view>
+    <view class="list-title">{{title}}</view>
+    <view class="list-sub">{{type === 'video' ? '精选实用内容，轻松看懂、慢慢学习' : '及时了解与生活相关的政策和服务信息'}}</view>
+  </view>
+
+  <view wx:if="{{posts.length}}" class="post-list">
+    <view wx:for="{{posts}}" wx:key="id" class="post-card" data-id="{{item.id}}" bindtap="goDetail">
+      <view class="post-cover-wrap">
+        <image class="post-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        <view wx:if="{{type === 'video'}}" class="post-play"><view></view></view>
+      </view>
+      <view class="post-copy">
+        <view class="post-title">{{item.title}}</view>
+        <view class="post-summary">{{item.summary}}</view>
+        <view class="post-meta"><text>{{item.source || '岁悦里'}}</text><text>{{item.publishedAt}}</text></view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="content-empty"><view class="empty-mark">岁</view><view class="empty-title">暂时没有更多内容</view><view class="empty-sub">有新内容时会第一时间更新</view></view>
+</view>

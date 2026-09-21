@@ -63,8 +63,76 @@
 .official-tip { margin: 7rpx 0 18rpx; color: #7f8582; font-size: 24rpx; }
 .recommend-scroll { margin-top: 6rpx; }
 .recommend-row { display: flex; }
-.recommend-item { width: 200rpx; flex-shrink: 0; margin-right: 20rpx; }
-.recommend-cover { width: 200rpx; height: 150rpx; display: flex; align-items: center; justify-content: center; border-radius: 18rpx; font-size: 56rpx; }
+.recommend-item { width: 220rpx; flex-shrink: 0; margin-right: 20rpx; }
+.recommend-cover { width: 220rpx; height: 165rpx; display: block; border: 1rpx solid #ebe5dc; border-radius: 18rpx; background: #f4f0e9; }
 .recommend-name { margin-top: 10rpx; font-size: 24rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recommend-price { margin-top: 4rpx; color: var(--color-primary); font-size: 26rpx; font-weight: 700; }
 .recommend-price-note { color: #9a9d9c; font-size: 20rpx; font-weight: 400; }
+
+/* Refined warm editorial treatment and unified line icons. */
+.profile-page { background: #f8f7f3; }
+.profile-hero { background: linear-gradient(145deg,#fcf5ec,#f5e7d8); }
+.profile-watermark { position: absolute; right: 22rpx; top: 20rpx; width: 210rpx; height: 210rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid rgba(152,111,72,.12); border-radius: 50%; color: rgba(152,111,72,.1); font-size: 112rpx; font-family: serif; }
+.profile-watermark::before { content: ''; position: absolute; left: 20rpx; right: 20rpx; top: 20rpx; bottom: 20rpx; border: 1rpx solid rgba(152,111,72,.1); border-radius: 50%; }
+.profile-watermark view { position: absolute; left: 40rpx; right: 40rpx; bottom: 35rpx; border-top: 2rpx solid rgba(152,111,72,.11); }
+.avatar { border-width: 6rpx; background: linear-gradient(145deg,#ddb98f,#b98555); box-shadow: 0 8rpx 20rpx rgba(70,52,37,.11); }
+.code-icon { width: 28rpx; height: 28rpx; display: flex; flex-wrap: wrap; gap: 4rpx; margin-right: 9rpx; }
+.code-icon view { width: 12rpx; height: 12rpx; border: 3rpx solid var(--color-primary-text); border-radius: 2rpx; }
+.assets { margin: 0 22rpx; padding: 28rpx 8rpx; border: 1rpx solid #ebe5dc; border-top: 0; border-radius: 0 0 24rpx 24rpx; box-shadow: 0 10rpx 25rpx rgba(51,43,33,.04); }
+.panel { margin-top: 22rpx; border: 1rpx solid #ebe6de; box-shadow: 0 8rpx 24rpx rgba(51,43,33,.045); }
+.line-icon { position: relative; width: 46rpx; height: 46rpx; margin-bottom: 7rpx; color: #52645e; font-size: 0; }
+.line-icon::before, .line-icon::after, .shortcut-icon::before, .shortcut-icon::after, .service-glyph::before, .service-glyph::after { content: ''; position: absolute; box-sizing: border-box; }
+.icon-wallet { width: 48rpx; height: 35rpx; margin-top: 5rpx; border: 3rpx solid currentColor; border-radius: 8rpx; }
+.icon-wallet::before { right: -3rpx; top: 8rpx; width: 20rpx; height: 15rpx; border: 3rpx solid currentColor; border-radius: 6rpx; background: #fff; }
+.icon-calendar { height: 40rpx; margin-top: 2rpx; border: 3rpx solid currentColor; border-radius: 7rpx; }
+.icon-calendar::before { left: -3rpx; right: -3rpx; top: 10rpx; border-top: 3rpx solid currentColor; }
+.icon-calendar::after { left: 10rpx; top: -7rpx; width: 4rpx; height: 12rpx; border-radius: 3rpx; background: currentColor; box-shadow: 20rpx 0 currentColor; }
+.icon-check { border: 3rpx solid currentColor; border-radius: 50%; }
+.icon-check::before { left: 13rpx; top: 10rpx; width: 18rpx; height: 10rpx; border-left: 3rpx solid currentColor; border-bottom: 3rpx solid currentColor; transform: rotate(-45deg); }
+.icon-star::before { left: 2rpx; right: 2rpx; top: 2rpx; bottom: 2rpx; border: 3rpx solid currentColor; border-radius: 10rpx 0; transform: rotate(45deg); }
+.icon-return { border: 3rpx solid currentColor; border-left-color: transparent; border-radius: 50%; }
+.icon-return::before { left: -5rpx; top: 2rpx; width: 16rpx; height: 16rpx; border-left: 3rpx solid currentColor; border-bottom: 3rpx solid currentColor; transform: rotate(18deg); }
+.shortcut-icon { position: relative; width: 42rpx; height: 42rpx; margin-right: 22rpx; color: #586760; font-size: 0; }
+.icon-clipboard { border: 3rpx solid currentColor; border-radius: 6rpx; }
+.icon-clipboard::before { left: 10rpx; top: -7rpx; width: 18rpx; height: 10rpx; border: 3rpx solid currentColor; border-radius: 5rpx; background: #fff; }
+.icon-clipboard::after { left: 10rpx; top: 15rpx; width: 18rpx; border-top: 3rpx solid currentColor; box-shadow: 0 9rpx 0 currentColor; }
+.icon-ticket { margin-top: 4rpx; height: 34rpx; border: 3rpx solid currentColor; border-radius: 6rpx; }
+.icon-ticket::before { left: 17rpx; top: 3rpx; height: 23rpx; border-left: 3rpx dashed currentColor; }
+.service-icon { border: 1rpx solid rgba(57,75,69,.06); border-radius: 25rpx; font-size: 0; }
+.service-glyph { position: relative; width: 36rpx; height: 36rpx; color: #566b64; }
+.glyph-cart { width: 34rpx; height: 25rpx; margin-top: -6rpx; border: 3rpx solid currentColor; border-top: 0; transform: skewX(-8deg); }
+.glyph-cart::before { left: -8rpx; top: -8rpx; width: 10rpx; border-top: 3rpx solid currentColor; }
+.glyph-cart::after { left: 4rpx; bottom: -12rpx; width: 7rpx; height: 7rpx; border: 2rpx solid currentColor; border-radius: 50%; box-shadow: 18rpx 0 0 -2rpx #edf4ef, 18rpx 0 0 0 currentColor; }
+.glyph-coupon { height: 30rpx; margin-top: 3rpx; border: 3rpx solid currentColor; border-radius: 5rpx; }
+.glyph-coupon::before { left: 15rpx; top: 3rpx; height: 19rpx; border-left: 3rpx dashed currentColor; }
+.glyph-people::before { left: 3rpx; top: 1rpx; width: 15rpx; height: 15rpx; border: 3rpx solid currentColor; border-radius: 50%; box-shadow: 17rpx 5rpx 0 -3rpx #edf0f8, 17rpx 5rpx 0 0 currentColor; }
+.glyph-people::after { left: 0; bottom: 0; width: 25rpx; height: 14rpx; border: 3rpx solid currentColor; border-radius: 20rpx 20rpx 5rpx 5rpx; box-shadow: 13rpx 0 0 -1rpx #edf0f8, 15rpx 0 0 1rpx currentColor; }
+.glyph-gift { margin-top: 7rpx; border: 3rpx solid currentColor; border-radius: 4rpx; }
+.glyph-gift::before { left: 15rpx; top: -8rpx; height: 40rpx; border-left: 3rpx solid currentColor; }
+.glyph-gift::after { left: -4rpx; top: -7rpx; width: 38rpx; border-top: 7rpx solid currentColor; }
+.glyph-pin { width: 29rpx; height: 29rpx; margin-top: -7rpx; border: 3rpx solid currentColor; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+.glyph-pin::before { left: 8rpx; top: 8rpx; width: 7rpx; height: 7rpx; border: 2rpx solid currentColor; border-radius: 50%; }
+.glyph-book { border: 3rpx solid currentColor; border-radius: 4rpx 9rpx 9rpx 4rpx; }
+.glyph-book::before { left: 8rpx; top: -3rpx; height: 36rpx; border-left: 3rpx solid currentColor; }
+.glyph-note { border: 3rpx solid currentColor; border-radius: 5rpx; }
+.glyph-note::before { left: 8rpx; top: 9rpx; width: 17rpx; border-top: 3rpx solid currentColor; box-shadow: 0 8rpx 0 currentColor; }
+.glyph-shop { height: 29rpx; margin-top: 7rpx; border: 3rpx solid currentColor; border-radius: 3rpx; }
+.glyph-shop::before { left: -5rpx; top: -11rpx; width: 40rpx; height: 12rpx; border: 3rpx solid currentColor; border-radius: 4rpx 4rpx 8rpx 8rpx; }
+.glyph-shop::after { left: 12rpx; bottom: 0; height: 16rpx; border-left: 3rpx solid currentColor; }
+.glyph-phone { width: 31rpx; height: 31rpx; border-left: 7rpx solid currentColor; border-bottom: 7rpx solid currentColor; border-radius: 4rpx 4rpx 4rpx 18rpx; transform: rotate(-42deg); }
+.glyph-briefcase { height: 27rpx; margin-top: 7rpx; border: 3rpx solid currentColor; border-radius: 5rpx; }
+.glyph-briefcase::before { left: 8rpx; top: -11rpx; width: 14rpx; height: 10rpx; border: 3rpx solid currentColor; border-bottom: 0; border-radius: 5rpx 5rpx 0 0; }
+.glyph-briefcase::after { left: -3rpx; right: -3rpx; top: 9rpx; border-top: 3rpx solid currentColor; }
+.glyph-cart-v2 { width: 38rpx; height: 31rpx; }
+.glyph-cart-v2::before { left: 7rpx; top: 4rpx; width: 29rpx; height: 21rpx; border: 3rpx solid currentColor; border-top: 0; border-radius: 3rpx 3rpx 8rpx 8rpx; transform: skewX(-7deg); }
+.glyph-cart-v2::after { left: 1rpx; top: 1rpx; width: 12rpx; height: 3rpx; border-radius: 3rpx; background: currentColor; }
+.glyph-cart-v2 view::before, .glyph-cart-v2 view::after { content: ''; position: absolute; bottom: 0; width: 7rpx; height: 7rpx; border-radius: 50%; background: currentColor; }
+.glyph-cart-v2 view::before { left: 12rpx; } .glyph-cart-v2 view::after { right: 1rpx; }
+.glyph-contacts-v2 { width: 39rpx; height: 36rpx; }
+.glyph-contacts-v2::before { left: 2rpx; top: 1rpx; width: 15rpx; height: 15rpx; border: 3rpx solid currentColor; border-radius: 50%; box-shadow: 20rpx 3rpx 0 -3rpx #edf0f8, 20rpx 3rpx 0 0 currentColor; }
+.glyph-contacts-v2::after { left: 0; bottom: 0; width: 24rpx; height: 16rpx; border: 3rpx solid currentColor; border-radius: 16rpx 16rpx 6rpx 6rpx; }
+.glyph-contacts-v2 view { position: absolute; right: 0; bottom: 1rpx; width: 18rpx; height: 14rpx; border: 3rpx solid currentColor; border-left: 0; border-radius: 0 14rpx 6rpx 0; }
+.glyph-headset-v2 { width: 38rpx; height: 38rpx; border: 3rpx solid currentColor; border-bottom-color: transparent; border-radius: 50% 50% 38% 38%; }
+.glyph-headset-v2::before, .glyph-headset-v2::after { top: 18rpx; width: 8rpx; height: 15rpx; border-radius: 5rpx; background: currentColor; }
+.glyph-headset-v2::before { left: -3rpx; } .glyph-headset-v2::after { right: -3rpx; }
+.glyph-headset-v2 view { position: absolute; right: 2rpx; bottom: -3rpx; width: 14rpx; height: 8rpx; border-bottom: 3rpx solid currentColor; border-radius: 0 0 10rpx 10rpx; }

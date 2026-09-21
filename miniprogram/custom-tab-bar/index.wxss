@@ -41,3 +41,22 @@
   font-size: 24rpx;
   font-weight: 700;
 }
+
+/* Calm, consistent line icons replace platform-dependent glyphs. */
+.tab-bar { height: 132rpx; padding-bottom: env(safe-area-inset-bottom); background: rgba(255,255,255,.97); box-shadow: 0 -8rpx 26rpx rgba(45,40,34,.045); }
+.tab-icon { position: relative; width: 46rpx; height: 46rpx; margin-bottom: 5rpx; color: currentColor; }
+.tab-icon::before, .tab-icon::after, .tab-icon-inner::before, .tab-icon-inner::after { content: ''; position: absolute; box-sizing: border-box; }
+.tab-icon-home::before { left: 6rpx; top: 17rpx; width: 34rpx; height: 25rpx; border: 3rpx solid currentColor; border-radius: 5rpx 5rpx 8rpx 8rpx; }
+.tab-icon-home::after { left: 7rpx; top: 5rpx; width: 32rpx; height: 32rpx; border-left: 4rpx solid currentColor; border-top: 4rpx solid currentColor; border-radius: 5rpx; transform: rotate(45deg); }
+.tab-icon-home .tab-icon-inner::before { left: 19rpx; bottom: 4rpx; width: 10rpx; height: 16rpx; border-radius: 6rpx 6rpx 0 0; background: currentColor; }
+.tab-icon-activities::before { left: 4rpx; right: 4rpx; top: 7rpx; bottom: 3rpx; border: 3rpx solid currentColor; border-radius: 8rpx; }
+.tab-icon-activities::after { left: 4rpx; right: 4rpx; top: 18rpx; border-top: 3rpx solid currentColor; }
+.tab-icon-activities .tab-icon-inner::before { left: 13rpx; top: 2rpx; width: 4rpx; height: 11rpx; border-radius: 4rpx; background: currentColor; box-shadow: 17rpx 0 0 currentColor; }
+.tab-icon-activities .tab-icon-inner::after { left: 13rpx; top: 26rpx; width: 6rpx; height: 6rpx; border-radius: 50%; background: currentColor; box-shadow: 14rpx 0 0 currentColor, 0 10rpx 0 currentColor, 14rpx 10rpx 0 currentColor; }
+.tab-icon-academy::before { left: 3rpx; top: 5rpx; width: 40rpx; height: 34rpx; border: 3rpx solid currentColor; border-radius: 8rpx; }
+.tab-icon-academy::after { left: 18rpx; top: 13rpx; width: 0; height: 0; border-top: 8rpx solid transparent; border-bottom: 8rpx solid transparent; border-left: 13rpx solid currentColor; }
+.tab-icon-academy .tab-icon-inner::before { left: 14rpx; bottom: 1rpx; width: 18rpx; height: 3rpx; border-radius: 3rpx; background: currentColor; }
+.tab-icon-user::before { left: 14rpx; top: 3rpx; width: 19rpx; height: 19rpx; border: 3rpx solid currentColor; border-radius: 50%; }
+.tab-icon-user::after { left: 6rpx; bottom: 2rpx; width: 36rpx; height: 21rpx; border: 3rpx solid currentColor; border-radius: 22rpx 22rpx 8rpx 8rpx; }
+.tab-item.active .tab-icon { transform: translateY(-2rpx); }
+.tab-emoji { display: none; }

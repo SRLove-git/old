@@ -1,10 +1,64 @@
 const { API_BASE } = require('./config.js')
 
-// 当前登录会员：真实项目里由登录态（openid 换取的会话）决定，这里先用固定演示账号。
-// 每个请求都会带上 x-user-id，服务端据此只返回本人的订单、报名人、地址等数据。
-const CURRENT_USER_ID = 'u1'
+const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v1'
+let authState = wx.getStorageSync(AUTH_STORAGE_KEY) || null
+let loginPromise = null
 
-function request(path, options = {}) {
+function getCurrentUserId() {
+  return authState && authState.user ? String(authState.user.id || '') : ''
+}
+
+function saveAuth(value) {
+  authState = value || null
+  if (authState) wx.setStorageSync(AUTH_STORAGE_KEY, authState)
+  else wx.removeStorageSync(AUTH_STORAGE_KEY)
+}
+
+function loginCode() {
+  return new Promise((resolve, reject) => {
+    wx.login({
+      timeout: 10000,
+      success: (result) => result.code ? resolve(result.code) : reject(new Error('微信未返回登录凭证')),
+      fail: (error) => reject(new Error(error.errMsg || '微信登录失败'))
+    })
+  })
+}
+
+function exchangeCode(code) {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: API_BASE + '/api/auth/wechat',
+      method: 'POST',
+      data: { code },
+      header: { 'Content-Type': 'application/json' },
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0) resolve(res.data.data)
+        else reject(new Error((res.data && res.data.message) || `登录失败(${res.statusCode})`))
+      },
+      fail: (error) => reject(new Error(error.errMsg || '登录服务不可用'))
+    })
+  })
+}
+
+function ensureLogin(force = false) {
+  const validUntil = Number(authState && authState.expiresAt)
+  const valid = authState && authState.token && getCurrentUserId() && validUntil > Date.now() + 60000
+  if (!force && valid) return Promise.resolve(authState)
+  if (loginPromise) return loginPromise
+  if (force) saveAuth(null)
+  loginPromise = loginCode()
+    .then(exchangeCode)
+    .then((result) => {
+      const expiresIn = Number(result.expiresIn || 0)
+      const next = { token: result.token, user: result.user, expiresIn, expiresAt: Date.now() + expiresIn * 1000 }
+      saveAuth(next)
+      return next
+    })
+    .finally(() => { loginPromise = null })
+  return loginPromise
+}
+
+function send(path, options, auth) {
   return new Promise((resolve, reject) => {
     wx.request({
       url: API_BASE + '/api' + path,
@@ -12,19 +66,34 @@ function request(path, options = {}) {
       data: options.data || {},
       header: {
         'Content-Type': 'application/json',
-        'x-user-id': CURRENT_USER_ID,
+        Authorization: `Bearer ${auth.token}`,
         ...(options.header || {})
       },
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0) {
           resolve(res.data.data)
         } else {
-          reject(new Error((res.data && res.data.message) || `请求失败(${res.statusCode})`))
+          const error = new Error((res.data && res.data.message) || `请求失败(${res.statusCode})`)
+          error.statusCode = res.statusCode
+          reject(error)
         }
       },
-      fail: (err) => reject(new Error(err.errMsg || '网络错误'))
+      fail: (error) => reject(new Error(error.errMsg || '网络错误'))
     })
   })
+}
+
+async function request(path, options = {}, retried = false) {
+  const auth = await ensureLogin()
+  try {
+    return await send(path, options, auth)
+  } catch (error) {
+    if (!retried && error.statusCode === 401) {
+      const refreshed = await ensureLogin(true)
+      return send(path, options, refreshed)
+    }
+    throw error
+  }
 }
 
 const api = {
@@ -34,4 +103,4 @@ const api = {
   del: (path) => request(path, { method: 'DELETE' })
 }
 
-module.exports = { api, CURRENT_USER_ID }
+module.exports = { api, ensureLogin, getCurrentUserId }

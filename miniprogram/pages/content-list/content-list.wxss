@@ -1,0 +1,19 @@
+.content-list-page { min-height: 100vh; padding: 28rpx 22rpx 100rpx; background: #f8f7f3; }
+.list-intro { padding: 30rpx 26rpx; border: 1rpx solid #e9e3da; border-radius: 26rpx; background: linear-gradient(135deg,#fff,#f6ede2); }
+.list-kicker { color: #9b8066; font-size: 19rpx; font-weight: 700; letter-spacing: 3rpx; }
+.list-title { margin-top: 8rpx; color: var(--color-ink); font-size: 40rpx; font-weight: 700; }
+.list-sub { margin-top: 7rpx; color: #747c78; font-size: 24rpx; }
+.post-list { margin-top: 22rpx; }
+.post-card { display: flex; gap: 20rpx; margin-bottom: 18rpx; padding: 18rpx; border: 1rpx solid #e9e5dd; border-radius: 24rpx; background: #fff; box-shadow: 0 8rpx 24rpx rgba(51,43,33,.045); }
+.post-cover-wrap { position: relative; flex: none; width: 210rpx; height: 154rpx; overflow: hidden; border-radius: 17rpx; background: #eee; }
+.post-cover { width: 100%; height: 100%; }
+.post-play { position: absolute; left: 50%; top: 50%; width: 56rpx; height: 56rpx; margin: -28rpx 0 0 -28rpx; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,.92); box-shadow: 0 4rpx 14rpx rgba(28,35,33,.14); }
+.post-play view { width: 0; height: 0; margin-left: 4rpx; border-top: 8rpx solid transparent; border-bottom: 8rpx solid transparent; border-left: 13rpx solid #40504b; }
+.post-copy { flex: 1; min-width: 0; padding: 2rpx 0; }
+.post-title { color: #2d3532; font-size: 28rpx; font-weight: 700; line-height: 1.42; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.post-summary { margin-top: 7rpx; color: #7f8682; font-size: 21rpx; line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.post-meta { display: flex; justify-content: space-between; gap: 10rpx; margin-top: 10rpx; color: #a0a4a1; font-size: 19rpx; }
+.content-empty { padding: 150rpx 30rpx; text-align: center; }
+.empty-mark { width: 88rpx; height: 88rpx; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f0e5d8; color: #a77950; font-size: 42rpx; font-family: serif; }
+.empty-title { margin-top: 20rpx; color: #37403c; font-size: 30rpx; font-weight: 700; }
+.empty-sub { margin-top: 7rpx; color: #969b98; font-size: 23rpx; }

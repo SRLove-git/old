@@ -18,6 +18,12 @@
     </view>
   </view>
 
+  <view class="activity-search">
+    <view class="activity-search-icon"></view>
+    <input class="activity-search-input" value="{{keyword}}" bindinput="onInput" confirm-type="search" placeholder="搜索活动名称、地点或关键词" placeholder-class="activity-search-placeholder" />
+    <text wx:if="{{keyword}}" class="activity-search-clear" bindtap="clearKeyword">×</text>
+  </view>
+
   <view wx:if="{{groups.length}}" class="date-groups">
     <view wx:for="{{groups}}" wx:key="key" wx:for-item="group" class="date-group">
       <view class="section-heading"><text class="heading-cn">{{group.label}}</text></view>
@@ -44,5 +50,5 @@
 
   <view wx:else class="empty"><view class="empty-icon">⌕</view><view class="empty-title">没有找到相关线下活动</view><view class="empty-sub">换个地区、时间或状态试试</view><button class="reset-button btn btn-primary btn-pill" bindtap="clearFilter">清空筛选</button></view>
 
-  <button class="share-fab" open-type="share">↗</button>
+  <button class="share-fab" open-type="share" aria-label="分享活动"><view class="share-mark"><text class="share-node node-top"></text><text class="share-node node-left"></text><text class="share-node node-right"></text></view></button>
 </view>

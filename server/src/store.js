@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { seed } from './seed.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DATA_FILE = path.join(__dirname, '..', 'data.json')
+const DATA_FILE = process.env.DATA_FILE
+  ? path.resolve(process.env.DATA_FILE)
+  : path.join(__dirname, '..', 'data.json')
 
 let db = null
 
@@ -1677,6 +1679,37 @@ export function joinMember(userId) {
   return { user: { ...user, ...memberIdentity(user) }, coupons: visibleCouponsFor(userId), alreadyMember: wasMember }
 }
 
+export function findOrCreateWechatCustomer(openid, unionid = '') {
+  const normalizedOpenId = String(openid || '').trim()
+  if (!normalizedOpenId) throw badRequest('微信 openid 不能为空')
+  let user = db.customers.find((item) => String(item.wechatOpenId || '') === normalizedOpenId)
+  if (!user && unionid) user = db.customers.find((item) => String(item.wechatUnionId || '') === String(unionid))
+  if (!user) {
+    user = {
+      id: `wx_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      name: '微信用户',
+      phone: '',
+      member: false,
+      balance: 0,
+      points: 0,
+      managerId: null,
+      isManager: false,
+      wechatOpenId: normalizedOpenId,
+      wechatUnionId: String(unionid || ''),
+      createdAt: nowText(),
+      lastLoginAt: nowText()
+    }
+    db.customers.push(user)
+    addLog('用户登录', `新微信用户 ${user.id} 首次登录`)
+  } else {
+    user.wechatOpenId = normalizedOpenId
+    if (unionid) user.wechatUnionId = String(unionid)
+    user.lastLoginAt = nowText()
+  }
+  save()
+  return { id: user.id, name: user.name || '微信用户', member: Boolean(user.member) }
+}
+
 export function purchaseLive(liveId, userId) {
   const live = (db.lives || []).find((l) => String(l.id) === String(liveId))
   if (!live) throw new Error('课程不存在')
@@ -1741,28 +1774,75 @@ export function purchaseLive(liveId, userId) {
   return card
 }
 
-export function checkInCard(cardId, data = {}) {
+function checkInCardRecord(cardId, data = {}, options = {}) {
   const card = db.cards.find((item) => String(item.id) === String(cardId))
   if (!card) throw new Error('计次卡不存在')
+  if (options.userId && String(card.userId) !== String(options.userId)) throw forbidden('无权使用其他会员的计次卡')
   if (Number(card.remain || 0) <= 0) throw new Error('计次卡剩余次数不足')
   card.attendanceRecords = Array.isArray(card.attendanceRecords) ? card.attendanceRecords : []
+  const checkedAt = nowText()
+  const date = String(data.date || checkedAt.slice(0, 10)).trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw badRequest('签到日期格式不正确')
   const sessionId = String(data.sessionId || '')
-  const existing = sessionId ? card.attendanceRecords.find((item) => String(item.id) === sessionId) : null
+  const existing = sessionId
+    ? card.attendanceRecords.find((item) => String(item.id) === sessionId)
+    : card.attendanceRecords.find((item) => String(item.date) === date)
   if (existing && existing.status === 'checked') throw new Error('本节课程已签到')
   const record = existing || {
     id: sessionId || `att${Date.now()}`,
-    date: data.date || new Date().toISOString().slice(0, 10),
+    date,
     time: data.time || '',
     lesson: data.lesson || card.courseName || card.title,
     teacher: data.teacher || card.teacher || '',
     location: data.location || ''
   }
   record.status = 'checked'
-  record.checkedAt = new Date().toLocaleString('zh-CN', { hour12: false })
+  record.checkedAt = checkedAt
+  record.checkinType = options.type || 'self'
+  record.memberName = String(data.memberName || '')
+  record.memberPhone = normalizePhone(data.memberPhone)
+  record.latitude = data.latitude === '' || data.latitude == null ? null : Number(data.latitude)
+  record.longitude = data.longitude === '' || data.longitude == null ? null : Number(data.longitude)
+  record.accuracy = data.accuracy === '' || data.accuracy == null ? null : Number(data.accuracy)
+  record.operator = String(data.operator || '')
+  record.makeupReason = String(data.reason || '').trim()
   if (!existing) card.attendanceRecords.unshift(record)
   card.remain = Math.max(0, Number(card.remain || 0) - 1)
   save()
   return card
+}
+
+export function selfCheckInCard(cardId, userId, data = {}) {
+  const customer = db.customers.find((item) => String(item.id) === String(userId))
+  if (!customer) throw new Error('会员不存在')
+  const latitude = Number(data.latitude)
+  const longitude = Number(data.longitude)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw badRequest('请先获取签到位置')
+  const memberName = String(customer.name && customer.name !== '微信用户' ? customer.name : data.memberName || '').trim()
+  const memberPhone = normalizePhone(customer.phone || data.memberPhone)
+  if (!memberName) throw badRequest('请补充签到人姓名')
+  if (!/^1\d{10}$/.test(memberPhone)) throw badRequest('请补充正确的手机号')
+  return checkInCardRecord(cardId, {
+    ...data,
+    memberName,
+    memberPhone,
+    location: data.location || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+  }, { userId, type: 'self' })
+}
+
+export function makeupCheckInCard(cardId, data = {}) {
+  const reason = String(data.reason || '').trim()
+  if (!reason) throw badRequest('请填写补签原因')
+  return checkInCardRecord(cardId, {
+    ...data,
+    operator: data.operator || '后台管理员',
+    location: data.location || '后台补签'
+  }, { type: 'makeup' })
+}
+
+// 兼容其他内部调用；管理后台使用独立的补签接口。
+export function checkInCard(cardId, data = {}) {
+  return checkInCardRecord(cardId, data, { type: 'makeup' })
 }
 
 export function bindCustomerByCodeOrId(userId, code, managerId, source) {

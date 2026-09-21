@@ -2,6 +2,28 @@
 
 基于 Node.js + Express，数据用 `data.json` 持久化（首次运行自动用 `src/seed.js` 种子数据生成）。
 
+## 微信小程序登录
+
+小程序 AppID 已配置为 `wx5d1ccdf824e45e73`。启动生产服务前必须在服务端环境变量中设置：
+
+```powershell
+$env:WECHAT_APPID='wx5d1ccdf824e45e73'
+$env:WECHAT_APP_SECRET='从微信公众平台获取的 AppSecret'
+$env:SESSION_SECRET='长度足够的随机会话签名密钥'
+npm start
+```
+
+不要把 AppSecret 或 `SESSION_SECRET` 写进小程序代码、配置文件或 Git。登录流程为：小程序调用 `wx.login`，后端使用临时 code 调用微信 `jscode2session`，再向小程序返回签名会话 Token。
+
+仅本地接口联调时，可显式开启模拟登录：
+
+```powershell
+$env:WECHAT_LOGIN_MOCK='true'
+npm start
+```
+
+模拟登录在 `NODE_ENV=production` 时自动禁用。
+
 ## 启动
 
 ```bash

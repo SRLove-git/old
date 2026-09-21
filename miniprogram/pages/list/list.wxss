@@ -4,10 +4,16 @@
 .filter-item.on { color: var(--color-primary); font-weight: 700; }
 .filter-caret { font-size: 20rpx; transform: rotate(45deg); }
 .filter-panel { position: sticky; top: 98rpx; z-index: 29; padding: 22rpx 24rpx; background: #fff; border-bottom: 1rpx solid var(--color-border); box-shadow: 0 8rpx 25rpx rgba(51,43,33,.08); }
+.activity-search { height: 82rpx; display: flex; align-items: center; margin: 24rpx 22rpx 0; padding: 0 22rpx; border: 1rpx solid #e5e0d8; border-radius: 22rpx; background: #f7f5f1; }
+.activity-search-icon { position: relative; flex: none; width: 27rpx; height: 27rpx; margin-right: 17rpx; border: 3rpx solid #68736f; border-radius: 50%; }
+.activity-search-icon::after { content: ''; position: absolute; right: -10rpx; bottom: -7rpx; width: 14rpx; height: 3rpx; border-radius: 3rpx; background: #68736f; transform: rotate(45deg); }
+.activity-search-input { flex: 1; height: 82rpx; color: #2f3734; font-size: 27rpx; }
+.activity-search-placeholder { color: #989d9a; }
+.activity-search-clear { flex: none; width: 48rpx; color: #8f9491; font-size: 40rpx; text-align: right; }
 .option-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16rpx; }
 .option { padding: 16rpx 10rpx; border: 2rpx solid transparent; border-radius: 14rpx; background: var(--color-fill); color: var(--color-text-2); text-align: center; font-size: 25rpx; }
 .option.active { border-color: var(--color-primary); background: var(--color-primary-light); color: var(--color-primary-text); font-weight: 700; }
-.date-groups { padding: 28rpx 22rpx 10rpx; }
+.date-groups { padding: 24rpx 22rpx 10rpx; }
 .date-group { margin-bottom: 34rpx; }
 .activity-card { margin-bottom: 16rpx; overflow: hidden; border-radius: 26rpx; background: #fff; box-shadow: 0 8rpx 25rpx rgba(51,43,33,.08); }
 .card-main { display: flex; gap: 22rpx; padding: 0; }
@@ -37,4 +43,10 @@
 .empty-title { margin-top: 18rpx; font-size: 31rpx; font-weight: 700; }
 .empty-sub { margin-top: 8rpx; color: var(--color-text-3); font-size: 24rpx; }
 .reset-button { display: inline-flex; margin-top: 28rpx; }
-.share-fab { position: fixed; right: 24rpx; bottom: 150rpx; z-index: 40; width: 82rpx; height: 82rpx; border-radius: 50%; background: var(--color-ink); color: #fff; font-size: 42rpx; line-height: 82rpx; text-align: center; box-shadow: 0 10rpx 25rpx rgba(51,43,33,.28); }
+.share-fab { position: fixed; right: 24rpx; bottom: 150rpx; z-index: 40; width: 92rpx; height: 92rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e1d9ce; border-radius: 50%; background: rgba(255,255,255,.97); box-shadow: 0 10rpx 28rpx rgba(51,43,33,.15); }
+.share-mark { position: relative; width: 48rpx; height: 48rpx; }
+.share-mark::before, .share-mark::after { content: ''; position: absolute; left: 16rpx; width: 24rpx; height: 3rpx; border-radius: 3rpx; background: #56665f; transform-origin: left center; }
+.share-mark::before { top: 17rpx; transform: rotate(-28deg); }
+.share-mark::after { top: 29rpx; transform: rotate(28deg); }
+.share-node { position: absolute; z-index: 2; width: 13rpx; height: 13rpx; border: 3rpx solid #56665f; border-radius: 50%; background: #fff; }
+.node-top { right: 0; top: 2rpx; } .node-left { left: 2rpx; top: 18rpx; } .node-right { right: 0; bottom: 2rpx; }

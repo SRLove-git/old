@@ -88,6 +88,8 @@ const cardCustomerId = ref('')
 const cardProfile = ref(null)
 const cardList = ref([])
 const cardLoading = ref(false)
+const makeupTarget = ref(null)
+const makeupForm = ref({ date: '', time: '', reason: '' })
 
 const kw = ref('')
 const orderStatusFilter = ref('全部')
@@ -859,28 +861,42 @@ async function loadCardCustomer(id) {
   }
 }
 
-function confirmCheckin(card) {
+function openMakeup(card) {
   const remain = Number(card.remain || 0)
   if (remain <= 0) {
     Message.warning('该计次卡已无剩余次数')
     return
   }
-  Modal.confirm({
-    title: '计次卡签到',
-    content: `确认为「${card.title}」核销 1 次？（当前剩余 ${remain} 次）`,
-    okText: '确认签到',
-    cancelText: '取消',
-    onOk: () => doCheckin(card)
-  })
+  const now = new Date()
+  const pad = (value) => String(value).padStart(2, '0')
+  makeupTarget.value = card
+  makeupForm.value = {
+    date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    reason: ''
+  }
 }
 
-async function doCheckin(card) {
+async function submitMakeup() {
+  const card = makeupTarget.value
+  const form = makeupForm.value
+  if (!card) return
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(form.date || ''))) return Message.warning('请填写正确的补签日期')
+  if (!String(form.reason || '').trim()) return Message.warning('请填写补签原因')
   error.value = ''
   try {
-    const updated = await api.post(`/cards/${card.id}/checkin`, {})
+    const updated = await api.post(`/cards/${card.id}/makeup-checkin`, {
+      date: form.date,
+      time: form.time,
+      reason: String(form.reason).trim(),
+      memberName: cardProfile.value?.user?.name || '',
+      memberPhone: cardProfile.value?.user?.phone || '',
+      operator: '后台管理员'
+    })
     const idx = cardList.value.findIndex((c) => String(c.id) === String(card.id))
     if (idx >= 0) cardList.value[idx] = updated
-    Message.success('签到成功')
+    makeupTarget.value = null
+    Message.success('补签成功')
   } catch (e) {
     error.value = e.message
     Message.error(e.message)
@@ -1389,7 +1405,7 @@ function exportCsv(filename, rows) {
                 </div>
               </template>
             </a-card>
-            <a-card :bordered="false" title="计次卡核销" style="margin-top: 16px">
+            <a-card :bordered="false" title="课程补签与核销" style="margin-top: 16px">
               <div class="toolbar">
                 <a-select
                   v-model="cardCustomerId"
@@ -1407,7 +1423,7 @@ function exportCsv(filename, rows) {
                 <a-table v-else :columns="cardColumns" :data="cardList" :pagination="false" row-key="id">
                   <template #remain="{ record }">{{ record.remain }} / {{ record.total }}</template>
                   <template #actions="{ record }">
-                    <a-button size="small" type="primary" @click="confirmCheckin(record)">签到</a-button>
+                    <a-button size="small" type="primary" @click="openMakeup(record)">补签</a-button>
                   </template>
                 </a-table>
               </a-spin>
@@ -1833,6 +1849,27 @@ function exportCsv(filename, rows) {
       </a-layout-content>
     </a-layout>
   </a-layout>
+
+  <a-modal
+    v-if="makeupTarget"
+    :visible="true"
+    title="课程补签"
+    :width="480"
+    @cancel="makeupTarget = null"
+  >
+    <a-alert type="warning" style="margin-bottom: 16px">
+      补签会核销 1 次课程，并保留操作人、补签日期和原因。
+    </a-alert>
+    <a-form :model="makeupForm" layout="vertical">
+      <a-form-item label="课程"><a-input :model-value="makeupTarget.title" disabled /></a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="补签日期" required><a-input v-model="makeupForm.date" placeholder="YYYY-MM-DD" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="课程时间"><a-input v-model="makeupForm.time" placeholder="如 14:00-15:30" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="补签原因" required><a-textarea v-model="makeupForm.reason" :max-length="100" show-word-limit placeholder="例如：会员现场签到失败，经工作人员核实到场" /></a-form-item>
+    </a-form>
+    <template #footer><a-button @click="makeupTarget = null">取消</a-button><a-button type="primary" @click="submitMakeup">确认补签</a-button></template>
+  </a-modal>
 
   <a-modal
     v-if="activityForm"

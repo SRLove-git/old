@@ -1,6 +1,6 @@
 <view class="profile-page">
   <view class="profile-hero">
-    <view class="bubble bubble-one">S</view><view class="bubble bubble-two">Y</view><view class="bubble bubble-three">L</view>
+    <view class="profile-watermark"><text>岁</text><view></view></view>
     <view class="user-row" bindtap="goMemberCode">
       <view class="avatar"><text>悦</text></view>
       <view class="profile-info">
@@ -8,7 +8,7 @@
         <view class="phone">{{user.phone || '点击完善个人信息'}}</view>
         <view class="member-pill">金穗会员 · 成长值 {{user.points || 0}}</view>
       </view>
-      <view class="code-entry"><text class="code-icon">🔳</text><text>会员码</text></view>
+      <view class="code-entry"><view class="code-icon"><view></view><view></view><view></view><view></view></view><text>会员码</text></view>
     </view>
     <view class="member-banner" bindtap="goMemberCode">
       <text class="diamond">◆</text><text class="banner-copy">会员价 · 专属优惠 · 活动优先报名</text><text class="banner-link">查看权益 ›</text>
@@ -25,32 +25,32 @@
   <view class="order-panel panel">
     <view class="panel-head"><text class="panel-title heading-cn">我的订单</text><text class="panel-more" data-url="/pages/orders/orders" bindtap="go">查看全部订单 ›</text></view>
     <view class="order-grid">
-      <view class="order-state" data-url="/pages/orders/orders?status=待付款" bindtap="go"><text class="line-icon">💳</text><text>待付款</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待出行" bindtap="go"><text class="line-icon">🗓️</text><text>待出行</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待完成" bindtap="go"><text class="line-icon">✅</text><text>待完成</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待评价" bindtap="go"><text class="line-icon">⭐</text><text>待评价</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=退款售后" bindtap="go"><text class="line-icon">↩️</text><text>退款/售后</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待付款" bindtap="go"><view class="line-icon icon-wallet"></view><text>待付款</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待出行" bindtap="go"><view class="line-icon icon-calendar"></view><text>待出行</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待完成" bindtap="go"><view class="line-icon icon-check"></view><text>待完成</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待评价" bindtap="go"><view class="line-icon icon-star"></view><text>待评价</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=退款售后" bindtap="go"><view class="line-icon icon-return"></view><text>退款/售后</text></view>
     </view>
   </view>
 
   <view class="shortcut-panel panel">
-    <view class="shortcut-row" data-url="/pages/appointments/appointments" bindtap="go"><text class="shortcut-icon">📋</text><text class="shortcut-text">我的预约单</text><text class="arrow">›</text></view>
-    <view class="shortcut-row" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="shortcut-icon">🎫</text><text class="shortcut-text">课程核销与签到</text><text class="arrow">›</text></view>
+    <view class="shortcut-row" data-url="/pages/appointments/appointments" bindtap="go"><view class="shortcut-icon icon-clipboard"></view><text class="shortcut-text">我的预约单</text><text class="arrow">›</text></view>
+    <view class="shortcut-row" data-url="/pages/card-attendance/card-attendance" bindtap="go"><view class="shortcut-icon icon-ticket"></view><text class="shortcut-text">课程核销与签到</text><text class="arrow">›</text></view>
   </view>
 
   <view class="panel services-panel">
     <view class="panel-title heading-cn">常用服务</view>
     <view class="service-grid">
-      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><text class="service-icon tone-0">🛒</text><text>购物车</text></view>
-      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><text class="service-icon tone-1">🎟️</text><text>优惠券</text></view>
-      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><text class="service-icon tone-2">👥</text><text>常用报名人</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon tone-3">🎁</text><text>赠品中心</text></view>
-      <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><text class="service-icon tone-4">📍</text><text>收货地址</text></view>
-      <view class="service-item" bindtap="goAcademy"><text class="service-icon tone-0">📚</text><text>我的课程</text></view>
-      <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><text class="service-icon tone-1">📝</text><text>学习记录</text></view>
-      <view wx:if="{{isManager}}" class="service-item" data-url="/pages/manager/manager" bindtap="go"><text class="service-icon tone-2">🏪</text><text>主理人工作台</text></view>
-      <view class="service-item" bindtap="showService"><text class="service-icon tone-3">📞</text><text>联系商家</text></view>
-      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><text class="service-icon tone-4">🤝</text><text>申请服务商</text></view>
+      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><view class="service-icon tone-0"><view class="service-glyph glyph-cart-v2"><view></view></view></view><text>购物车</text></view>
+      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-coupon"></view></view><text>优惠券</text></view>
+      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-contacts-v2"><view></view></view></view><text>常用报名人</text></view>
+      <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><view class="service-glyph glyph-gift"></view></view><text>赠品中心</text></view>
+      <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-pin"></view></view><text>收货地址</text></view>
+      <view class="service-item" bindtap="goAcademy"><view class="service-icon tone-0"><view class="service-glyph glyph-book"></view></view><text>我的课程</text></view>
+      <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-note"></view></view><text>学习记录</text></view>
+      <view wx:if="{{isManager}}" class="service-item" data-url="/pages/manager/manager" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-shop"></view></view><text>主理人工作台</text></view>
+      <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><view class="service-glyph glyph-headset-v2"><view></view></view></view><text>联系商家</text></view>
+      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-briefcase"></view></view><text>申请服务商</text></view>
     </view>
   </view>
 
@@ -85,7 +85,7 @@
     <scroll-view scroll-x class="recommend-scroll" enhanced show-scrollbar="{{false}}">
       <view class="recommend-row">
         <view wx:for="{{products}}" wx:key="id" class="recommend-item" data-id="{{item.id}}" bindtap="goDetail">
-          <view class="recommend-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
+          <image class="recommend-cover" src="{{item.coverImage || '/assets/product-tumbler-v2.jpg'}}" mode="aspectFill" />
           <view class="recommend-name">{{item.title}}</view>
           <view class="recommend-price">¥{{item.memberPrice}} <text class="recommend-price-note">会员价</text></view>
         </view>

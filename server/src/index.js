@@ -1,10 +1,15 @@
 import express from 'express'
 import cors from 'cors'
+import crypto from 'node:crypto'
 import * as store from './store.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin-token'
+const WECHAT_APPID = process.env.WECHAT_APPID || 'wx5d1ccdf824e45e73'
+const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET || ''
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-local-session-secret')
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
 
 app.use(cors())
 app.use(express.json())
@@ -21,11 +26,44 @@ function isAdminRequest(req) {
   return req.headers['x-admin-token'] === ADMIN_TOKEN
 }
 
-// 会员身份：小程序每个请求都带 x-user-id，用于只返回本人的数据
+function encodeSession(payload) {
+  if (!SESSION_SECRET) throw httpError(503, '服务端未配置 SESSION_SECRET')
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
+  return `${body}.${signature}`
+}
+
+function decodeSession(token) {
+  if (!token || !SESSION_SECRET) return null
+  const [body, signature] = String(token).split('.')
+  if (!body || !signature) return null
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
+  const left = Buffer.from(signature)
+  const right = Buffer.from(expected)
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
+    if (!payload.userId || !payload.exp || Number(payload.exp) <= Math.floor(Date.now() / 1000)) return null
+    return payload
+  } catch (e) {
+    return null
+  }
+}
+
+function sessionFromRequest(req) {
+  const authorization = String((req.headers && req.headers.authorization) || '')
+  if (!authorization.startsWith('Bearer ')) return null
+  return decodeSession(authorization.slice(7).trim())
+}
+
+// 会员身份优先由签名会话解析；x-user-id 仅保留给非生产环境的历史联调。
 function requestUserId(req) {
-  const raw = (req.headers && req.headers['x-user-id'])
+  const session = sessionFromRequest(req)
+  if (session) return String(session.userId)
+  const legacyAllowed = process.env.NODE_ENV !== 'production'
+  const raw = legacyAllowed && ((req.headers && req.headers['x-user-id'])
     || (req.query && req.query.userId)
-    || (req.body && req.body.userId)
+    || (req.body && req.body.userId))
   return String(raw == null ? '' : raw).trim()
 }
 
@@ -39,7 +77,7 @@ function httpError(status, message) {
 function requireUser(req, targetUserId) {
   if (isAdminRequest(req)) return true
   const caller = requestUserId(req)
-  if (!caller) throw httpError(401, '缺少用户身份（x-user-id）')
+  if (!caller) throw httpError(401, '登录已失效，请重新登录')
   if (String(targetUserId == null ? '' : targetUserId) !== caller) throw httpError(403, '无权访问其他会员的数据')
   return true
 }
@@ -69,6 +107,37 @@ const wrap = (fn) => (req, res) => {
     res.status(status).json({ code: status, message: e.message })
   }
 }
+
+// 微信静默登录：小程序只提交 wx.login 得到的临时 code，AppSecret 始终只保留在服务端。
+app.post('/api/auth/wechat', async (req, res) => {
+  try {
+    const code = String((req.body && req.body.code) || '').trim()
+    if (!code) throw httpError(400, '缺少微信登录 code')
+    let openid = ''
+    let unionid = ''
+    if (process.env.WECHAT_LOGIN_MOCK === 'true' && process.env.NODE_ENV !== 'production') {
+      openid = `mock_${crypto.createHash('sha256').update(code).digest('hex').slice(0, 24)}`
+    } else {
+      if (!WECHAT_APP_SECRET) throw httpError(503, '服务端未配置 WECHAT_APP_SECRET')
+      const params = new URLSearchParams({ appid: WECHAT_APPID, secret: WECHAT_APP_SECRET, js_code: code, grant_type: 'authorization_code' })
+      const response = await fetch(`https://api.weixin.qq.com/sns/jscode2session?${params.toString()}`)
+      const result = await response.json()
+      if (!response.ok || result.errcode || !result.openid) {
+        const message = result.errmsg || `微信登录失败(${response.status})`
+        throw httpError(401, message)
+      }
+      openid = result.openid
+      unionid = result.unionid || ''
+    }
+    const user = store.findOrCreateWechatCustomer(openid, unionid)
+    const now = Math.floor(Date.now() / 1000)
+    const token = encodeSession({ userId: user.id, iat: now, exp: now + SESSION_TTL_SECONDS })
+    res.json({ code: 0, data: { token, expiresIn: SESSION_TTL_SECONDS, user } })
+  } catch (e) {
+    const status = e && e.status ? e.status : 500
+    res.status(status).json({ code: status, message: e.message || '登录失败' })
+  }
+})
 
 // 首页数据
 app.get('/api/home', wrap(() => {
@@ -324,7 +393,12 @@ app.post('/api/members/join', wrap((req) => {
   requireUser(req, userId)
   return store.joinMember(userId)
 }))
-app.post('/api/cards/:id/checkin', adminAuth, wrap((req) => store.checkInCard(req.params.id, req.body)))
+app.post('/api/cards/:id/checkin', wrap((req) => {
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return store.selfCheckInCard(req.params.id, userId, req.body)
+}))
+app.post('/api/cards/:id/makeup-checkin', adminAuth, wrap((req) => store.makeupCheckInCard(req.params.id, req.body)))
 app.post('/api/customers/:id/bind', wrap((req) => {
   requireUser(req, req.params.id)
   return store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)
@@ -338,7 +412,7 @@ app.post('/api/customers/:id/unbind-apply', wrap((req) => {
   return store.applyUnbind(req.params.id, req.body.reason)
 }))
 app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id, {
-  userId: req.query.userId,
+  userId: isAdminRequest(req) ? req.query.userId : requestUserId(req),
   isAdmin: isAdminRequest(req)
 })))
 
@@ -370,7 +444,7 @@ app.post('/api/withdraws', wrap((req) => {
   // 只能为绑定了自己的主理人账号发起提现，避免替别人锁单
   if (!isAdminRequest(req)) {
     const caller = requestUserId(req)
-    if (!caller) throw httpError(401, '缺少用户身份（x-user-id）')
+    if (!caller) throw httpError(401, '登录已失效，请重新登录')
     const own = store.findManagerByUser(caller)
     if (!own || String(own.id) !== String(managerId)) throw httpError(403, '只能为自己的主理人账号发起提现')
   }
@@ -409,4 +483,5 @@ store.init()
 app.listen(PORT, () => {
   console.log(`岁悦里后端已启动：http://127.0.0.1:${PORT}`)
   console.log(`管理员 Token：${ADMIN_TOKEN}`)
+  console.log(`微信登录 AppID：${WECHAT_APPID}（AppSecret ${WECHAT_APP_SECRET ? '已配置' : '未配置'}）`)
 })

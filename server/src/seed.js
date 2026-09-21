@@ -88,6 +88,7 @@ const products = [
     category: 5,
     title: '岁悦里定制保温杯 · 便携款',
     cover: '🥤',
+    coverImage: '/assets/product-tumbler-v2.jpg',
     coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)',
     price: 69,
     memberPrice: 59,

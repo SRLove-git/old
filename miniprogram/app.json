@@ -6,6 +6,7 @@
     "pages/list/list",
     "pages/detail/detail",
     "pages/content-detail/content-detail",
+    "pages/content-list/content-list",
     "pages/merchant-shop/merchant-shop",
     "pages/booking/booking",
     "pages/appointments/appointments",
@@ -32,6 +33,14 @@
     "backgroundColor": "#faf9f6",
     "backgroundTextStyle": "light"
   },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于课程签到时确认您的到场位置"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
   "tabBar": {
     "custom": true,
     "color": "#6f747b",

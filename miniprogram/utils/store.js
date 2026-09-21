@@ -1,5 +1,5 @@
-// 登录会员身份由 request.js 统一携带（请求头 x-user-id），这里复用同一个常量
-const { api, CURRENT_USER_ID } = require('./request.js')
+// 登录会员身份由 request.js 的微信会话统一管理。
+const { api, ensureLogin, getCurrentUserId: authUserId } = require('./request.js')
 
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
@@ -97,7 +97,7 @@ function couponApplicable(coupon, activity, amount, userId) {
   if (!coupon || coupon.used) return false
   // 入会赠送券等带 welcomeFor 的券只属于指定会员
   const owner = coupon.welcomeFor ? String(coupon.welcomeFor) : ''
-  if (owner && owner !== String(userId == null ? CURRENT_USER_ID : userId)) return false
+  if (owner && owner !== String(userId == null ? authUserId() : userId)) return false
   if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
   if (coupon.minAmount && amount < coupon.minAmount) return false
   if (coupon.type === 3 && coupon.scopeCategory && activity.category !== coupon.scopeCategory) return false
@@ -143,9 +143,11 @@ async function ready() {
   if (loaded) return cache
   wx.showLoading({ title: '加载中', mask: true })
   try {
+    await ensureLogin()
+    const currentUserId = authUserId()
     const [home, profile, orders, participants, reviews, managers] = await Promise.all([
       api.get('/home'),
-      api.get(`/users/${CURRENT_USER_ID}`),
+      api.get(`/users/${currentUserId}`),
       api.get('/orders'),
       api.get('/participants'),
       api.get('/reviews'),
@@ -176,7 +178,7 @@ async function ready() {
     cache.managers = managers
     cache.lives = []
     try {
-      cache.lives = await api.get(`/lives?userId=${CURRENT_USER_ID}`)
+      cache.lives = await api.get(`/lives?userId=${currentUserId}`)
     } catch (e) {
       // 后端未部署直播接口时静默降级为空列表，不影响其它功能
     }
@@ -356,11 +358,11 @@ function getOwnManager() {
 }
 
 function getCurrentUserId() {
-  return CURRENT_USER_ID
+  return authUserId()
 }
 
 async function joinMember() {
-  const result = await api.post('/members/join', { userId: CURRENT_USER_ID })
+  const result = await api.post('/members/join', { userId: authUserId() })
   cache.user = result.user
   cache.coupons = result.coupons || cache.coupons
   return result
@@ -398,7 +400,7 @@ async function confirmPendingBind() {
   const source = pendingBindSource || 2
   pendingBindManagerId = null
   pendingBindSource = null
-  const manager = await api.post(`/customers/${CURRENT_USER_ID}/bind`, { managerId, source })
+  const manager = await api.post(`/customers/${authUserId()}/bind`, { managerId, source })
   cache.boundManager = manager
   return manager
 }
@@ -409,18 +411,18 @@ function cancelPendingBind() {
 }
 
 async function bindByCode(code) {
-  const manager = await api.post(`/customers/${CURRENT_USER_ID}/bind`, { code, source: 3 })
+  const manager = await api.post(`/customers/${authUserId()}/bind`, { code, source: 3 })
   cache.boundManager = manager
   return manager
 }
 
 async function unbindManager() {
-  await api.post(`/customers/${CURRENT_USER_ID}/unbind`, { reason: '客户主动解除' })
+  await api.post(`/customers/${authUserId()}/unbind`, { reason: '客户主动解除' })
   cache.boundManager = null
 }
 
 async function createOrder(payload) {
-  const order = await api.post('/orders', { ...payload, userId: CURRENT_USER_ID })
+  const order = await api.post('/orders', { ...payload, userId: authUserId() })
   cache.orders.unshift(order)
   if (payload.couponId) {
     const coupon = cache.coupons.find((c) => String(c.id) === String(payload.couponId))
@@ -481,7 +483,7 @@ async function deleteParticipant(id) {
 }
 
 async function saveAddress(address) {
-  const addr = await api.post('/addresses', { ...address, userId: CURRENT_USER_ID })
+  const addr = await api.post('/addresses', { ...address, userId: authUserId() })
   if (!cache.addresses.some((a) => a.id === addr.id)) cache.addresses.push(addr)
   return addr
 }
@@ -499,13 +501,13 @@ async function deleteAddress(id) {
 }
 
 async function unbindApply(reason) {
-  const application = await api.post(`/customers/${CURRENT_USER_ID}/unbind-apply`, { reason })
+  const application = await api.post(`/customers/${authUserId()}/unbind-apply`, { reason })
   cache.pendingUnbind = application
   return application
 }
 
 async function purchaseLive(liveId) {
-  const card = await api.post(`/lives/${liveId}/purchase`, { userId: CURRENT_USER_ID })
+  const card = await api.post(`/lives/${liveId}/purchase`, { userId: authUserId() })
   if (card && !cache.cards.some((c) => String(c.id) === String(card.id))) cache.cards.push(card)
   return card
 }
@@ -593,7 +595,7 @@ async function submitManagerApply(form) {
 
 async function loadManagerDashboard(managerId) {
   // 带上当前登录会员身份，服务端只允许主理人查看自己的工作台
-  const dash = await api.get(`/managers/${managerId}/dashboard?userId=${CURRENT_USER_ID}`)
+  const dash = await api.get(`/managers/${managerId}/dashboard?userId=${authUserId()}`)
   cache.managerView = dash.manager
   cache.managerCustomers = dash.customers
   cache.commissions = dash.commissions
