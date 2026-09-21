@@ -101,7 +101,7 @@ Page({
       memberSaving: Math.max(0, Number(activity.price || activity.originalPrice || 0) - Number(activity.memberPrice || 0)),
       serviceText: activity.category === 5 ? '支持配送 · 收货后可申请售后' : (activity.sellType === 'sku' ? '规格可选 · 下单后客服确认' : '线下服务 · 凭订单签到核销'),
       refundText: store.refundRuleText(activity.refundRule),
-      buyNowText: activity.category === 5 ? '立即购买' : '立即报名',
+      buyNowText: '立即购买',
       selectedSkuId: hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
       selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
     })

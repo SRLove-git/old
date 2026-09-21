@@ -50,5 +50,5 @@
 
   <view wx:else class="empty"><view class="empty-icon">⌕</view><view class="empty-title">没有找到相关线下活动</view><view class="empty-sub">换个地区、时间或状态试试</view><button class="reset-button btn btn-primary btn-pill" bindtap="clearFilter">清空筛选</button></view>
 
-  <button class="share-fab" open-type="share" aria-label="分享活动"><view class="share-mark"><text class="share-node node-top"></text><text class="share-node node-left"></text><text class="share-node node-right"></text></view></button>
+  <button class="share-fab" open-type="share" aria-label="分享活动"><view class="share-fab-circle"><view class="share-mark"><text class="share-node node-top"></text><text class="share-node node-left"></text><text class="share-node node-right"></text></view></view></button>
 </view>

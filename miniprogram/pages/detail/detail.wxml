@@ -15,11 +15,12 @@
   <view wx:if="{{tab === 'product'}}" class="tab-panel product-panel">
     <view class="price-line"><text class="currency">¥</text><text class="price">{{activity.memberPrice}}</text><text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text></view>
     <view class="member-banner" bindtap="goProfile"><view><text class="member-mark">会员</text><text>入会得优惠券，本单再减</text><text class="member-save">¥{{memberSaving}}</text></view><text class="member-link">立即入会 ›</text></view>
-    <view class="title-share-row"><view class="product-title">{{activity.title}}</view><button class="share-button" open-type="share"><text class="share-icon">↗</text><text>分享</text></button></view>
+    <view class="title-share-row"><view class="product-title">{{activity.title}}</view><button class="share-button" open-type="share" aria-label="分享商品"><view class="detail-share-circle"><view class="detail-share-mark"><text class="detail-share-node detail-node-top"></text><text class="detail-share-node detail-node-left"></text><text class="detail-share-node detail-node-right"></text></view></view></button></view>
     <view class="product-sub"><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
     <view wx:if="{{refundText}}" class="info-row"><text class="info-label">退改</text><text class="info-value">{{refundText}}</text></view>
+    <button class="detail-buy-button btn btn-ink btn-block" bindtap="openSku">立即购买</button>
 
     <view wx:if="{{venues.length}}" class="section-card venue-card">
       <view class="section-title-row"><text>活动场地（{{venues.length}}个可选）</text><text class="muted-link">下单时选择</text></view>
@@ -76,7 +77,7 @@
     <button class="bottom-icon" bindtap="showService"><text>◌</text><text>客服</text></button>
     <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><text>⌂</text><text>店铺</text></button>
     <button class="bottom-icon" bindtap="goCart"><text>▢</text><text>购物车</text></button>
-    <view class="buy-actions"><button class="add-cart btn btn-ghost btn-pill" bindtap="addToCart">加入购物车</button><button class="buy-now btn btn-ink btn-pill" bindtap="openSku">{{buyNowText}}</button></view>
+    <view class="buy-actions"><button class="add-cart btn btn-ghost btn-pill" bindtap="addToCart">加入购物车</button><button class="buy-now btn btn-ink btn-pill" bindtap="openSku">立即购买</button></view>
   </view>
 
   <view wx:if="{{skuOpen}}" class="sheet-mask mask" bindtap="closeSku">

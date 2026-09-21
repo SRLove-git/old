@@ -43,7 +43,8 @@
 .empty-title { margin-top: 18rpx; font-size: 31rpx; font-weight: 700; }
 .empty-sub { margin-top: 8rpx; color: var(--color-text-3); font-size: 24rpx; }
 .reset-button { display: inline-flex; margin-top: 28rpx; }
-.share-fab { position: fixed; right: 24rpx; bottom: 150rpx; z-index: 40; width: 92rpx; height: 92rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e1d9ce; border-radius: 50%; background: rgba(255,255,255,.97); box-shadow: 0 10rpx 28rpx rgba(51,43,33,.15); }
+.share-fab { position: fixed; right: 12rpx; bottom: 150rpx; z-index: 40; width: 92rpx; height: 92rpx; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; line-height: 1; }
+.share-fab-circle { position: absolute; right: 0; top: 0; width: 92rpx; height: 92rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e1d9ce; border-radius: 50%; background: rgba(255,255,255,.97); box-shadow: 0 10rpx 28rpx rgba(51,43,33,.15); }
 .share-mark { position: relative; width: 48rpx; height: 48rpx; }
 .share-mark::before, .share-mark::after { content: ''; position: absolute; left: 16rpx; width: 24rpx; height: 3rpx; border-radius: 3rpx; background: #56665f; transform-origin: left center; }
 .share-mark::before { top: 17rpx; transform: rotate(-28deg); }

@@ -22,14 +22,23 @@
 .member-link { padding: 12rpx 24rpx; border-radius: 999rpx; background: linear-gradient(135deg,#e98560,#e65a4e); color: #fff; font-size: 24rpx; font-weight: 700; }
 .title-share-row { display: flex; align-items: flex-start; gap: 16rpx; }
 .product-title { flex: 1; font-size: 31rpx; font-weight: 700; line-height: 1.45; }
-.share-button { width: 74rpx; flex: none; display: flex; flex-direction: column; align-items: center; padding: 0; background: transparent; color: var(--color-text-2); font-size: 20rpx; line-height: 1.2; }
-.share-icon { font-size: 38rpx; font-weight: 700; }
+.share-button { flex: none; width: 76rpx; height: 76rpx; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; line-height: 1; }
+.detail-share-circle { width: 76rpx; height: 76rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e3ddd4; border-radius: 50%; background: #f8f5f0; }
+.detail-share-mark { position: relative; width: 38rpx; height: 38rpx; }
+.detail-share-mark::before, .detail-share-mark::after { content: ''; position: absolute; left: 12rpx; width: 20rpx; height: 3rpx; border-radius: 3rpx; background: #56665f; transform-origin: left center; }
+.detail-share-mark::before { top: 13rpx; transform: rotate(-28deg); }
+.detail-share-mark::after { top: 24rpx; transform: rotate(28deg); }
+.detail-share-node { position: absolute; z-index: 2; width: 11rpx; height: 11rpx; border: 3rpx solid #56665f; border-radius: 50%; background: #f8f5f0; }
+.detail-node-top { right: 0; top: 0; }
+.detail-node-left { left: 0; top: 14rpx; }
+.detail-node-right { right: 0; bottom: 0; }
 .product-sub { margin-top: 9rpx; color: var(--color-text-3); font-size: 23rpx; line-height: 1.55; }
 .rank-label { display: inline-flex; margin-top: 11rpx; padding: 6rpx 13rpx; border-radius: 12rpx; background: var(--color-primary-light); color: var(--color-primary-text); font-size: 20rpx; font-weight: 700; }
 .info-row { display: flex; align-items: center; margin: 20rpx 24rpx 0; padding: 22rpx 0; border-top: 1rpx solid var(--color-border); }
 .info-label { width: 76rpx; color: var(--color-text-3); }
 .info-value { flex: 1; color: var(--color-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-arrow { color: var(--color-text-3); font-size: 40rpx; }
+.detail-buy-button { width: auto; min-height: 88rpx; margin: 24rpx 24rpx 0; border-radius: 22rpx; font-size: 29rpx; letter-spacing: 2rpx; }
 .section-card { margin: 24rpx 24rpx 0; padding: 28rpx; border-radius: 26rpx; background: #fff; box-shadow: 0 10rpx 34rpx rgba(55,44,31,.06); }
 .section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; color: var(--color-text-1); font-size: 31rpx; font-weight: 700; }
 .muted-link { color: var(--color-text-3); font-size: 23rpx; font-weight: 400; }

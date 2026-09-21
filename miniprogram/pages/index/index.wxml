@@ -91,7 +91,7 @@
             <view class="mini-body">
               <view class="mini-title">{{item.title}}</view>
               <view class="mini-date">{{item.schedules[0].date}} · {{item.schedules[0].time}}</view>
-              <view class="mini-foot"><text class="mini-price">¥{{item.memberPrice}}</text><button class="mini-arrow" aria-label="加入购物车" data-id="{{item.id}}" catchtap="addCart"><view class="plus-icon"></view></button></view>
+              <view class="mini-foot"><text class="mini-price">¥{{item.memberPrice}}</text><view class="mini-arrow" role="button" aria-label="加入购物车" data-id="{{item.id}}" catchtap="addCart"><view class="plus-icon"></view></view></view>
             </view>
           </view>
         </view>
@@ -118,7 +118,7 @@
     </view>
   </view>
 
-  <button class="service-fab" aria-label="联系小助理" bindtap="showService"><view class="service-bubble-icon"><text></text><text></text><text></text></view></button>
+  <view class="service-fab" role="button" aria-label="联系小助理" bindtap="showService"><view class="service-bubble-icon"><text></text><text></text><text></text></view></view>
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
       <view class="city-sheet-title">选择所在区域</view>

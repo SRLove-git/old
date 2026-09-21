@@ -1,7 +1,7 @@
-const { API_BASE } = require('./config.js')
+const { API_BASE, DEV_USER_ID } = require('./config.js')
 
 const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v1'
-let authState = wx.getStorageSync(AUTH_STORAGE_KEY) || null
+let authState = DEV_USER_ID ? { token: 'local-dev', user: { id: String(DEV_USER_ID) }, expiresAt: Number.MAX_SAFE_INTEGER } : (wx.getStorageSync(AUTH_STORAGE_KEY) || null)
 let loginPromise = null
 
 function getCurrentUserId() {
@@ -67,6 +67,7 @@ function send(path, options, auth) {
       header: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${auth.token}`,
+        ...(DEV_USER_ID ? { 'x-user-id': String(DEV_USER_ID) } : {}),
         ...(options.header || {})
       },
       success: (res) => {
