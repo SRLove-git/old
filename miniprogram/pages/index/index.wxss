@@ -72,7 +72,7 @@
 .activity-scroll { width: calc(100% + 24rpx); white-space: nowrap; } .activity-row { display: inline-flex; gap: 18rpx; padding: 4rpx 24rpx 12rpx 0; }
 .mini-card { width: 286rpx; overflow: hidden; border-radius: 22rpx; background: #fff; box-shadow: 0 8rpx 25rpx rgba(51,43,33,.08); }
 .mini-cover { position: relative; height: 220rpx; overflow: hidden; background: #eee; }
-.mini-city { position: absolute; left: 14rpx; top: 14rpx; padding: 7rpx 12rpx; border-radius: 999rpx; background: rgba(255,255,255,.9); color: #4c5552; font-size: 20rpx; font-weight: 700; }
+.mini-city { position: absolute; left: 14rpx; top: 14rpx; max-width: 216rpx; padding: 7rpx 12rpx; border-radius: 999rpx; background: rgba(255,255,255,.9); color: #4c5552; font-size: 20rpx; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-body { padding: 17rpx; } .mini-title { height: 76rpx; color: #313735; font-size: 27rpx; font-weight: 700; line-height: 1.4; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .mini-date { margin-top: 8rpx; color: #929794; font-size: 21rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 11rpx; } .mini-price { color: var(--color-primary); font-size: 29rpx; font-weight: 700; }

@@ -4,10 +4,30 @@
 }
 
 .status-hero {
-  background: var(--color-success);
+  background: var(--color-sage);
   color: #ffffff;
   padding: 48rpx 30rpx;
   text-align: center;
+}
+
+.hero-pay {
+  background: #dd8a3e;
+}
+
+.hero-ship {
+  background: #6b8da8;
+}
+
+.hero-done {
+  background: var(--color-sage);
+}
+
+.hero-refund {
+  background: #8d939b;
+}
+
+.hero-cancel {
+  background: #a39e93;
 }
 
 .status-icon {

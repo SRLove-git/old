@@ -192,6 +192,7 @@
 .check {
   width: 44rpx;
   height: 44rpx;
+  margin-left: 14rpx;
   border-radius: 50%;
   background: var(--color-border);
   color: #ffffff;
@@ -224,6 +225,9 @@
 }
 
 .counter-value {
+  min-width: 90rpx;
+  margin: 0 18rpx;
+  text-align: center;
   font-size: 52rpx;
   font-weight: 700;
 }
@@ -355,7 +359,9 @@
   color: var(--color-primary);
   font-size: 42rpx;
   font-weight: 700;
-  min-width: 100rpx;
+  flex-shrink: 0;
+  min-width: 120rpx;
+  margin-right: 18rpx;
 }
 
 .coupon-info {

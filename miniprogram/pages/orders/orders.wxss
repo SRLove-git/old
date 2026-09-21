@@ -51,6 +51,8 @@
 
 .order-info {
   flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
 }
 
 .order-title {
@@ -126,6 +128,25 @@
 
 .empty {
   text-align: center;
+  padding: 80rpx 30rpx;
+}
+
+.empty-emoji {
+  font-size: 96rpx;
+}
+
+.empty-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-top: 18rpx;
+}
+
+.empty-sub {
   color: var(--color-text-3);
-  padding: 80rpx;
+  margin: 10rpx 0 28rpx;
+}
+
+.empty .btn {
+  width: 320rpx;
+  margin: 0 auto;
 }

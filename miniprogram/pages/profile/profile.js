@@ -25,12 +25,24 @@ Page({
 
   loadState() {
     const state = store.get()
+    const managers = state.managers || []
+    const bindLogs = (state.bindLogs || []).map((log) => {
+      const manager = managers.find((m) => String(m.id) === String(log.managerId))
+      const unbound = Number(log.status) === 2 || !!log.unbindTime
+      return {
+        ...log,
+        time: unbound ? (log.unbindTime || log.bindTime || '') : (log.bindTime || ''),
+        action: unbound ? '解绑' : '绑定',
+        managerName: (manager && manager.name) || '平台主理人',
+        reason: log.unbindReason || ''
+      }
+    })
     this.setData({
       user: state.user,
       boundManager: state.boundManager,
       isManager: state.isManager,
       application: state.application,
-      bindLogs: state.bindLogs || [],
+      bindLogs,
       cards: state.cards || [],
       couponCount: state.coupons.length,
       pendingUnbind: state.pendingUnbind || null,

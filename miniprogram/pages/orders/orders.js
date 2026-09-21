@@ -36,5 +36,9 @@ Page({
 
   goOrder(e) {
     wx.navigateTo({ url: `/pages/order-detail/order-detail?id=${e.currentTarget.dataset.id}` })
+  },
+
+  goList() {
+    wx.switchTab({ url: '/pages/list/list' })
   }
 })

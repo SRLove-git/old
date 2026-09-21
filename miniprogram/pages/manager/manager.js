@@ -54,15 +54,27 @@ Page({
       id: c.id,
       customerName: c.customerName,
       productName: c.productName,
-      payAmount: c.payAmount,
-      commissionAmount: c.commissionAmount
+      payAmount: store.money(c.payAmount),
+      commissionAmount: store.money(c.commissionAmount)
     }))
     const customerList = (dash.customers || []).map((c) => ({ id: c.id, name: c.name, phone: c.phone }))
+    const rawManager = { ...(dash.manager || {}), customers: customerList.length }
+    // 展示金额统一保留两位小数；缺失字段（如提现中）按 0 兜底
+    const manager = { ...rawManager }
+    ;['monthPerformance', 'monthCommission', 'pending', 'available', 'withdrawing', 'total', 'debt', 'withdrawable'].forEach((k) => {
+      manager[k] = store.money(rawManager[k] || 0)
+    })
+    const withdraws = (dash.withdraws || []).map((w) => ({
+      ...w,
+      amount: store.money(w.amount),
+      tax: store.money(w.tax || 0),
+      actualAmount: store.money(w.actualAmount || 0)
+    }))
     this.setData({
       // 客户数按实际归属客户计算，不用主理人表里的静态值
-      manager: { ...(dash.manager || {}), customers: customerList.length },
+      manager,
       commissions: dash.commissions || [],
-      withdraws: dash.withdraws || [],
+      withdraws,
       customers: customerList,
       activities: dash.activities || [],
       config: dash.config || {},
@@ -115,7 +127,7 @@ Page({
       wx.showToast({ title: `最低提现金额为${min}元`, icon: 'none' })
       return
     }
-    const available = Number(this.data.manager.withdrawable ?? this.data.manager.available ?? 0)
+    const available = Number(this.data.manager.available || 0)
     if (amount > available) {
       wx.showToast({ title: '超出可结算余额', icon: 'none' })
       return

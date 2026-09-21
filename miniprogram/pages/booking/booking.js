@@ -241,13 +241,18 @@ Page({
           wx.showToast({ title: '请填写手机号码', icon: 'none' })
           return
         }
-        if (!/^1\d{10}$/.test(info.phone)) {
-          wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
-          return
-        }
-        if (info.phone !== store.get().user.phone) {
-          wx.showToast({ title: '手机号需与账号绑定手机一致', icon: 'none' })
-          return
+        // 账号手机号是脱敏存储的（如 138****6688）：未改动直接放行；
+        // 用户主动修改过，则要求填 11 位全号且与账号脱敏号一致
+        const accountPhone = store.get().user.phone
+        if (info.phone !== accountPhone) {
+          if (!/^1\d{10}$/.test(info.phone)) {
+            wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
+            return
+          }
+          if (store.maskPhone(info.phone) !== accountPhone) {
+            wx.showToast({ title: '手机号需与账号绑定手机一致', icon: 'none' })
+            return
+          }
         }
         if ((needIdCard && !info.idCard) || (needDiscount && !info.discount)) {
           wx.showToast({ title: '请先填写完整报名信息', icon: 'none' })

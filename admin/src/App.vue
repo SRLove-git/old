@@ -32,6 +32,9 @@ const loading = ref(false)
 const error = ref('')
 const collapsed = ref(false)
 
+// 金额展示统一两位小数，空值按 0 兜底
+const fmtMoney = (n) => Number(n || 0).toFixed(2)
+
 const nav = [
   { key: 'dashboard', name: '数据看板', icon: IconDashboard },
   { key: 'activities', name: '活动管理', icon: IconCalendar },
@@ -254,12 +257,9 @@ const statItems = computed(() => {
 })
 
 const rankingColumns = [
-  { title: '排名', slotName: 'rank', width: 80 },
-  { title: '主理人', dataIndex: 'name' },
-  { title: '累计佣金', slotName: 'commission', align: 'right', width: 160 },
-  { title: '可结算', slotName: 'available', align: 'right', width: 140 },
-  { title: '待结算', slotName: 'pending', align: 'right', width: 140 },
-  { title: '客户数', dataIndex: 'totalCustomers', align: 'right', width: 120 }
+  { title: '排名', slotName: 'rank', width: 60 },
+  { title: '主理人', dataIndex: 'name', ellipsis: true, tooltip: true },
+  { title: '累计佣金', slotName: 'commission', align: 'right', width: 130 }
 ]
 const activityColumns = [
   { title: 'ID', dataIndex: 'id', width: 80 },
@@ -303,7 +303,7 @@ const cardColumns = [
   { title: '操作', slotName: 'actions', width: 120 }
 ]
 const orderColumns = [
-  { title: '订单号', dataIndex: 'id', width: 100 },
+  { title: '订单号', dataIndex: 'id', width: 150, ellipsis: true, tooltip: true },
   { title: '客户', dataIndex: 'participants', width: 110 },
   { title: '标题', dataIndex: 'title', ellipsis: true, tooltip: true },
   { title: '收货地址', slotName: 'address', width: 230 },
@@ -325,7 +325,7 @@ const customerColumns = [
   { title: '操作', slotName: 'actions', width: 200 }
 ]
 const couponColumns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: 'ID', dataIndex: 'id', width: 150, ellipsis: true, tooltip: true },
   { title: '标题', dataIndex: 'title', ellipsis: true, tooltip: true },
   { title: '类型', slotName: 'type', width: 110 },
   { title: '面额', slotName: 'value', align: 'right', width: 90 },
@@ -335,7 +335,7 @@ const couponColumns = [
   { title: '操作', slotName: 'actions', width: 140 }
 ]
 const reviewColumns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: 'ID', dataIndex: 'id', width: 150, ellipsis: true, tooltip: true },
   { title: '活动', slotName: 'activity', ellipsis: true, tooltip: true },
   { title: '用户', dataIndex: 'name', width: 110 },
   { title: '评分', slotName: 'rating', width: 80 },
@@ -371,7 +371,7 @@ const providerColumns = [
   { title: '操作', slotName: 'actions', width: 160 }
 ]
 const unbindColumns = [
-  { title: '申请ID', dataIndex: 'id', width: 90 },
+  { title: '申请ID', dataIndex: 'id', width: 130, ellipsis: true, tooltip: true },
   { title: '客户', dataIndex: 'customerName', width: 120 },
   { title: '原主理人', dataIndex: 'managerName', width: 120 },
   { title: '申请理由', dataIndex: 'reason', ellipsis: true, tooltip: true },
@@ -380,17 +380,17 @@ const unbindColumns = [
   { title: '操作', slotName: 'actions', width: 160 }
 ]
 const managerColumns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
-  { title: '姓名', dataIndex: 'name', width: 120 },
-  { title: '邀请码', dataIndex: 'inviteCode', width: 120 },
-  { title: '累计业绩', slotName: 'performance', align: 'right', width: 120 },
-  { title: '累计佣金', slotName: 'commission', align: 'right', width: 120 },
-  { title: '可结算', slotName: 'available', align: 'right', width: 110 },
-  { title: '待结算', slotName: 'pending', align: 'right', width: 110 },
-  { title: '提现中', slotName: 'withdrawing', align: 'right', width: 110 },
-  { title: '已打款', slotName: 'settled', align: 'right', width: 110 },
-  { title: '状态', slotName: 'status', width: 100 },
-  { title: '操作', slotName: 'actions', width: 180 }
+  { title: 'ID', dataIndex: 'id', width: 70 },
+  { title: '姓名', dataIndex: 'name', width: 100 },
+  { title: '邀请码', dataIndex: 'inviteCode', width: 100 },
+  { title: '累计业绩', slotName: 'performance', align: 'right', width: 115 },
+  { title: '累计佣金', slotName: 'commission', align: 'right', width: 115 },
+  { title: '可结算', slotName: 'available', align: 'right', width: 100 },
+  { title: '待结算', slotName: 'pending', align: 'right', width: 100 },
+  { title: '提现中', slotName: 'withdrawing', align: 'right', width: 100 },
+  { title: '已打款', slotName: 'settled', align: 'right', width: 100 },
+  { title: '状态', slotName: 'status', width: 80 },
+  { title: '操作', slotName: 'actions', width: 160 }
 ]
 const bindingColumns = [
   { title: '客户', dataIndex: 'customerName', width: 140 },
@@ -401,15 +401,15 @@ const bindingColumns = [
   { title: '操作', slotName: 'actions', width: 160 }
 ]
 const commissionColumns = [
-  { title: '佣金单', dataIndex: 'id', width: 90 },
+  { title: '佣金单', dataIndex: 'id', width: 150, ellipsis: true, tooltip: true },
   { title: '主理人', slotName: 'manager', width: 110 },
   { title: '客户', dataIndex: 'customerName', width: 120 },
   { title: '商品', dataIndex: 'productName', ellipsis: true, tooltip: true },
   { title: '比例', slotName: 'rate', align: 'right', width: 80 },
   { title: '金额', slotName: 'amount', align: 'right', width: 110 },
   { title: '状态', slotName: 'status', width: 110 },
-  { title: '创建时间', dataIndex: 'createTime', width: 150 },
-  { title: '结算时间', dataIndex: 'settleTime', width: 150 },
+  { title: '创建时间', dataIndex: 'createTime', width: 160 },
+  { title: '结算时间', dataIndex: 'settleTime', width: 160 },
   { title: '操作', slotName: 'actions', width: 160 }
 ]
 const settlementColumns = [
@@ -420,16 +420,16 @@ const settlementColumns = [
   { title: '结算时间', dataIndex: 'settledAt', width: 160 }
 ]
 const withdrawColumns = [
-  { title: '提现单', dataIndex: 'id', width: 90 },
-  { title: '主理人', slotName: 'manager', width: 120 },
+  { title: '提现单', dataIndex: 'id', width: 140, ellipsis: true, tooltip: true },
+  { title: '主理人', slotName: 'manager', width: 110 },
   { title: '金额', slotName: 'amount', align: 'right', width: 100 },
   { title: '税费', slotName: 'tax', align: 'right', width: 90 },
-  { title: '实际到账', slotName: 'actual', align: 'right', width: 110 },
-  { title: '锁定佣金', dataIndex: 'commissionCount', align: 'right', width: 100 },
-  { title: '退款扣减', slotName: 'clawback', align: 'right', width: 100 },
-  { title: '状态', slotName: 'status', width: 100 },
-  { title: '申请时间', dataIndex: 'applyTime', width: 160 },
-  { title: '操作', slotName: 'actions', width: 160 }
+  { title: '实际到账', slotName: 'actual', align: 'right', width: 105 },
+  { title: '锁定佣金', dataIndex: 'commissionCount', align: 'right', width: 95 },
+  { title: '退款扣减', slotName: 'clawback', align: 'right', width: 95 },
+  { title: '状态', slotName: 'status', width: 90 },
+  { title: '申请时间', dataIndex: 'applyTime', width: 140 },
+  { title: '操作', slotName: 'actions', width: 150 }
 ]
 const logColumns = [
   { title: '时间', dataIndex: 'time', width: 180 },
@@ -1190,9 +1190,9 @@ function exportCsv(filename, rows) {
                     size="small"
                   >
                     <template #rank="{ rowIndex }">{{ rowIndex + 1 }}</template>
-                    <template #commission="{ record }"><span class="num">¥{{ record.totalCommission }}</span></template>
-                    <template #available="{ record }"><span class="num">¥{{ record.available }}</span></template>
-                    <template #pending="{ record }"><span class="num">¥{{ record.pending }}</span></template>
+                    <template #commission="{ record }"><span class="num">¥{{ fmtMoney(record.totalCommission) }}</span></template>
+                    <template #available="{ record }"><span class="num">¥{{ fmtMoney(record.available) }}</span></template>
+                    <template #pending="{ record }"><span class="num">¥{{ fmtMoney(record.pending) }}</span></template>
                   </a-table>
                 </a-card>
               </a-col>
@@ -1218,9 +1218,9 @@ function exportCsv(filename, rows) {
               >
                 <template #category="{ record }"><a-tag color="arcoblue">{{ catName(record.category) }}</a-tag></template>
                 <template #regions="{ record }">{{ regionNames(record) }}</template>
-                <template #price="{ record }"><span class="num">¥{{ record.memberPrice }}</span></template>
+                <template #price="{ record }"><span class="num">¥{{ fmtMoney(record.memberPrice) }}</span></template>
                 <template #status="{ record }">
-                  <a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag>
+                  <a-tag :color="record.status !== 0 ? 'green' : 'gray'">{{ record.status !== 0 ? '上架' : '下架' }}</a-tag>
                 </template>
                 <template #actions="{ record }">
                   <a-space :size="0">
@@ -1247,9 +1247,9 @@ function exportCsv(filename, rows) {
               >
                 <template #category="{ record }"><a-tag color="arcoblue">{{ catName(record.category) }}</a-tag></template>
                 <template #regions="{ record }">{{ regionNames(record) }}</template>
-                <template #price="{ record }"><span class="num">¥{{ record.memberPrice }}</span></template>
+                <template #price="{ record }"><span class="num">¥{{ fmtMoney(record.memberPrice) }}</span></template>
                 <template #status="{ record }">
-                  <a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag>
+                  <a-tag :color="record.status !== 0 ? 'green' : 'gray'">{{ record.status !== 0 ? '上架' : '下架' }}</a-tag>
                 </template>
                 <template #actions="{ record }">
                   <a-space :size="0">
@@ -1306,7 +1306,7 @@ function exportCsv(filename, rows) {
                 :scroll="{ x: 1500 }"
                 size="middle"
               >
-                <template #payAmount="{ record }"><span class="num">¥{{ record.payAmount }}</span></template>
+                <template #payAmount="{ record }"><span class="num">¥{{ fmtMoney(record.payAmount) }}</span></template>
                 <template #address="{ record }">
                   <div v-if="record.address">
                     <div>{{ record.address.name }} {{ record.address.phone }}</div>
@@ -1326,7 +1326,7 @@ function exportCsv(filename, rows) {
                   <div v-if="record.status === '退款中' || record.refundReason">
                     <div>{{ record.refundReason || '—' }}</div>
                     <div class="muted">
-                      ¥{{ record.refundAmount || 0 }}
+                      ¥{{ fmtMoney(record.refundAmount || 0) }}
                       <template v-if="record.status === '退款中'"> · 申请于 {{ record.refundApplyTime || '—' }}</template>
                       <template v-else-if="record.refundTime"> · {{ record.refundTime }}</template>
                     </div>
@@ -1373,7 +1373,7 @@ function exportCsv(filename, rows) {
                   <a-descriptions-item label="标题">{{ verifyOrder.title }}</a-descriptions-item>
                   <a-descriptions-item label="客户">{{ verifyOrder.participants }}</a-descriptions-item>
                   <a-descriptions-item label="人数">{{ verifyOrder.count }}</a-descriptions-item>
-                  <a-descriptions-item label="实付"><span class="num">¥{{ verifyOrder.payAmount }}</span></a-descriptions-item>
+                  <a-descriptions-item label="实付"><span class="num">¥{{ fmtMoney(verifyOrder.payAmount) }}</span></a-descriptions-item>
                   <a-descriptions-item label="状态"><a-tag :color="orderChip(verifyOrder.status)">{{ verifyOrder.status }}</a-tag></a-descriptions-item>
                   <a-descriptions-item label="核销码">{{ verifyOrder.code }}</a-descriptions-item>
                   <a-descriptions-item label="场次时间">{{ verifyOrder.schedule ? `${verifyOrder.schedule.date || ''} ${verifyOrder.schedule.time || ''}`.trim() || '—' : '—' }}</a-descriptions-item>
@@ -1427,7 +1427,7 @@ function exportCsv(filename, rows) {
                 size="middle"
               >
                 <template #member="{ record }">{{ record.member ? '是' : '否' }}</template>
-                <template #balance="{ record }"><span class="num">¥{{ record.balance }}</span></template>
+                <template #balance="{ record }"><span class="num">¥{{ fmtMoney(record.balance) }}</span></template>
                 <template #manager="{ record }">{{ managers.find((m) => String(m.id) === String(record.managerId))?.name || '散客' }}</template>
                 <template #actions="{ record }">
                   <a-space :size="0">
@@ -1450,7 +1450,7 @@ function exportCsv(filename, rows) {
                 size="middle"
               >
                 <template #type="{ record }">{{ couponTypes[record.type] }}</template>
-                <template #value="{ record }"><span class="num">¥{{ record.value }}</span></template>
+                <template #value="{ record }"><span class="num">¥{{ fmtMoney(record.value) }}</span></template>
                 <template #min="{ record }">满 {{ record.minAmount }}</template>
                 <template #status="{ record }"><a-tag :color="record.used ? 'gray' : 'green'">{{ record.used ? '已使用' : '可用' }}</a-tag></template>
                 <template #actions="{ record }">
@@ -1515,7 +1515,7 @@ function exportCsv(filename, rows) {
             <a-card :bordered="false">
               <a-table :columns="contentColumns" :data="contentPosts" :pagination="false" row-key="id">
                 <template #type="{ record }"><a-tag :color="record.type === 'video' ? 'purple' : 'arcoblue'">{{ record.type === 'video' ? '视频' : '政策资讯' }}</a-tag></template>
-                <template #status="{ record }"><a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag></template>
+                <template #status="{ record }"><a-tag :color="record.status !== 0 ? 'green' : 'gray'">{{ record.status !== 0 ? '上架' : '下架' }}</a-tag></template>
                 <template #actions="{ record }">
                   <a-space :size="0">
                     <a-button type="text" size="small" @click="openContent(record)">编辑</a-button>
@@ -1538,7 +1538,7 @@ function exportCsv(filename, rows) {
               >
                 <template #fields="{ record }">{{ (record.fields || []).join('、') }}</template>
                 <template #paid="{ record }">
-                  <span v-if="record.paidAmount > 0" class="muted">¥{{ record.paidAmount }}</span>
+                  <span v-if="record.paidAmount > 0" class="muted">¥{{ fmtMoney(record.paidAmount) }}</span>
                   <span v-else class="muted">免费</span>
                 </template>
                 <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
@@ -1587,12 +1587,12 @@ function exportCsv(filename, rows) {
                 row-key="id"
                 size="middle"
               >
-                <template #performance="{ record }"><span class="num">¥{{ record.totalPerformance }}</span></template>
-                <template #commission="{ record }"><span class="num">¥{{ record.totalCommission }}</span></template>
-                <template #available="{ record }"><span class="num">¥{{ record.available }}</span></template>
-                <template #pending="{ record }"><span class="num">¥{{ record.pending }}</span></template>
-                <template #withdrawing="{ record }"><span class="num">¥{{ record.withdrawing }}</span></template>
-                <template #settled="{ record }"><span class="num">¥{{ record.settled }}</span></template>
+                <template #performance="{ record }"><span class="num">¥{{ fmtMoney(record.totalPerformance) }}</span></template>
+                <template #commission="{ record }"><span class="num">¥{{ fmtMoney(record.totalCommission) }}</span></template>
+                <template #available="{ record }"><span class="num">¥{{ fmtMoney(record.available) }}</span></template>
+                <template #pending="{ record }"><span class="num">¥{{ fmtMoney(record.pending) }}</span></template>
+                <template #withdrawing="{ record }"><span class="num">¥{{ fmtMoney(record.withdrawing) }}</span></template>
+                <template #settled="{ record }"><span class="num">¥{{ fmtMoney(record.settled) }}</span></template>
                 <template #status="{ record }"><a-tag :color="managerChip(record.status)">{{ record.status === 1 ? '正常' : record.status === 2 ? '已冻结' : '已清退' }}</a-tag></template>
                 <template #actions="{ record }">
                   <a-space :size="0">
@@ -1674,7 +1674,7 @@ function exportCsv(filename, rows) {
               >
                 <template #manager="{ record }">{{ managers.find((m) => String(m.id) === String(record.managerId))?.name || record.managerId }}</template>
                 <template #rate="{ record }">{{ record.commissionRate }}%</template>
-                <template #amount="{ record }"><span class="num">¥{{ record.commissionAmount }}</span></template>
+                <template #amount="{ record }"><span class="num">¥{{ fmtMoney(record.commissionAmount) }}</span></template>
                 <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
                 <template #actions="{ record }">
                   <a-space :size="0">
@@ -1692,7 +1692,7 @@ function exportCsv(filename, rows) {
                 row-key="id"
                 size="small"
               >
-                <template #amount="{ record }"><span class="num">¥{{ record.amount }}</span></template>
+                <template #amount="{ record }"><span class="num">¥{{ fmtMoney(record.amount) }}</span></template>
               </a-table>
             </a-card>
           </section>
@@ -1707,9 +1707,9 @@ function exportCsv(filename, rows) {
                 size="middle"
               >
                 <template #manager="{ record }">{{ managers.find((m) => String(m.id) === String(record.managerId))?.name || record.managerId }}</template>
-                <template #amount="{ record }"><span class="num">¥{{ record.amount }}</span></template>
-                <template #tax="{ record }"><span class="num">¥{{ record.tax ?? 0 }}</span></template>
-                <template #actual="{ record }"><span class="num">¥{{ record.actualAmount ?? record.amount }}</span></template>
+                <template #amount="{ record }"><span class="num">¥{{ fmtMoney(record.amount) }}</span></template>
+                <template #tax="{ record }"><span class="num">¥{{ fmtMoney(record.tax ?? 0) }}</span></template>
+                <template #actual="{ record }"><span class="num">¥{{ fmtMoney(record.actualAmount ?? record.amount) }}</span></template>
                 <template #clawback="{ record }">{{ record.clawbackAmount ? `-¥${record.clawbackAmount}` : '—' }}</template>
                 <template #status="{ record }"><a-tag :color="statusChip(record.status)">{{ record.status }}</a-tag></template>
                 <template #actions="{ record }">

@@ -18,6 +18,8 @@
 
 .info {
   flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
 }
 
 .name {
@@ -31,12 +33,17 @@
 }
 
 .small-btn {
+  flex-shrink: 0;
   border: 2rpx solid var(--color-primary);
   color: var(--color-primary);
   border-radius: 999rpx;
   padding: 12rpx 20rpx;
   font-size: 26rpx;
   font-weight: 700;
+}
+
+.small-btn + .small-btn {
+  margin-left: 14rpx;
 }
 
 .small-btn.danger {

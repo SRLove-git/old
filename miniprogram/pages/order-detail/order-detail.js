@@ -40,14 +40,25 @@ Page({
       displayStatus: store.displayStatus(order),
       statusSub: this.statusSubText(order, refundInfo),
       statusIcon: this.statusIconText(order),
+      statusTone: this.statusTone(order),
       actionLabel: this.actionLabel(order),
-      payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : ''
+      payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : '',
+      payAmountText: store.money(order.payAmount),
+      refundAmountText: store.money(order.refundAmount || 0)
     })
+  },
+
+  statusTone(order) {
+    if (order.status === '待付款') return 'pay'
+    if (order.status === '待发货' || order.status === '待收货') return 'ship'
+    if (order.status === '退款中' || order.status === '已退款') return 'refund'
+    if (order.status === '已取消') return 'cancel'
+    return 'done'
   },
 
   statusSubText(order, refundInfo) {
     if (order.status === '退款中') return '退款申请审核中，通过后原路退回'
-    if (order.status === '已退款') return `已退款 ¥${order.refundAmount || 0}`
+    if (order.status === '已退款') return `已退款 ¥${store.money(order.refundAmount || 0)}`
     if (order.refundRejected) return `退款申请未通过：${order.refundRejected}`
     if (order.trackingNo) return `${order.carrier} ${order.trackingNo}`
     return (refundInfo && refundInfo.reason) || '请按时参加活动'
