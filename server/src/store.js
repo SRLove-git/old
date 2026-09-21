@@ -93,6 +93,18 @@ function normalizeOrders(database) {
   return changed
 }
 
+// 历史报名人没有归属字段，按姓名认领会员；认不到的统一挂到演示账号，避免全站互相可见
+function normalizeParticipants(database) {
+  let changed = 0
+  ;(database.participants || []).forEach((p) => {
+    if (p.userId) return
+    const owner = (database.customers || []).find((c) => String(c.name) === String(p.name))
+    p.userId = owner ? owner.id : 'u1'
+    changed += 1
+  })
+  return changed
+}
+
 // 主理人身份绑定：优先沿用已有 userId，缺失时按姓名+手机号认领会员账号
 function normalizeManagers(database) {
   let changed = false
@@ -214,6 +226,7 @@ export function init() {
       normalizeTimestamps(db)
       normalizeManagers(db)
       normalizeOrders(db)
+      normalizeParticipants(db)
       syncManagerTotals()
       save()
       return db
@@ -228,6 +241,7 @@ export function init() {
   normalizeCollections(db)
   normalizeManagers(db)
   normalizeOrders(db)
+  normalizeParticipants(db)
   syncManagerTotals()
   save()
   return db
@@ -247,6 +261,7 @@ export function reset() {
   normalizeConfig(db)
   normalizeManagers(db)
   normalizeOrders(db)
+  normalizeParticipants(db)
   syncManagerTotals()
   save()
   return db
@@ -544,8 +559,19 @@ function resolveRate(activity, manager) {
   return Number(db.config.globalCommissionRate || 8)
 }
 
-export function couponApplicable(coupon, activity, amount) {
+// 入会赠送券等带 welcomeFor 的券只属于指定会员；没有 welcomeFor 的是全站通用券
+function couponBelongsToUser(coupon, userId) {
+  if (!coupon || !coupon.welcomeFor) return true
+  return String(coupon.welcomeFor) === String(userId == null ? '' : userId)
+}
+
+function visibleCouponsFor(userId) {
+  return db.coupons.filter((coupon) => couponBelongsToUser(coupon, userId))
+}
+
+export function couponApplicable(coupon, activity, amount, userId) {
   if (!coupon || coupon.used) return false
+  if (!couponBelongsToUser(coupon, userId)) return false
   if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
   if (coupon.minAmount && amount < coupon.minAmount) return false
   if (coupon.type === 3 && coupon.scopeCategory && activity.category !== coupon.scopeCategory) return false
@@ -652,7 +678,7 @@ export function createOrder(payload) {
   let discount = 0
   if (payload.couponId) {
     coupon = db.coupons.find((c) => c.id === payload.couponId)
-    if (!couponApplicable(coupon, activity, memberPrice * payload.count)) coupon = null
+    if (!couponApplicable(coupon, activity, memberPrice * payload.count, payload.userId || 'u1')) coupon = null
   }
   if (coupon) {
     discount = coupon.value
@@ -1608,7 +1634,7 @@ export function getUserProfile(userId) {
     cards,
     boundManager,
     addresses,
-    coupons: db.coupons,
+    coupons: visibleCouponsFor(userId),
     isManager,
     manager: ownManager,
     application,
@@ -1620,7 +1646,7 @@ export function getUserProfile(userId) {
 
 export function joinMember(userId) {
   const user = db.customers.find((c) => String(c.id) === String(userId))
-  if (!user) throw new Error('会员不存在')
+  if (!user) throw badRequest('会员不存在')
   const wasMember = Boolean(user.member)
   user.member = true
   const now = new Date()
@@ -1648,7 +1674,7 @@ export function joinMember(userId) {
     }
   }
   save()
-  return { user: { ...user, ...memberIdentity(user) }, coupons: db.coupons, alreadyMember: wasMember }
+  return { user: { ...user, ...memberIdentity(user) }, coupons: visibleCouponsFor(userId), alreadyMember: wasMember }
 }
 
 export function purchaseLive(liveId, userId) {

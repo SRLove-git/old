@@ -32,7 +32,9 @@ npm start        # 或 npm run dev（文件变化自动重启）
 - `GET/POST/PUT/DELETE /api/lives` 私域直播（`GET` 可选 `?userId=` 过滤该用户可见的私域直播）
 - `GET /api/stats/dashboard` 数据看板
 
-修改类接口需要 `x-admin-token: admin-token` 请求头。
+修改类接口需要 `x-admin-token: admin-token` 请求头。以下读接口同样需要管理员令牌：
+`GET /api/coupons`（含入会赠送券等归属个人券，小程序改从 `/api/users/:id` 取自己的券）、
+`GET /api/commissions`、`GET /api/withdraws`、`GET /api/commission-settlements`、`GET /api/manager-applications`。
 
 ## 佣金与提现口径
 

@@ -21,6 +21,45 @@ function isAdminRequest(req) {
   return req.headers['x-admin-token'] === ADMIN_TOKEN
 }
 
+// 会员身份：小程序每个请求都带 x-user-id，用于只返回本人的数据
+function requestUserId(req) {
+  const raw = (req.headers && req.headers['x-user-id'])
+    || (req.query && req.query.userId)
+    || (req.body && req.body.userId)
+  return String(raw == null ? '' : raw).trim()
+}
+
+function httpError(status, message) {
+  const err = new Error(message)
+  err.status = status
+  return err
+}
+
+// 会员数据只允许本人访问，管理端令牌可绕过
+function requireUser(req, targetUserId) {
+  if (isAdminRequest(req)) return true
+  const caller = requestUserId(req)
+  if (!caller) throw httpError(401, '缺少用户身份（x-user-id）')
+  if (String(targetUserId == null ? '' : targetUserId) !== caller) throw httpError(403, '无权访问其他会员的数据')
+  return true
+}
+
+// 按订单归属校验（订单不存在时交给业务逻辑返回空）
+function requireOrderOwner(req, orderId) {
+  if (isAdminRequest(req)) return
+  const order = store.get().orders.find((o) => String(o.id) === String(orderId))
+  if (!order) return
+  requireUser(req, order.userId)
+}
+
+// 按集合里的资源归属校验（报名人 / 地址）
+function requireRowOwner(req, collection, id) {
+  if (isAdminRequest(req)) return
+  const row = (store.get()[collection] || []).find((r) => String(r.id) === String(id))
+  if (!row) return
+  requireUser(req, row.userId)
+}
+
 const wrap = (fn) => (req, res) => {
   try {
     const result = fn(req, res)
@@ -105,7 +144,8 @@ app.delete('/api/banners/:id', adminAuth, wrap((req) => {
 }))
 
 // 优惠券
-app.get('/api/coupons', wrap(() => store.get().coupons))
+// 优惠券含入会赠送券等归属某个会员的券，列表只对管理端开放（小程序走 /users/:id 取自己的券）
+app.get('/api/coupons', adminAuth, wrap(() => store.get().coupons))
 app.post('/api/coupons', adminAuth, wrap((req) => {
   const db = store.get()
   const coupon = { id: Date.now(), used: false, ...req.body }
@@ -128,22 +168,32 @@ app.delete('/api/coupons/:id', adminAuth, wrap((req) => {
 }))
 
 // 报名人
-app.get('/api/participants', wrap(() => store.get().participants))
+app.get('/api/participants', wrap((req) => {
+  const db = store.get()
+  if (isAdminRequest(req)) return db.participants
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return db.participants.filter((p) => String(p.userId || '') === userId)
+}))
 app.post('/api/participants', wrap((req) => {
   const db = store.get()
-  const p = { id: Date.now(), ...req.body }
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  const p = { id: Date.now(), ...req.body, userId }
   db.participants.push(p)
   store.save()
   return p
 }))
 app.put('/api/participants/:id', wrap((req) => {
+  requireRowOwner(req, 'participants', req.params.id)
   const db = store.get()
   const p = db.participants.find((x) => String(x.id) === String(req.params.id))
-  if (p) Object.assign(p, req.body)
+  if (p) Object.assign(p, req.body, { id: p.id, userId: p.userId })
   store.save()
   return p
 }))
 app.delete('/api/participants/:id', wrap((req) => {
+  requireRowOwner(req, 'participants', req.params.id)
   const db = store.get()
   db.participants = db.participants.filter((x) => String(x.id) !== String(req.params.id))
   store.save()
@@ -151,19 +201,28 @@ app.delete('/api/participants/:id', wrap((req) => {
 }))
 
 // 收货地址
-app.get('/api/addresses', wrap(() => store.get().addresses))
+app.get('/api/addresses', wrap((req) => {
+  const db = store.get()
+  if (isAdminRequest(req)) return db.addresses
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return db.addresses.filter((a) => String(a.userId || '') === userId)
+}))
 app.post('/api/addresses', wrap((req) => {
   const db = store.get()
-  const a = { id: `addr${Date.now()}`, ...req.body }
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  const a = { id: `addr${Date.now()}`, ...req.body, userId }
   db.addresses.push(a)
   store.save()
   return a
 }))
 app.put('/api/addresses/:id', wrap((req) => {
+  requireRowOwner(req, 'addresses', req.params.id)
   const db = store.get()
   const a = db.addresses.find((x) => String(x.id) === String(req.params.id))
   if (!a) return null
-  Object.assign(a, req.body, { id: a.id })
+  Object.assign(a, req.body, { id: a.id, userId: a.userId })
   if (a.isDefault) {
     db.addresses.forEach((x) => {
       if (String(x.id) !== String(a.id) && x.userId === a.userId) x.isDefault = false
@@ -173,6 +232,7 @@ app.put('/api/addresses/:id', wrap((req) => {
   return a
 }))
 app.delete('/api/addresses/:id', wrap((req) => {
+  requireRowOwner(req, 'addresses', req.params.id)
   const db = store.get()
   db.addresses = db.addresses.filter((x) => String(x.id) !== String(req.params.id))
   store.save()
@@ -180,25 +240,50 @@ app.delete('/api/addresses/:id', wrap((req) => {
 }))
 
 // 订单
-app.get('/api/orders', wrap(() => {
+app.get('/api/orders', wrap((req) => {
   store.autoCancelExpired()
-  return store.get().orders
+  const db = store.get()
+  if (isAdminRequest(req)) return db.orders
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return db.orders.filter((o) => String(o.userId || '') === userId)
 }))
 app.get('/api/orders/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
 app.get('/api/orders/:id', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
   store.autoCancelExpired()
   return store.get().orders.find((o) => o.id === req.params.id)
 }))
-app.post('/api/orders', wrap((req) => store.createOrder(req.body)))
-app.post('/api/orders/:id/pay', wrap((req) => store.payOrder(req.params.id)))
-app.post('/api/orders/:id/cancel', wrap((req) => store.cancelOrder(req.params.id)))
-app.post('/api/orders/:id/refund', wrap((req) => store.refundOrder(req.params.id, req.body.reason)))
+app.post('/api/orders', wrap((req) => {
+  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
+  requireUser(req, userId)
+  return store.createOrder({ ...req.body, userId })
+}))
+app.post('/api/orders/:id/pay', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
+  return store.payOrder(req.params.id)
+}))
+app.post('/api/orders/:id/cancel', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
+  return store.cancelOrder(req.params.id)
+}))
+app.post('/api/orders/:id/refund', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
+  return store.refundOrder(req.params.id, req.body.reason)
+}))
 app.post('/api/orders/:id/refund-audit', adminAuth, wrap((req) => store.auditRefund(req.params.id, req.body.approve, req.body.reason)))
 app.post('/api/orders/:id/verify', adminAuth, wrap((req) => store.verifyOrder(req.params.id)))
-app.post('/api/orders/:id/advance', wrap((req) => store.advanceOrder(req.params.id)))
+app.post('/api/orders/:id/advance', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
+  return store.advanceOrder(req.params.id)
+}))
 app.post('/api/orders/:id/ship', adminAuth, wrap((req) => store.shipOrder(req.params.id, req.body || {})))
-app.post('/api/orders/:id/review', wrap((req) => store.submitReview(req.params.id, req.body)))
+app.post('/api/orders/:id/review', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
+  return store.submitReview(req.params.id, req.body)
+}))
 app.get('/api/orders/:id/refund-calc', wrap((req) => {
+  requireOrderOwner(req, req.params.id)
   const order = store.get().orders.find((o) => o.id === req.params.id)
   return order ? store.calcRefund(order) : null
 }))
@@ -215,23 +300,43 @@ app.delete('/api/reviews/:id', adminAuth, wrap((req) => {
 // 主理人
 app.get('/api/managers', wrap((req) => (isAdminRequest(req) ? store.listManagers() : store.listPublicManagers())))
 app.get('/api/manager-applications', adminAuth, wrap(() => store.get().managerApplications))
-app.post('/api/manager-applications', wrap((req) => store.applyManager(req.body)))
+app.post('/api/manager-applications', wrap((req) => {
+  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
+  requireUser(req, userId)
+  return store.applyManager({ ...req.body, userId })
+}))
 app.post('/api/manager-applications/:id/approve', adminAuth, wrap((req) => store.approveManagerApp(req.params.id)))
 app.post('/api/manager-applications/:id/reject', adminAuth, wrap((req) => store.rejectManagerApp(req.params.id, req.body.reason)))
 app.post('/api/managers/:id/status', adminAuth, wrap((req) => store.setManagerStatus(req.params.id, req.body.status)))
 
 // 客户与归属
-app.get('/api/customers', wrap(() => store.get().customers))
+app.get('/api/customers', adminAuth, wrap(() => store.get().customers))
 app.put('/api/customers/:id', adminAuth, wrap((req) => store.updateCustomer(req.params.id, req.body)))
-app.get('/api/bindings', wrap(() => store.get().bindings))
+app.get('/api/bindings', adminAuth, wrap(() => store.get().bindings))
 app.post('/api/bindings/unbind', adminAuth, wrap((req) => store.unbindCustomer(req.body.customerId, req.body.reason)))
 app.post('/api/bindings/rebind', adminAuth, wrap((req) => store.rebindCustomer(req.body.customerId, req.body.managerId, req.body.reason)))
-app.get('/api/users/:id', wrap((req) => store.getUserProfile(req.params.id)))
-app.post('/api/members/join', wrap((req) => store.joinMember((req.body && req.body.userId) || 'u1')))
+app.get('/api/users/:id', wrap((req) => {
+  requireUser(req, req.params.id)
+  return store.getUserProfile(req.params.id)
+}))
+app.post('/api/members/join', wrap((req) => {
+  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
+  requireUser(req, userId)
+  return store.joinMember(userId)
+}))
 app.post('/api/cards/:id/checkin', adminAuth, wrap((req) => store.checkInCard(req.params.id, req.body)))
-app.post('/api/customers/:id/bind', wrap((req) => store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)))
-app.post('/api/customers/:id/unbind', wrap((req) => store.unbindCustomerByUser(req.params.id, req.body.reason)))
-app.post('/api/customers/:id/unbind-apply', wrap((req) => store.applyUnbind(req.params.id, req.body.reason)))
+app.post('/api/customers/:id/bind', wrap((req) => {
+  requireUser(req, req.params.id)
+  return store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)
+}))
+app.post('/api/customers/:id/unbind', wrap((req) => {
+  requireUser(req, req.params.id)
+  return store.unbindCustomerByUser(req.params.id, req.body.reason)
+}))
+app.post('/api/customers/:id/unbind-apply', wrap((req) => {
+  requireUser(req, req.params.id)
+  return store.applyUnbind(req.params.id, req.body.reason)
+}))
 app.get('/api/managers/:id/dashboard', wrap((req) => store.getManagerDashboard(req.params.id, {
   userId: req.query.userId,
   isAdmin: isAdminRequest(req)
@@ -243,7 +348,11 @@ app.post('/api/unbind-applications/:id/approve', adminAuth, wrap((req) => store.
 app.post('/api/unbind-applications/:id/reject', adminAuth, wrap((req) => store.auditUnbind(req.params.id, false, req.body.reason)))
 
 // 服务商申请
-app.post('/api/provider-applications', wrap((req) => store.applyProvider(req.body)))
+app.post('/api/provider-applications', wrap((req) => {
+  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
+  requireUser(req, userId)
+  return store.applyProvider({ ...req.body, userId })
+}))
 app.get('/api/provider-applications', adminAuth, wrap(() => store.get().providerApplications || []))
 app.post('/api/provider-applications/:id/approve', adminAuth, wrap((req) => store.auditProvider(req.params.id, true)))
 app.post('/api/provider-applications/:id/reject', adminAuth, wrap((req) => store.auditProvider(req.params.id, false, req.body.reason)))
@@ -256,7 +365,17 @@ app.post('/api/commissions/:id/adjust', adminAuth, wrap((req) => store.adjustCom
 
 // 提现
 app.get('/api/withdraws', adminAuth, wrap(() => store.get().withdraws))
-app.post('/api/withdraws', wrap((req) => store.applyWithdraw(req.body.managerId, req.body.amount, { source: req.body.source })))
+app.post('/api/withdraws', wrap((req) => {
+  const managerId = req.body.managerId
+  // 只能为绑定了自己的主理人账号发起提现，避免替别人锁单
+  if (!isAdminRequest(req)) {
+    const caller = requestUserId(req)
+    if (!caller) throw httpError(401, '缺少用户身份（x-user-id）')
+    const own = store.findManagerByUser(caller)
+    if (!own || String(own.id) !== String(managerId)) throw httpError(403, '只能为自己的主理人账号发起提现')
+  }
+  return store.applyWithdraw(managerId, req.body.amount, { source: req.body.source })
+}))
 app.post('/api/withdraws/:id/approve', adminAuth, wrap((req) => store.approveWithdraw(req.params.id)))
 app.post('/api/withdraws/:id/reject', adminAuth, wrap((req) => store.rejectWithdraw(req.params.id, req.body.reason)))
 
@@ -270,12 +389,16 @@ app.put('/api/config', adminAuth, wrap((req) => {
 }))
 
 // 统计
-app.get('/api/stats/dashboard', wrap(() => store.dashboardStats()))
-app.get('/api/logs', wrap(() => store.getLogs()))
+app.get('/api/stats/dashboard', adminAuth, wrap(() => store.dashboardStats()))
+app.get('/api/logs', adminAuth, wrap(() => store.getLogs()))
 
 // 私域直播
-app.get('/api/lives', wrap((req) => store.listLives(req.query.userId || null)))
-app.post('/api/lives/:id/purchase', wrap((req) => store.purchaseLive(req.params.id, req.body.userId || 'u1')))
+app.get('/api/lives', wrap((req) => store.listLives(isAdminRequest(req) ? req.query.userId : (requestUserId(req) || null))))
+app.post('/api/lives/:id/purchase', wrap((req) => {
+  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
+  requireUser(req, userId)
+  return store.purchaseLive(req.params.id, userId)
+}))
 app.post('/api/lives', adminAuth, wrap((req) => store.createLive(req.body)))
 app.put('/api/lives/:id', adminAuth, wrap((req) => store.updateLive(req.params.id, req.body)))
 app.delete('/api/lives/:id', adminAuth, wrap((req) => store.deleteLive(req.params.id)))
