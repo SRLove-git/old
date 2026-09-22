@@ -12,7 +12,7 @@
       <view class="card-user">
         <view class="card-name">{{user.name}}</view>
         <view class="card-title">尊享会员</view>
-        <view class="card-phone">{{user.phone}}</view>
+        <view class="card-phone">{{phoneDisplay}}</view>
       </view>
       <view class="qr-box">
         <canvas canvas-id="memberQr" class="qr-canvas" width="200" height="200"></canvas>

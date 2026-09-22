@@ -86,7 +86,7 @@
         <view
           wx:for="{{participants}}"
           wx:key="id"
-          class="participant-chip {{selectedParticipantId === item.id ? 'selected' : ''}}"
+          class="participant-chip {{item.selected ? 'selected' : ''}}"
           data-id="{{item.id}}"
           bindtap="selectParticipant"
         >{{item.name}}</view>

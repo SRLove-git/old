@@ -5,7 +5,7 @@
       <view class="avatar"><text>悦</text></view>
       <view class="profile-info">
         <view class="name">{{user.name || '岁悦里朋友'}}</view>
-        <view class="phone">{{user.phone || '点击完善个人信息'}}</view>
+        <view class="phone">{{phoneDisplay || '点击完善个人信息'}}</view>
         <view class="member-pill">金穗会员 · 成长值 {{user.points || 0}}</view>
       </view>
       <view class="code-entry"><view class="code-icon"><view></view><view></view><view></view><view></view></view><text>会员码</text></view>

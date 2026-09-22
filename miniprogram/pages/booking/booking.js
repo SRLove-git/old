@@ -1,5 +1,20 @@
 const store = require('../../utils/store.js')
 
+function selectedParticipantIds(info, memberList) {
+  return [info, ...(memberList || [])]
+    .map((item) => item && item.participantId)
+    .filter((id) => id !== null && id !== undefined && id !== '')
+    .map(String)
+}
+
+function decorateParticipants(participants, info, memberList) {
+  const selected = new Set(selectedParticipantIds(info, memberList))
+  return (participants || []).map((item) => ({
+    ...item,
+    selected: selected.has(String(item.id))
+  }))
+}
+
 Page({
   data: {
     id: null,
@@ -8,7 +23,6 @@ Page({
     scheduleId: '',
     count: 1,
     participants: [],
-    selectedParticipantId: null,
     coupons: [],
     couponList: [],
     couponId: null,
@@ -63,8 +77,7 @@ Page({
       isSkuOnly,
       skuId: skuId || '',
       scheduleId: !isSkuOnly && activity.schedules && activity.schedules.length ? activity.schedules[0].id : '',
-      participants: state.participants,
-      selectedParticipantId: firstParticipant.id,
+      participants: decorateParticipants(state.participants, { participantId: firstParticipant.id }, []),
       coupons: state.coupons,
       skuName: sku ? sku.name : '',
       skuAddress: (sku && sku.address) || activity.address || '',
@@ -76,6 +89,7 @@ Page({
       address: activity.category === 5 ? store.getDefaultAddress() : null,
       refundText: store.refundRuleText(activity.refundRule) || activity.refund || '',
       info: {
+        participantId: firstParticipant.id,
         name: firstParticipant.name || '',
         phone: state.user.phone || '',
         idCard: firstParticipant.idCard || '',
@@ -90,7 +104,7 @@ Page({
     await store.ready()
     const state = store.get()
     this.setData({
-      participants: state.participants,
+      participants: decorateParticipants(state.participants, this.data.info, this.data.memberList),
       coupons: state.coupons
     })
   },
@@ -148,8 +162,9 @@ Page({
       return
     }
     const memberList = this.data.memberList.slice(0, count - 1)
-    while (memberList.length < count - 1) memberList.push({ name: '', idCard: '' })
-    this.setData({ count, memberList }, () => this.recalc())
+    while (memberList.length < count - 1) memberList.push({ participantId: null, name: '', idCard: '' })
+    const participants = decorateParticipants(this.data.participants, this.data.info, memberList)
+    this.setData({ count, memberList, participants }, () => this.recalc())
   },
 
   selectParticipant(e) {
@@ -159,26 +174,70 @@ Page({
       return
     }
     const participant = this.data.participants.find((p) => String(p.id) === String(id))
-    this.setData({
-      selectedParticipantId: id,
-      info: {
-        name: participant.name,
-        phone: store.get().user.phone || '',
-        idCard: participant.idCard || '',
-        discount: ''
+    if (!participant) return
+
+    let info = { ...this.data.info }
+    const memberList = this.data.memberList.map((member) => ({ ...member }))
+    const normalizedId = String(id)
+
+    if (String(info.participantId) === normalizedId) {
+      info = { ...info, participantId: null, name: '', idCard: '', discount: '' }
+    } else {
+      const selectedMemberIndex = memberList.findIndex((member) => String(member.participantId) === normalizedId)
+      if (selectedMemberIndex >= 0) {
+        memberList[selectedMemberIndex] = { participantId: null, name: '', idCard: '' }
+      } else if (info.participantId === null || info.participantId === undefined || info.participantId === '') {
+        info = {
+          ...info,
+          participantId: participant.id,
+          name: participant.name,
+          phone: store.get().user.phone || '',
+          idCard: participant.idCard || '',
+          discount: ''
+        }
+      } else {
+        const emptyIndex = memberList.findIndex((member) => (
+          member.participantId === null || member.participantId === undefined || member.participantId === ''
+        ))
+        if (emptyIndex < 0) {
+          wx.showToast({ title: `当前最多选择${this.data.count}人`, icon: 'none' })
+          return
+        }
+        memberList[emptyIndex] = {
+          participantId: participant.id,
+          name: participant.name,
+          idCard: participant.idCard || ''
+        }
       }
+    }
+
+    this.setData({
+      info,
+      memberList,
+      participants: decorateParticipants(this.data.participants, info, memberList)
     })
   },
 
   onInput(e) {
     const field = e.currentTarget.dataset.field
-    this.setData({ [`info.${field}`]: e.detail.value })
+    const changes = { [`info.${field}`]: e.detail.value }
+    if (field === 'name' || field === 'idCard') changes['info.participantId'] = null
+    this.setData(changes, () => {
+      if (field === 'name' || field === 'idCard') {
+        this.setData({ participants: decorateParticipants(this.data.participants, this.data.info, this.data.memberList) })
+      }
+    })
   },
 
   onMemberInput(e) {
     const index = Number(e.currentTarget.dataset.index)
     const field = e.currentTarget.dataset.field
-    this.setData({ [`memberList[${index}].${field}`]: e.detail.value })
+    this.setData({
+      [`memberList[${index}].${field}`]: e.detail.value,
+      [`memberList[${index}].participantId`]: null
+    }, () => {
+      this.setData({ participants: decorateParticipants(this.data.participants, this.data.info, this.data.memberList) })
+    })
   },
 
   selectCoupon(e) {

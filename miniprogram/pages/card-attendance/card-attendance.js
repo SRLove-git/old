@@ -13,8 +13,7 @@ function clockText() {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
 }
 function maskPhone(value) {
-  const phone = String(value || '').replace(/\D/g, '')
-  return phone.length === 11 ? `${phone.slice(0, 3)} **** ${phone.slice(7)}` : phone
+  return store.formatPhoneDisplay(value)
 }
 
 Page({

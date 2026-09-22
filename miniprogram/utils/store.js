@@ -381,6 +381,17 @@ function maskPhone(value) {
   return `${phone.slice(0, 3)}****${phone.slice(7)}`
 }
 
+// 仅用于界面展示，同时兼容完整号码和接口返回的已脱敏号码。
+function formatPhoneDisplay(value) {
+  const compact = String(value == null ? '' : value).trim().replace(/\s/g, '')
+  if (/^1\d{2}\*{4}\d{4}$/.test(compact)) {
+    return `${compact.slice(0, 3)} **** ${compact.slice(-4)}`
+  }
+  const phone = normalizePhone(compact)
+  if (phone.length === 11) return `${phone.slice(0, 3)} **** ${phone.slice(7)}`
+  return compact
+}
+
 function getDefaultAddress() {
   return cache.addresses.find((a) => a.isDefault) || cache.addresses[0] || null
 }
@@ -645,6 +656,7 @@ module.exports = {
   joinMember,
   normalizePhone,
   maskPhone,
+  formatPhoneDisplay,
   getDefaultAddress,
   money,
   statusClass,

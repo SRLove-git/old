@@ -45,6 +45,7 @@ Page({
     const memberIdDisplay = memberId.replace(/(.{4})/g, '$1 ').trim()
     return {
       user,
+      phoneDisplay: store.formatPhoneDisplay(user.phone),
       memberId,
       memberIdDisplay,
       memberLevel: level,

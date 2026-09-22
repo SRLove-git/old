@@ -12,7 +12,8 @@ Page({
     pendingUnbind: null,
     products: [],
     bindOpen: false,
-    code: ''
+    code: '',
+    phoneDisplay: ''
   },
 
   async onShow() {
@@ -39,6 +40,7 @@ Page({
     })
     this.setData({
       user: state.user,
+      phoneDisplay: store.formatPhoneDisplay(state.user.phone),
       boundManager: state.boundManager,
       isManager: state.isManager,
       application: state.application,
