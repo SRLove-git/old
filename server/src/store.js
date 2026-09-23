@@ -1465,6 +1465,35 @@ export function dashboardStats() {
   }
 }
 
+export function adminNotifications() {
+  const items = []
+  const add = (type, id, title, description, time, target) => {
+    items.push({ id: `${type}-${id}`, type, title, description, time: time || '', target })
+  }
+
+  db.managerApplications
+    .filter((item) => item.status === '待审核')
+    .forEach((item) => add('manager', item.id, '新的主理人申请', `${item.name || '用户'}提交了主理人申请`, item.submittedAt, 'applications'))
+  ;(db.providerApplications || [])
+    .filter((item) => item.status === '待审核')
+    .forEach((item) => add('provider', item.id, '新的服务商申请', `${item.name || '用户'}提交了服务商申请`, item.submittedAt, 'providers'))
+  ;(db.unbindApplications || [])
+    .filter((item) => item.status === '待审核')
+    .forEach((item) => add('unbind', item.id, '新的解绑申请', `${item.customerName || '用户'}申请解绑主理人${item.managerName ? ` ${item.managerName}` : ''}`, item.submittedAt, 'bindings'))
+  db.orders
+    .filter((item) => item.status === '退款中')
+    .forEach((item) => {
+      const customer = db.customers.find((customerItem) => String(customerItem.id) === String(item.userId))
+      add('refund', item.id, '新的退款申请', `${customer?.name || '用户'}申请订单「${item.title || item.id}」退款`, item.refundApplyTime || item.createdAt, 'orders')
+    })
+  db.withdraws
+    .filter((item) => item.status === '待审核')
+    .forEach((item) => add('withdraw', item.id, '新的提现申请', `${item.managerName || '主理人'}申请提现 ¥${round2(item.amount).toFixed(2)}`, item.applyTime, 'withdraws'))
+
+  items.sort((a, b) => String(b.time).localeCompare(String(a.time)))
+  return { total: items.length, items }
+}
+
 function enrichLive(live) {
   const manager = live.managerId ? findManager(live.managerId) : null
   return {

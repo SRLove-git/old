@@ -19,10 +19,51 @@ Page({
     application: null
   },
 
-  async onLoad() {
-    await store.ready()
+  async onShow() {
+    this.pageVisible = true
+    try {
+      await store.ready()
+      await this.refreshApplication()
+      if (this.pageVisible) this.startStatusPolling()
+    } catch (e) {
+      // 网络异常时仍展示缓存中的申请记录。
+      if (this.pageVisible) this.setData({ application: store.get().providerApplication || null })
+    }
+  },
+
+  onHide() {
+    this.pageVisible = false
+    this.stopStatusPolling()
+  },
+
+  onUnload() {
+    this.pageVisible = false
+    this.stopStatusPolling()
+  },
+
+  async refreshApplication() {
+    await store.refreshUserProfile()
     const application = store.get().providerApplication || null
-    if (application) this.setData({ application })
+    if (this.pageVisible) this.setData({ application })
+    return application
+  },
+
+  startStatusPolling() {
+    this.stopStatusPolling()
+    if (!this.data.application || this.data.application.status !== '待审核') return
+    this.statusTimer = setInterval(async () => {
+      try {
+        const application = await this.refreshApplication()
+        if (!application || application.status !== '待审核') this.stopStatusPolling()
+      } catch (e) {
+        // 静默等待下一次同步，避免临时断网反复打扰用户。
+      }
+    }, 5000)
+  },
+
+  stopStatusPolling() {
+    if (this.statusTimer) clearInterval(this.statusTimer)
+    this.statusTimer = null
   },
 
   selectType(e) {
@@ -64,6 +105,7 @@ Page({
       })
       store.get().providerApplication = record
       this.setData({ application: record, submitting: false })
+      this.startStatusPolling()
     } catch (e) {
       this.setData({ submitting: false })
       wx.showToast({ title: e.message || '提交失败', icon: 'none' })

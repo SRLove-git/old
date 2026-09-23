@@ -4,11 +4,15 @@ Page({
   data: {
     addresses: [],
     editingId: null,
-    form: { name: '', phone: '', region: '', detail: '' }
+    form: { name: '', phone: '', region: '', detail: '' },
+    regionOptions: [],
+    regionIndex: -1
   },
 
   async onShow() {
     await store.ready()
+    try { await store.refreshRegions() } catch (e) {}
+    this.setData({ regionOptions: store.getRegions() })
     this.loadList()
   },
 
@@ -17,19 +21,22 @@ Page({
   },
 
   openAdd() {
-    this.setData({ editingId: 'new', form: { name: '', phone: '', region: '', detail: '' } })
+    this.setData({ editingId: 'new', form: { name: '', phone: '', region: '', detail: '' }, regionIndex: -1 })
   },
 
   openEdit(e) {
     const id = e.currentTarget.dataset.id
     const addr = this.data.addresses.find((a) => String(a.id) === String(id))
     if (!addr) return
+    const region = `${addr.province || ''}${addr.city || ''}${addr.district || ''}`
+    const regionIndex = this.data.regionOptions.findIndex((item) => item.name === region)
     this.setData({
       editingId: id,
+      regionIndex,
       form: {
         name: addr.name || '',
         phone: addr.phone || '',
-        region: `${addr.province || ''}${addr.city || ''}${addr.district || ''}`,
+        region,
         detail: addr.detail || ''
       }
     })
@@ -46,10 +53,20 @@ Page({
     this.setData({ [`form.${field}`]: e.detail.value })
   },
 
+  onRegionChange(e) {
+    const regionIndex = Number(e.detail.value)
+    const region = this.data.regionOptions[regionIndex]
+    this.setData({ regionIndex, 'form.region': region ? region.name : '' })
+  },
+
   async save() {
     const { form, editingId } = this.data
-    if (!form.name || !form.phone || !form.detail) {
+    if (!form.name || !form.phone || !form.region || !form.detail) {
       wx.showToast({ title: '请填写完整收货信息', icon: 'none' })
+      return
+    }
+    if (!this.data.regionOptions.some((item) => item.name === form.region)) {
+      wx.showToast({ title: '请选择后台已启用地区', icon: 'none' })
       return
     }
     if (!/^1\d{10}$/.test(form.phone)) {

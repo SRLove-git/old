@@ -6,7 +6,7 @@
     data-index="{{index}}"
     bindtap="switchTab"
   >
-    <view class="tab-icon tab-icon-{{item.icon}}"><view class="tab-icon-inner"></view></view>
+    <view class="tab-icon-wrap"><view class="tab-icon tab-icon-{{item.icon}}"></view></view>
     <text class="tab-text">{{item.text}}</text>
   </view>
 </view>

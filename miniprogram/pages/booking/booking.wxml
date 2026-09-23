@@ -179,8 +179,11 @@
         <input class="field-input" value="{{addressForm.phone}}" data-field="phone" bindinput="onAddressInput" placeholder="联系电话" />
       </view>
       <view class="field">
-        <text class="field-label">省市区</text>
-        <input class="field-input" value="{{addressForm.region}}" data-field="region" bindinput="onAddressInput" placeholder="例如：北京市朝阳区" />
+        <text class="field-label">配送地区<text class="required">*</text></text>
+        <picker mode="selector" range="{{regionOptions}}" range-key="name" value="{{regionIndex}}" bindchange="onAddressRegionChange">
+          <view class="field-input address-picker {{addressForm.region ? '' : 'placeholder'}}"><text>{{addressForm.region || '请选择后台配置的地区'}}</text><text class="address-picker-arrow">›</text></view>
+        </picker>
+        <view wx:if="{{regionOptions.length === 0}}" class="region-empty-tip">后台暂未配置可用配送地区</view>
       </view>
       <view class="field">
         <text class="field-label">详细地址<text class="required">*</text></text>

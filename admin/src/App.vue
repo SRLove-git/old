@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import {
   IconDashboard,
@@ -23,7 +23,8 @@ import {
   IconMenuFold,
   IconMenuUnfold,
   IconPlus,
-  IconLocation
+  IconLocation,
+  IconNotification
 } from '@arco-design/web-vue/es/icon'
 import { api } from './api.js'
 
@@ -31,6 +32,10 @@ const view = ref('dashboard')
 const loading = ref(false)
 const error = ref('')
 const collapsed = ref(false)
+const notifications = ref([])
+const notificationLoading = ref(false)
+const notificationOpen = ref(false)
+let notificationTimer = null
 
 // 金额展示统一两位小数，空值按 0 兜底
 const fmtMoney = (n) => Number(n || 0).toFixed(2)
@@ -196,6 +201,15 @@ function catName(id) {
 function typeName(type) { return categoryTypes[type] || '活动' }
 
 const pageTitle = computed(() => nav.find((n) => n.key === view.value)?.name || '')
+const notificationCount = computed(() => notifications.value.length)
+
+function notificationColor(type) {
+  return ({ manager: 'arcoblue', provider: 'purple', unbind: 'orange', refund: 'red', withdraw: 'green' })[type] || 'gray'
+}
+
+function notificationLabel(type) {
+  return ({ manager: '主理人', provider: '服务商', unbind: '解绑', refund: '退款', withdraw: '提现' })[type] || '待办'
+}
 
 function fuzzyMatch(text, kw) {
   const k = String(kw || '').trim().toLowerCase()
@@ -513,6 +527,23 @@ async function load() {
   }
 }
 
+async function loadNotifications(silent = false) {
+  if (!silent) notificationLoading.value = true
+  try {
+    const result = await api.get('/admin/notifications')
+    notifications.value = Array.isArray(result?.items) ? result.items : []
+  } catch (e) {
+    if (!silent) Message.error(e.message || '消息通知加载失败')
+  } finally {
+    if (!silent) notificationLoading.value = false
+  }
+}
+
+function openNotification(item) {
+  notificationOpen.value = false
+  switchView(item.target)
+}
+
 function switchView(key) {
   view.value = key
   kw.value = ''
@@ -520,13 +551,22 @@ function switchView(key) {
   load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await Promise.all([load(), loadNotifications()])
+  notificationTimer = setInterval(() => loadNotifications(true), 30000)
+})
+
+onBeforeUnmount(() => {
+  if (notificationTimer) clearInterval(notificationTimer)
+  notificationTimer = null
+})
 
 async function doAction(fn, successMsg) {
   error.value = ''
   try {
     await fn()
     await load()
+    await loadNotifications(true)
     if (successMsg) Message.success(successMsg)
   } catch (e) {
     error.value = e.message
@@ -1144,6 +1184,32 @@ function exportCsv(filename, rows) {
           </a-button>
           <span class="topbar-title">{{ pageTitle }}</span>
           <div class="topbar-spacer"></div>
+          <a-popover v-model:popup-visible="notificationOpen" trigger="click" position="br">
+            <a-badge :count="notificationCount" :max-count="99">
+              <a-button type="text" aria-label="消息通知">
+                <template #icon><IconNotification /></template>
+              </a-button>
+            </a-badge>
+            <template #content>
+              <div class="notification-panel">
+                <div class="notification-head">
+                  <div><strong>消息通知</strong><span>{{ notificationCount }} 项待处理</span></div>
+                  <a-button type="text" size="mini" :loading="notificationLoading" @click="loadNotifications()">刷新</a-button>
+                </div>
+                <div v-if="notificationCount === 0" class="notification-empty">暂无待处理消息</div>
+                <div v-else class="notification-list">
+                  <button v-for="item in notifications" :key="item.id" class="notification-item" @click="openNotification(item)">
+                    <div class="notification-item-head">
+                      <a-tag :color="notificationColor(item.type)" size="small">{{ notificationLabel(item.type) }}</a-tag>
+                      <span>{{ item.time || '刚刚' }}</span>
+                    </div>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.description }}</p>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </a-popover>
           <a-space :size="10">
             <a-avatar :size="30" class="avatar">管</a-avatar>
             <span class="topbar-user">运营管理员</span>
@@ -2233,6 +2299,78 @@ function exportCsv(filename, rows) {
 
 .avatar {
   background: var(--primary-6);
+}
+
+.notification-panel {
+  width: 360px;
+}
+
+.notification-head,
+.notification-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-head {
+  padding: 2px 4px 12px;
+  border-bottom: 1px solid var(--color-fill-3);
+}
+
+.notification-head strong {
+  font-size: 15px;
+}
+
+.notification-head span {
+  margin-left: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.notification-list {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.notification-item {
+  width: 100%;
+  padding: 14px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--color-fill-3);
+  background: transparent;
+  color: var(--color-text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: var(--color-fill-1);
+}
+
+.notification-item-head span {
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.notification-item > strong {
+  display: block;
+  margin-top: 9px;
+  font-size: 14px;
+}
+
+.notification-item p {
+  margin: 5px 0 0;
+  color: var(--color-text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.notification-empty {
+  padding: 42px 0;
+  color: var(--color-text-3);
+  text-align: center;
 }
 
 .content {

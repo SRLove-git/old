@@ -28,15 +28,16 @@
 .meta-icon { flex: none; width: 24rpx; color: #7c8481; font-size: 25rpx; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; }
 .card-footer { display: flex; align-items: center; min-height: 92rpx; margin: 0 16rpx; border-top: 1rpx solid var(--color-border); }
-.signup-info { flex: 1; display: flex; align-items: center; min-width: 0; }
-.avatar-stack { display: flex; padding-left: 7rpx; }
-.mini-avatar { width: 38rpx; height: 38rpx; display: flex; align-items: center; justify-content: center; margin-left: -7rpx; border: 2rpx solid #fff; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary-text); font-size: 20rpx; }
+/* 防重叠：空间不足时先裁剪头像叠层，报名人数始终完整，价格与按钮保持自然宽度 */
+.signup-info { flex: 1 1 auto; display: flex; align-items: center; min-width: 0; margin-right: 16rpx; overflow: hidden; }
+.avatar-stack { flex: 0 1 auto; display: flex; min-width: 0; padding-left: 7rpx; overflow: hidden; }
+.mini-avatar { flex: none; width: 38rpx; height: 38rpx; display: flex; align-items: center; justify-content: center; margin-left: -7rpx; border: 2rpx solid #fff; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary-text); font-size: 20rpx; }
 .mini-avatar.more { background: var(--color-fill); color: var(--color-text-3); font-size: 22rpx; }
-.signup-count { margin-left: 10rpx; color: var(--color-text-3); font-size: 20rpx; white-space: nowrap; }
-.starting-price { display: flex; align-items: center; margin-right: 20rpx; color: var(--color-primary); font-size: 28rpx; font-weight: 700; }
+.signup-count { flex: none; margin-left: 10rpx; color: var(--color-text-3); font-size: 20rpx; white-space: nowrap; }
+.starting-price { flex: none; display: flex; align-items: center; margin-right: 20rpx; color: var(--color-primary); font-size: 28rpx; font-weight: 700; }
 .price-dot { width: 31rpx; height: 31rpx; display: flex; align-items: center; justify-content: center; margin-right: 5rpx; border-radius: 50%; background: var(--color-primary); color: #fff; font-size: 20rpx; }
 .price-suffix { margin-left: 2rpx; color: var(--color-text-3); font-size: 21rpx; font-weight: 400; }
-.signup-button { min-width: 132rpx; min-height: 64rpx; padding: 12rpx 24rpx; font-size: 25rpx; }
+.signup-button { flex: none; min-width: 132rpx; min-height: 64rpx; padding: 12rpx 24rpx; font-size: 25rpx; }
 .signup-button.disabled { background: var(--color-fill); color: var(--color-text-3); box-shadow: none; }
 .empty { padding: 150rpx 40rpx; text-align: center; }
 .empty-icon { color: var(--color-text-4); font-size: 80rpx; }

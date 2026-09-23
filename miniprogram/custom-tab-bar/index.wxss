@@ -1,13 +1,15 @@
+/* Tab bar redesign: unified 24px-grid SVG line icons (2px round-cap stroke).
+   Selected state: brand-brown icon on a soft primary-light pill. */
 .tab-bar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 126rpx;
-  background: rgba(255, 255, 255, 0.98);
-  border-top: 1rpx solid #e9e5de;
+  height: 132rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8rpx 26rpx rgba(45, 40, 34, 0.045);
   display: flex;
-  padding-bottom: 0;
   z-index: 100;
 }
 
@@ -26,37 +28,44 @@
   color: #b98555;
 }
 
-.tab-emoji {
-  height: 52rpx;
-  font-size: 47rpx;
-  line-height: 48rpx;
-  font-weight: 400;
+/* Pill highlight behind the selected icon: larger visual target,
+   easier for elderly users to spot the current page. */
+.tab-icon-wrap {
+  width: 96rpx;
+  height: 58rpx;
+  margin-bottom: 5rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
-.tab-item.active .tab-emoji {
-  transform: translateY(-2rpx);
+.tab-item.active .tab-icon-wrap {
+  background: #f8efe5;
 }
+
+.tab-icon {
+  width: 44rpx;
+  height: 44rpx;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 44rpx 44rpx;
+}
+
+.tab-icon-home { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2E4MTdmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgMTEuNSAxMiA0LjVsOCA3Ii8+PHBhdGggZD0iTTYgOS44VjE4YTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMi0yVjkuOCIvPjxwYXRoIGQ9Ik0xMCAyMHYtNC41YTIgMiAwIDAgMSA0IDBWMjAiLz48L3N2Zz4="); }
+.tab-item.active .tab-icon-home { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjk4NTU1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTQgMTEuNSAxMiA0LjVsOCA3Ii8+PHBhdGggZD0iTTYgOS44VjE4YTIgMiAwIDAgMCAyIDJoOGEyIDIgMCAwIDAgMi0yVjkuOCIvPjxwYXRoIGQ9Ik0xMCAyMHYtNC41YTIgMiAwIDAgMSA0IDBWMjAiLz48L3N2Zz4="); }
+
+.tab-icon-activities { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2E4MTdmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iNCIgeT0iNCIgd2lkdGg9IjciIGhlaWdodD0iNyIgcng9IjIuMiIvPjxyZWN0IHg9IjEzIiB5PSI0IiB3aWR0aD0iNyIgaGVpZ2h0PSI3IiByeD0iMi4yIi8+PHJlY3QgeD0iNCIgeT0iMTMiIHdpZHRoPSI3IiBoZWlnaHQ9IjciIHJ4PSIyLjIiLz48cmVjdCB4PSIxMyIgeT0iMTMiIHdpZHRoPSI3IiBoZWlnaHQ9IjciIHJ4PSIyLjIiLz48L3N2Zz4="); }
+.tab-item.active .tab-icon-activities { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjk4NTU1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iNCIgeT0iNCIgd2lkdGg9IjciIGhlaWdodD0iNyIgcng9IjIuMiIvPjxyZWN0IHg9IjEzIiB5PSI0IiB3aWR0aD0iNyIgaGVpZ2h0PSI3IiByeD0iMi4yIi8+PHJlY3QgeD0iNCIgeT0iMTMiIHdpZHRoPSI3IiBoZWlnaHQ9IjciIHJ4PSIyLjIiLz48cmVjdCB4PSIxMyIgeT0iMTMiIHdpZHRoPSI3IiBoZWlnaHQ9IjciIHJ4PSIyLjIiLz48L3N2Zz4="); }
+
+.tab-icon-academy { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2E4MTdmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMy41IiB5PSI1IiB3aWR0aD0iMTciIGhlaWdodD0iMTEuNSIgcng9IjIuNCIvPjxwYXRoIGQ9Ik0xMC44IDkuMWwzLjIgMS42NS0zLjIgMS42NXoiIGZpbGw9IiM3YTgxN2YiIHN0cm9rZT0iIzdhODE3ZiIgc3Ryb2tlLXdpZHRoPSIxLjEiLz48cGF0aCBkPSJNMTIgMTYuNXYyLjIiLz48cGF0aCBkPSJNOC44IDIwaDYuNCIvPjwvc3ZnPg=="); }
+.tab-item.active .tab-icon-academy { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjk4NTU1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMy41IiB5PSI1IiB3aWR0aD0iMTciIGhlaWdodD0iMTEuNSIgcng9IjIuNCIvPjxwYXRoIGQ9Ik0xMC44IDkuMWwzLjIgMS42NS0zLjIgMS42NXoiIGZpbGw9IiNiOTg1NTUiIHN0cm9rZT0iI2I5ODU1NSIgc3Ryb2tlLXdpZHRoPSIxLjEiLz48cGF0aCBkPSJNMTIgMTYuNXYyLjIiLz48cGF0aCBkPSJNOC44IDIwaDYuNCIvPjwvc3ZnPg=="); }
+
+.tab-icon-user { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2E4MTdmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSI4IiByPSIzLjUiLz48cGF0aCBkPSJNNS4yIDE5LjhhNi44IDYuOCAwIDAgMSAxMy42IDAiLz48L3N2Zz4="); }
+.tab-item.active .tab-icon-user { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjk4NTU1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iMTIiIGN5PSI4IiByPSIzLjUiLz48cGF0aCBkPSJNNS4yIDE5LjhhNi44IDYuOCAwIDAgMSAxMy42IDAiLz48L3N2Zz4="); }
 
 .tab-item.active .tab-text {
   font-size: 24rpx;
   font-weight: 700;
 }
-
-/* Calm, consistent line icons replace platform-dependent glyphs. */
-.tab-bar { height: 132rpx; padding-bottom: env(safe-area-inset-bottom); background: rgba(255,255,255,.97); box-shadow: 0 -8rpx 26rpx rgba(45,40,34,.045); }
-.tab-icon { position: relative; width: 46rpx; height: 46rpx; margin-bottom: 5rpx; color: currentColor; }
-.tab-icon::before, .tab-icon::after, .tab-icon-inner::before, .tab-icon-inner::after { content: ''; position: absolute; box-sizing: border-box; }
-.tab-icon-home::before { left: 6rpx; top: 17rpx; width: 34rpx; height: 25rpx; border: 3rpx solid currentColor; border-radius: 5rpx 5rpx 8rpx 8rpx; }
-.tab-icon-home::after { left: 7rpx; top: 5rpx; width: 32rpx; height: 32rpx; border-left: 4rpx solid currentColor; border-top: 4rpx solid currentColor; border-radius: 5rpx; transform: rotate(45deg); }
-.tab-icon-home .tab-icon-inner::before { left: 19rpx; bottom: 4rpx; width: 10rpx; height: 16rpx; border-radius: 6rpx 6rpx 0 0; background: currentColor; }
-.tab-icon-activities::before { left: 4rpx; right: 4rpx; top: 7rpx; bottom: 3rpx; border: 3rpx solid currentColor; border-radius: 8rpx; }
-.tab-icon-activities::after { left: 4rpx; right: 4rpx; top: 18rpx; border-top: 3rpx solid currentColor; }
-.tab-icon-activities .tab-icon-inner::before { left: 13rpx; top: 2rpx; width: 4rpx; height: 11rpx; border-radius: 4rpx; background: currentColor; box-shadow: 17rpx 0 0 currentColor; }
-.tab-icon-activities .tab-icon-inner::after { left: 13rpx; top: 26rpx; width: 6rpx; height: 6rpx; border-radius: 50%; background: currentColor; box-shadow: 14rpx 0 0 currentColor, 0 10rpx 0 currentColor, 14rpx 10rpx 0 currentColor; }
-.tab-icon-academy::before { left: 3rpx; top: 5rpx; width: 40rpx; height: 34rpx; border: 3rpx solid currentColor; border-radius: 8rpx; }
-.tab-icon-academy::after { left: 18rpx; top: 13rpx; width: 0; height: 0; border-top: 8rpx solid transparent; border-bottom: 8rpx solid transparent; border-left: 13rpx solid currentColor; }
-.tab-icon-academy .tab-icon-inner::before { left: 14rpx; bottom: 1rpx; width: 18rpx; height: 3rpx; border-radius: 3rpx; background: currentColor; }
-.tab-icon-user::before { left: 14rpx; top: 3rpx; width: 19rpx; height: 19rpx; border: 3rpx solid currentColor; border-radius: 50%; }
-.tab-icon-user::after { left: 6rpx; bottom: 2rpx; width: 36rpx; height: 21rpx; border: 3rpx solid currentColor; border-radius: 22rpx 22rpx 8rpx 8rpx; }
-.tab-item.active .tab-icon { transform: translateY(-2rpx); }
-.tab-emoji { display: none; }

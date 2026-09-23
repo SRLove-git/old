@@ -46,6 +46,8 @@ Page({
     address: null,
     addressOpen: false,
     addressForm: {},
+    regionOptions: [],
+    regionIndex: -1,
     showAll: false,
     visibleSchedules: [],
     hasMore: false,
@@ -56,6 +58,7 @@ Page({
 
   async onLoad(options) {
     await store.ready()
+    try { await store.refreshRegions() } catch (e) {}
     const id = options.id
     const state = store.get()
     const activity = store.getActivity(id)
@@ -87,6 +90,7 @@ Page({
       needDiscount: !!(activity.participantFields && activity.participantFields.discount),
       isGoods: activity.category === 5,
       address: activity.category === 5 ? store.getDefaultAddress() : null,
+      regionOptions: store.getRegions(),
       refundText: store.refundRuleText(activity.refundRule) || activity.refund || '',
       info: {
         participantId: firstParticipant.id,
@@ -105,7 +109,8 @@ Page({
     const state = store.get()
     this.setData({
       participants: decorateParticipants(state.participants, this.data.info, this.data.memberList),
-      coupons: state.coupons
+      coupons: state.coupons,
+      regionOptions: store.getRegions()
     })
   },
 
@@ -345,12 +350,15 @@ Page({
 
   openAddress() {
     const addr = this.data.address || store.getDefaultAddress() || {}
+    const region = `${addr.province || ''}${addr.city || ''}${addr.district || ''}`
+    const regionIndex = this.data.regionOptions.findIndex((item) => item.name === region)
     this.setData({
       addressOpen: true,
+      regionIndex,
       addressForm: {
         name: addr.name || '',
         phone: addr.phone || '',
-        region: `${addr.province || ''}${addr.city || ''}${addr.district || ''}`,
+        region,
         detail: addr.detail || ''
       }
     })
@@ -365,14 +373,27 @@ Page({
     this.setData({ [`addressForm.${field}`]: e.detail.value })
   },
 
+  onAddressRegionChange(e) {
+    const regionIndex = Number(e.detail.value)
+    const region = this.data.regionOptions[regionIndex]
+    this.setData({ regionIndex, 'addressForm.region': region ? region.name : '' })
+  },
+
   async saveAddressNow() {
     const { addressForm } = this.data
-    if (!addressForm.name || !addressForm.phone || !addressForm.detail) {
+    if (!addressForm.name || !addressForm.phone || !addressForm.region || !addressForm.detail) {
       wx.showToast({ title: '请填写完整收货信息', icon: 'none' })
       return
     }
-    const addr = await store.saveAddress({
-      id: this.data.address ? this.data.address.id : null,
+    if (!/^1\d{10}$/.test(addressForm.phone)) {
+      wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
+      return
+    }
+    if (!this.data.regionOptions.some((item) => item.name === addressForm.region)) {
+      wx.showToast({ title: '请选择后台已启用地区', icon: 'none' })
+      return
+    }
+    const payload = {
       name: addressForm.name,
       phone: addressForm.phone,
       province: '',
@@ -380,7 +401,10 @@ Page({
       district: addressForm.region || '',
       detail: addressForm.detail,
       isDefault: true
-    })
+    }
+    const addr = this.data.address && this.data.address.id
+      ? await store.updateAddress(this.data.address.id, payload)
+      : await store.saveAddress(payload)
     this.setData({ address: addr, addressOpen: false })
     wx.showToast({ title: '收货地址已保存', icon: 'none' })
   },

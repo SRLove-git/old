@@ -84,8 +84,9 @@ Page({
 
   setTab(e) {
     const id = e.currentTarget.dataset.id
-    this.setData({ tab: id })
-    if (id === 'promote') this.drawPromoQr()
+    this.setData({ tab: id }, () => {
+      if (id === 'promote') this.drawPromoQr()
+    })
   },
 
   openWithdraw() {
@@ -168,19 +169,26 @@ Page({
   },
 
   drawPromoQr(onDone) {
-    const ctx = wx.createCanvasContext('promoQr', this)
-    qrcode.draw(ctx, this.promoText(), 240)
-    ctx.draw(false, typeof onDone === 'function' ? onDone : undefined)
+    wx.createSelectorQuery()
+      .in(this)
+      .select('.promo-qr')
+      .boundingClientRect((rect) => {
+        const size = (rect && Math.min(rect.width, rect.height)) || 100
+        const ctx = wx.createCanvasContext('promoQr', this)
+        qrcode.draw(ctx, this.promoText(), size)
+        ctx.draw(false, typeof onDone === 'function' ? () => onDone(size) : undefined)
+      })
+      .exec()
   },
 
   saveQr() {
-    this.drawPromoQr(() => {
+    this.drawPromoQr((size) => {
       wx.canvasToTempFilePath({
         canvasId: 'promoQr',
         x: 0,
         y: 0,
-        width: 240,
-        height: 240,
+        width: size,
+        height: size,
         destWidth: 480,
         destHeight: 480,
         success: (res) => {

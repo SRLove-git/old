@@ -74,9 +74,9 @@
   </view>
 
   <view class="fixed-bottom product-bottom">
-    <button class="bottom-icon" bindtap="showService"><text>◌</text><text>客服</text></button>
-    <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><text>⌂</text><text>店铺</text></button>
-    <button class="bottom-icon" bindtap="goCart"><text>▢</text><text>购物车</text></button>
+    <button class="bottom-icon" bindtap="showService"><view class="bi-icon bi-icon-service"></view><text>客服</text></button>
+    <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><view class="bi-icon bi-icon-shop"></view><text>店铺</text></button>
+    <button class="bottom-icon" bindtap="goCart"><view class="bi-icon bi-icon-cart"></view><text>购物车</text></button>
     <view class="buy-actions"><button class="add-cart btn btn-ghost btn-pill" bindtap="addToCart">加入购物车</button><button class="buy-now btn btn-ink btn-pill" bindtap="openSku">立即购买</button></view>
   </view>
 

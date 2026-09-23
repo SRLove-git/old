@@ -281,7 +281,13 @@ app.post('/api/addresses', wrap((req) => {
   const db = store.get()
   const userId = requestUserId(req)
   requireUser(req, userId)
-  const a = { id: `addr${Date.now()}`, ...req.body, userId }
+  const { id: ignoredId, userId: ignoredUserId, ...form } = req.body || {}
+  const a = { ...form, id: `addr${Date.now()}`, userId }
+  if (a.isDefault) {
+    db.addresses.forEach((item) => {
+      if (String(item.userId) === String(userId)) item.isDefault = false
+    })
+  }
   db.addresses.push(a)
   store.save()
   return a
@@ -317,6 +323,7 @@ app.get('/api/orders', wrap((req) => {
   requireUser(req, userId)
   return db.orders.filter((o) => String(o.userId || '') === userId)
 }))
+app.get('/api/admin/notifications', adminAuth, wrap(() => store.adminNotifications()))
 app.get('/api/orders/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
 app.get('/api/orders/:id', wrap((req) => {
   requireOrderOwner(req, req.params.id)

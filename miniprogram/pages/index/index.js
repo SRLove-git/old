@@ -32,6 +32,8 @@ Page({
     city: '全部',
     cities: ['全部'],
     cityOpen: false,
+    serviceOpen: false,
+    assistant: {},
     viewMode: 'recommend',
     slogan: '',
     filing: {},
@@ -49,6 +51,7 @@ Page({
       boundManager: store.get().boundManager,
       slogan: store.getBrand().slogan,
       filing: store.getFiling(),
+      assistant: store.getAssistant(),
       cities,
       city: cities.length > 1 ? cities[1] : (cities[0] || '全部')
     })
@@ -65,7 +68,8 @@ Page({
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
       slogan: store.getBrand().slogan,
-      filing: store.getFiling()
+      filing: store.getFiling(),
+      assistant: store.getAssistant()
     })
     this.buildGroups()
     this.buildContent()
@@ -74,7 +78,9 @@ Page({
 
   onHide() {
     this.setTabBarVisible(true)
-    if (this.data.cityOpen) this.setData({ cityOpen: false })
+    if (this.data.cityOpen || this.data.serviceOpen) {
+      this.setData({ cityOpen: false, serviceOpen: false })
+    }
   },
 
   buildCategories() {
@@ -246,12 +252,29 @@ Page({
   },
 
   showService() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '需要帮忙吗？',
-      content: `不会操作没关系，直接打电话，我们一步步教您。\n客服电话：${a.phone}\n\n或长按添加小助理微信：${a.wechat}`,
-      showCancel: false,
-      confirmText: '我知道了'
+    this.setData({
+      serviceOpen: true,
+      assistant: store.getAssistant()
+    })
+    this.setTabBarVisible(false)
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
+    this.setTabBarVisible(true)
+  },
+
+  copyServiceContact(e) {
+    const field = e.currentTarget.dataset.field
+    const value = String(this.data.assistant[field] || '').trim()
+    if (!value) {
+      wx.showToast({ title: '暂无联系方式', icon: 'none' })
+      return
+    }
+    const label = field === 'phone' ? '客服电话' : '微信号'
+    wx.setClipboardData({
+      data: value,
+      success: () => wx.showToast({ title: `${label}已复制`, icon: 'success' })
     })
   }
 })

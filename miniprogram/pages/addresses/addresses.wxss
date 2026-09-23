@@ -74,3 +74,26 @@
   color: var(--color-danger);
   margin-left: 4rpx;
 }
+
+.picker-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-input.placeholder {
+  color: var(--color-text-3);
+}
+
+.picker-arrow {
+  margin-left: 20rpx;
+  color: var(--color-text-3);
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.region-empty-tip {
+  margin-top: 10rpx;
+  color: var(--color-danger);
+  font-size: 22rpx;
+}

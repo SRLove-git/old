@@ -119,6 +119,22 @@
   </view>
 
   <view class="service-fab" role="button" aria-label="联系小助理" bindtap="showService"><view class="service-bubble-icon"><text></text><text></text><text></text></view></view>
+  <view wx:if="{{serviceOpen}}" class="contact-mask" bindtap="closeService">
+    <view class="contact-sheet" catchtap="noop">
+      <view class="contact-handle"></view>
+      <view class="contact-title">需要帮忙吗？</view>
+      <view class="contact-sub">不会操作没关系，联系我们，我们一步步教您。</view>
+      <view class="contact-row" data-field="phone" bindtap="copyServiceContact">
+        <view class="contact-copy"><text class="contact-label">客服电话</text><text class="contact-value">{{assistant.phone}}</text></view>
+        <view class="contact-copy-btn">复制</view>
+      </view>
+      <view class="contact-row" data-field="wechat" bindtap="copyServiceContact">
+        <view class="contact-copy"><text class="contact-label">小助理微信</text><text class="contact-value">{{assistant.wechat}}</text></view>
+        <view class="contact-copy-btn">复制</view>
+      </view>
+      <button class="contact-close" bindtap="closeService">我知道了</button>
+    </view>
+  </view>
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
       <view class="city-sheet-title">选择所在区域</view>

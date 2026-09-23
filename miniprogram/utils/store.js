@@ -33,6 +33,7 @@ let cache = {
 }
 
 let loaded = false
+let profileRefreshPromise = null
 let pendingBindManagerId = null
 let pendingBindSource = null
 
@@ -91,6 +92,21 @@ function getBrand() {
   return {
     slogan: b.slogan || '和同龄人一起，玩得开心又省心'
   }
+}
+
+function applyUserProfile(profile) {
+  cache.user = profile.user
+  cache.cards = profile.cards
+  cache.coupons = profile.coupons
+  cache.boundManager = profile.boundManager
+  cache.addresses = profile.addresses
+  cache.isManager = profile.isManager
+  // 只有主理人本人会拿到自己的主理人记录（含余额与 id）
+  cache.manager = profile.manager || null
+  cache.application = profile.application
+  cache.bindLogs = profile.bindLogs
+  cache.pendingUnbind = profile.pendingUnbind || null
+  cache.providerApplication = profile.providerApplication || null
 }
 
 function couponApplicable(coupon, activity, amount, userId) {
@@ -160,18 +176,7 @@ async function ready() {
     cache.banners = home.banners
     cache.categories = home.categories
     cache.config = home.config
-    cache.user = profile.user
-    cache.cards = profile.cards
-    cache.coupons = profile.coupons
-    cache.boundManager = profile.boundManager
-    cache.addresses = profile.addresses
-    cache.isManager = profile.isManager
-    // 只有主理人本人会拿到自己的主理人记录（含余额与 id）
-    cache.manager = profile.manager || null
-    cache.application = profile.application
-    cache.bindLogs = profile.bindLogs
-    cache.pendingUnbind = profile.pendingUnbind || null
-    cache.providerApplication = profile.providerApplication || null
+    applyUserProfile(profile)
     cache.orders = orders
     cache.participants = participants
     cache.reviews = reviews
@@ -194,6 +199,19 @@ async function refresh() {
   return ready()
 }
 
+// 审核状态只需要刷新会员资料，避免轮询时重复拉取首页、订单等大列表。
+async function refreshUserProfile() {
+  if (profileRefreshPromise) return profileRefreshPromise
+  profileRefreshPromise = ensureLogin()
+    .then(() => api.get(`/users/${authUserId()}`))
+    .then((profile) => {
+      applyUserProfile(profile)
+      return cache
+    })
+    .finally(() => { profileRefreshPromise = null })
+  return profileRefreshPromise
+}
+
 function get() {
   return cache
 }
@@ -209,6 +227,11 @@ function getActivities() {
 
 function getRegions() {
   return (cache.regions || []).filter((region) => region.enabled !== false).slice().sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
+}
+
+async function refreshRegions() {
+  cache.regions = await api.get('/regions?enabled=1')
+  return getRegions()
 }
 
 function getActivityRegionNames(activity) {
@@ -626,6 +649,7 @@ module.exports = {
   init,
   ready,
   refresh,
+  refreshUserProfile,
   get,
   getCategory,
   getAssistant,
@@ -633,6 +657,7 @@ module.exports = {
   getBrand,
   getActivities,
   getRegions,
+  refreshRegions,
   getActivityRegionNames,
   activityInRegion,
   getActivity,

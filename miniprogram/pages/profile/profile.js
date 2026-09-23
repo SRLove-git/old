@@ -17,11 +17,50 @@ Page({
   },
 
   async onShow() {
+    this.pageVisible = true
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 })
     }
-    await store.ready()
-    this.loadState()
+    try {
+      await store.ready()
+      await store.refreshUserProfile()
+      if (!this.pageVisible) return
+      this.loadState()
+      this.startStatusPolling()
+    } catch (e) {
+      // 网络波动时保留上一次成功加载的资料，不阻塞个人中心使用。
+      if (this.pageVisible) this.loadState()
+    }
+  },
+
+  onHide() {
+    this.pageVisible = false
+    this.stopStatusPolling()
+  },
+
+  onUnload() {
+    this.pageVisible = false
+    this.stopStatusPolling()
+  },
+
+  startStatusPolling() {
+    this.stopStatusPolling()
+    if (!store.get().pendingUnbind) return
+    this.statusTimer = setInterval(async () => {
+      try {
+        await store.refreshUserProfile()
+        if (!this.pageVisible) return
+        this.loadState()
+        if (!store.get().pendingUnbind) this.stopStatusPolling()
+      } catch (e) {
+        // 静默等待下一次同步，避免临时断网反复打扰用户。
+      }
+    }, 5000)
+  },
+
+  stopStatusPolling() {
+    if (this.statusTimer) clearInterval(this.statusTimer)
+    this.statusTimer = null
   },
 
   loadState() {
@@ -111,6 +150,7 @@ Page({
             try {
               const application = await store.unbindApply(reason)
               this.setData({ pendingUnbind: application })
+              this.startStatusPolling()
               wx.showToast({ title: '申请已提交，等待客服审核', icon: 'none' })
             } catch (e) {
               wx.showToast({ title: e.message || '提交失败', icon: 'none' })
