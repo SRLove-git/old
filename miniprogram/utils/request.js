@@ -1,6 +1,7 @@
 const { API_BASE, DEV_USER_ID } = require('./config.js')
 
-const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v1'
+// 登录身份发生过后台合并时升级缓存键，确保新版重新换取服务端会话。
+const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v2'
 let authState = DEV_USER_ID ? { token: 'local-dev', user: { id: String(DEV_USER_ID) }, expiresAt: Number.MAX_SAFE_INTEGER } : (wx.getStorageSync(AUTH_STORAGE_KEY) || null)
 let loginPromise = null
 

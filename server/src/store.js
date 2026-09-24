@@ -1171,25 +1171,18 @@ export function applyManager(form) {
   const name = String(form.name || '').trim()
   const phone = normalizePhone(form.phone)
   const accountName = customer ? String(customer.name || '').trim() : ''
-  const accountPhone = customer ? normalizePhone(customer.phone) : ''
-  const accountPhoneValid = /^1\d{10}$/.test(accountPhone)
   if (!name) throw badRequest('请填写真实姓名')
   if (!/^1\d{10}$/.test(phone)) throw badRequest('手机号格式不正确，请填写11位手机号（如 13812346688）')
   // 账号已有资料时以账号为准，避免冒用他人身份申请
   if (accountName && accountName !== name) throw badRequest(`姓名需与账号信息一致（当前账号：${accountName}）`)
-  // 账号手机号本身不合法（缺失/残缺/被脱敏）时不作为身份依据，允许本人补填并覆盖
-  if (accountPhoneValid && accountPhone !== phone) {
-    throw badRequest(`手机号需与账号信息一致（当前账号：${maskPhone(accountPhone)}）`)
-  }
   if (!customer) {
     // 登录用户还没有会员档案时补建一条，避免申请流程走不通
     customer = { id: userId, name, phone, member: true, balance: 0, points: 0, managerId: null, isManager: false }
     db.customers.push(customer)
     addLog('用户管理', `补建会员档案：${name} ${maskPhone(phone)}`)
-  } else if (!accountName || !accountPhoneValid) {
-    // 账号缺姓名或手机号不可用时，用本次申请填写的信息补齐
+  } else if (!accountName) {
+    // 申请联系电话可与登录账号不同，不用表单电话覆盖账号资料。
     if (!accountName) customer.name = name
-    if (!accountPhoneValid) customer.phone = phone
     addLog('用户管理', `完善会员资料：${name} ${maskPhone(phone)}`)
   }
   const scaleText = String(form.scale || '')

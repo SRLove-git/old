@@ -119,7 +119,7 @@ const managers = [
 ]
 
 const customers = [
-  { id: 'u1', name: '张桂芳', phone: '13812346688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
+  { id: 'u1', name: '李桂芳', phone: '13812346688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
   { id: 'u2', name: '刘淑华', phone: '13656782031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
   { id: 'u3', name: '李建国', phone: '13523458820', member: true, balance: 0, points: 40, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
   // 主理人同时也是平台会员，工作台用它来判断「是不是我自己的账本」
@@ -135,13 +135,13 @@ const coupons = [
 ]
 
 const participants = [
-  { id: 1, name: '张桂芳', idCard: '110101196203084821', phone: '13812346688' },
+  { id: 1, name: '李桂芳', idCard: '110101196203084821', phone: '13812346688' },
   { id: 2, name: '李明', idCard: '', phone: '13634562210' },
   { id: 3, name: '王秀英', idCard: '110101195811129302', phone: '13545673401' }
 ]
 
 const addresses = [
-  { id: 'addr1', userId: 'u1', name: '张桂芳', phone: '13812346688', province: '北京市', city: '北京市', district: '朝阳区', detail: '幸福里小区1号楼1单元101', isDefault: true }
+  { id: 'addr1', userId: 'u1', name: '李桂芳', phone: '13812346688', province: '北京市', city: '北京市', district: '朝阳区', detail: '幸福里小区1号楼1单元101', isDefault: true }
 ]
 
 const cards = [
@@ -172,14 +172,14 @@ const reviews = [
 const orders = [
   {
     id: 'SYL20260908001', userId: 'u1', activityId: 1, title: '秋日徒步 · 香山赏红叶（15人成团）', category: 1, cover: '🍁', coverTone: 'linear-gradient(135deg,#c96b2a,#f1b35a)',
-    skuName: '', schedule: activities[0].schedules[0], participants: '张桂芳、李明', count: 2, memberPrice: 79, payAmount: 148, discount: 10,
+    skuName: '', schedule: activities[0].schedules[0], participants: '李桂芳、李明', count: 2, memberPrice: 79, payAmount: 148, discount: 10,
     status: '待收货', coupon: '10元无门槛券', couponId: 1, code: '8236 1940', managerId: 1001, commissionRate: 12, commissionAmount: 17.76, address: null, createdAt: '2026-09-08 10:26', payDeadline: null
   }
 ]
 
 const commissions = [
   { id: 'CM20260828001', managerId: 1001, orderId: 'SYL20260828012', customerId: 'u2', customerName: '刘淑华', productName: '云南大理研学之旅', payAmount: 2780, commissionRate: 8, commissionAmount: 222.4, status: '可结算', createTime: '2026-08-28 14:20' },
-  { id: 'CM20260812001', managerId: 1001, orderId: 'SYL20260812033', customerId: 'u1', customerName: '张桂芳', productName: '秋日徒步', payAmount: 158, commissionRate: 8, commissionAmount: 12.64, status: '待结算', createTime: '2026-09-08 10:26' }
+  { id: 'CM20260812001', managerId: 1001, orderId: 'SYL20260812033', customerId: 'u1', customerName: '李桂芳', productName: '秋日徒步', payAmount: 158, commissionRate: 8, commissionAmount: 12.64, status: '待结算', createTime: '2026-09-08 10:26' }
 ]
 
 const withdraws = []

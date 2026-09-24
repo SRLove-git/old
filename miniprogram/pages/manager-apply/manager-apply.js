@@ -15,7 +15,7 @@ Page({
     payOpen: false,
     errors: {},
     nameEditable: false,
-    phoneEditable: false,
+    phoneEditable: true,
     nameHint: '',
     phoneHint: '',
     accountName: '',
@@ -45,24 +45,21 @@ Page({
     })
   },
 
-  // 账号已有姓名/有效手机号时锁定输入框（身份核对用），缺失或格式不对时允许本人补填
+  // 姓名继续用于账号身份核对；申请联系电话可与登录账号不同。
   profileFields(user) {
     const accountName = String(user.name || '').trim()
     const accountPhone = store.normalizePhone(user.phone)
     const phoneValid = /^1\d{10}$/.test(accountPhone)
     const nameEditable = !accountName
-    const phoneEditable = !phoneValid
     return {
       'form.name': accountName,
-      'form.phone': accountPhone,
+      'form.phone': phoneValid ? accountPhone : '',
       nameEditable,
-      phoneEditable,
+      phoneEditable: true,
       accountName,
       accountPhone: phoneValid ? accountPhone : '',
       nameHint: nameEditable ? '账号未填写姓名，请填写真实姓名用于审核' : '与账号信息一致，如需修改请联系客服',
-      phoneHint: phoneValid
-        ? `与账号信息一致（${store.maskPhone(accountPhone)}）`
-        : (accountPhone ? '账号手机号不完整，请填写完整的11位手机号' : '账号未绑定手机号，请填写常用手机号')
+      phoneHint: '请填写申请联系人手机号，可与登录账号不同'
     }
   },
 
@@ -98,8 +95,6 @@ Page({
     if (!name) errors.name = '请填写真实姓名'
     if (!/^1\d{10}$/.test(phone)) {
       errors.phone = '请填写11位手机号，例如 13812346688'
-    } else if (!this.data.phoneEditable && this.data.accountPhone && phone !== this.data.accountPhone) {
-      errors.phone = '手机号需与账号信息一致'
     }
     const groupCount = Number(form.groupCount)
     const memberCount = Number(form.memberCount)

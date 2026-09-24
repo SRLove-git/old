@@ -20,8 +20,6 @@
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
     <view wx:if="{{refundText}}" class="info-row"><text class="info-label">退改</text><text class="info-value">{{refundText}}</text></view>
-    <button class="detail-buy-button btn btn-ink btn-block" bindtap="openSku">立即购买</button>
-
     <view wx:if="{{venues.length}}" class="section-card venue-card">
       <view class="section-title-row"><text>活动场地（{{venues.length}}个可选）</text><text class="muted-link">下单时选择</text></view>
       <view wx:for="{{venues}}" wx:key="id" class="venue-row {{selectedSkuId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectSku">
@@ -77,7 +75,7 @@
     <button class="bottom-icon" bindtap="showService"><view class="bi-icon bi-icon-service"></view><text>客服</text></button>
     <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><view class="bi-icon bi-icon-shop"></view><text>店铺</text></button>
     <button class="bottom-icon" bindtap="goCart"><view class="bi-icon bi-icon-cart"></view><text>购物车</text></button>
-    <view class="buy-actions"><button class="add-cart btn btn-ghost btn-pill" bindtap="addToCart">加入购物车</button><button class="buy-now btn btn-ink btn-pill" bindtap="openSku">立即购买</button></view>
+    <button class="buy-now btn btn-ink btn-pill" bindtap="openSku">立即购买</button>
   </view>
 
   <view wx:if="{{reviewOpen}}" class="review-mask mask" bindtap="closeReview">
