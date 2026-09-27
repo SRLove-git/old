@@ -126,7 +126,7 @@ const orderStatuses = ['全部', '待付款', '待发货', '待收货', '待评�
 const activityForm = ref(null)
 const activityCoverInput = ref(null)
 const activityCoverUploading = ref(false)
-const activitySchedulesJson = ref('')
+const activitySchedules = ref([])
 const activitySkusJson = ref('')
 const productForm = ref(null)
 const liveForm = ref(null)
@@ -809,6 +809,70 @@ const commissionManagerOptions = computed(() =>
   managers.value.map((m) => ({ label: `${m.name}（可结算 ¥${m.available ?? 0}）`, value: String(m.id) }))
 )
 
+function parseScheduleTime(value) {
+  const text = String(value || '').trim()
+  const matched = text.match(/^(\d{1,2}:\d{2})\s*[-—~至]\s*(\d{1,2}:\d{2})$/)
+  return matched ? { startTime: matched[1], endTime: matched[2], originalTime: '' } : { startTime: '', endTime: '', originalTime: text }
+}
+
+function scheduleEditorRow(schedule = {}) {
+  const parsed = parseScheduleTime(schedule.time)
+  return {
+    ...schedule,
+    full: String(schedule.full || ''),
+    startTime: parsed.startTime,
+    endTime: parsed.endTime,
+    originalTime: parsed.originalTime,
+    totalQuota: Number(schedule.totalQuota ?? activityForm.value?.maxGroup ?? 0),
+    soldQuota: Number(schedule.soldQuota || 0)
+  }
+}
+
+function addActivitySchedule() {
+  activitySchedules.value.push(scheduleEditorRow({ totalQuota: activityForm.value?.maxGroup || 0 }))
+}
+
+function removeActivitySchedule(index) {
+  activitySchedules.value.splice(index, 1)
+}
+
+function scheduleDateText(full) {
+  const matched = String(full || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return matched ? `${Number(matched[2])}月${Number(matched[3])}日` : ''
+}
+
+function scheduleWeekday(full) {
+  const date = new Date(`${full}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return ''
+  return `周${['日', '一', '二', '三', '四', '五', '六'][date.getDay()]}`
+}
+
+function serializeActivitySchedules() {
+  return activitySchedules.value.map((schedule, index) => {
+    const full = String(schedule.full || '').trim()
+    const startTime = String(schedule.startTime || '').trim()
+    const endTime = String(schedule.endTime || '').trim()
+    const time = startTime && endTime ? `${startTime}-${endTime}` : String(schedule.originalTime || '').trim()
+    if (!full || !time || (!!startTime !== !!endTime)) throw new Error(`请完整填写第 ${index + 1} 个场次的日期和时间`)
+    const totalQuota = Math.max(0, Number(schedule.totalQuota || 0))
+    const soldQuota = Math.max(0, Number(schedule.soldQuota || 0))
+    return {
+      ...schedule,
+      id: schedule.id || `schedule-${Date.now()}-${index + 1}`,
+      full,
+      date: scheduleDateText(full),
+      weekday: scheduleWeekday(full),
+      time,
+      totalQuota,
+      soldQuota,
+      remaining: Math.max(0, totalQuota - soldQuota),
+      startTime: undefined,
+      endTime: undefined,
+      originalTime: undefined
+    }
+  })
+}
+
 function openActivity(a) {
   if (!a && !selectedMerchantId.value) {
     Message.warning('请先选择商家')
@@ -817,7 +881,7 @@ function openActivity(a) {
   activityForm.value = a
     ? { ...a, regionIds: inferRegionIds(a), sellType: a.sellType || 'date' }
     : { title: '', coverImage: '', managerId: Number(selectedMerchantId.value), category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
-  activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
+  activitySchedules.value = Array.isArray(a && a.schedules) ? a.schedules.map(scheduleEditorRow) : []
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
 
@@ -828,11 +892,11 @@ function saveActivity() {
     return
   }
   try {
-    form.schedules = JSON.parse(activitySchedulesJson.value || '[]')
+    form.schedules = serializeActivitySchedules()
     form.skus = JSON.parse(activitySkusJson.value || '[]')
   } catch (e) {
-    error.value = '排班或 SKU JSON 格式错误'
-    Message.error('排班或 SKU JSON 格式错误')
+    error.value = e.message || '排班或 SKU 数据格式错误'
+    Message.error(error.value)
     return
   }
   form.hasSku = form.sellType === 'sku' || (Array.isArray(form.skus) && form.skus.length > 0)
@@ -2329,7 +2393,7 @@ function exportCsv(filename, rows) {
     v-if="activityForm"
     :visible="true"
     :title="activityForm.id ? '编辑活动' : '新建活动'"
-    :width="640"
+    :width="760"
     @cancel="activityForm = null"
   >
     <a-form :model="activityForm" layout="vertical">
@@ -2365,7 +2429,35 @@ function exportCsv(filename, rows) {
         <a-col :span="8"><a-form-item label="购买方式"><a-select v-model="activityForm.sellType" :options="sellTypeOptions" /></a-form-item></a-col>
         <a-col :span="8"><a-form-item label="规格称谓"><a-input v-model="activityForm.skuLabel" placeholder="如：场地 / 房型 / 规格" /></a-form-item></a-col>
       </a-row>
-      <a-form-item label="排班 JSON（预约日期用，高级）"><a-textarea v-model="activitySchedulesJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
+      <a-form-item v-if="activityForm.sellType === 'date'" label="预约日期和时间">
+        <div class="schedule-editor">
+          <div v-if="!activitySchedules.length" class="schedule-empty">暂无场次，请点击下方按钮添加预约日期</div>
+          <div v-for="(schedule, index) in activitySchedules" :key="schedule.id || index" class="schedule-row">
+            <div class="schedule-field schedule-date-field">
+              <span>日期</span>
+              <a-date-picker v-model="schedule.full" value-format="YYYY-MM-DD" placeholder="选择日期" style="width: 100%" />
+            </div>
+            <div class="schedule-field">
+              <span>开始时间</span>
+              <a-time-picker v-model="schedule.startTime" format="HH:mm" placeholder="开始时间" style="width: 100%" />
+            </div>
+            <div class="schedule-field">
+              <span>结束时间</span>
+              <a-time-picker v-model="schedule.endTime" format="HH:mm" placeholder="结束时间" style="width: 100%" />
+            </div>
+            <div class="schedule-field schedule-quota-field">
+              <span>名额</span>
+              <a-input-number v-model="schedule.totalQuota" :min="0" style="width: 100%" />
+            </div>
+            <a-button status="danger" type="text" class="schedule-remove" @click="removeActivitySchedule(index)">删除</a-button>
+            <div v-if="schedule.originalTime && !schedule.startTime && !schedule.endTime" class="schedule-original-time">
+              原时间内容：{{ schedule.originalTime }}。如需修改，请手动选择开始和结束时间。
+            </div>
+            <div v-if="schedule.soldQuota" class="schedule-sold">已报名 {{ schedule.soldQuota }} 人</div>
+          </div>
+          <a-button type="outline" long @click="addActivitySchedule">新增预约场次</a-button>
+        </div>
+      </a-form-item>
       <a-form-item label="SKU JSON（每个 SKU 可加 address 场地地址、district 区域名）"><a-textarea v-model="activitySkusJson" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item>
     </a-form>
     <template #footer>
@@ -2907,6 +2999,58 @@ function exportCsv(filename, rows) {
 
 .activity-cover-tip {
   margin-top: 10px;
+}
+
+.schedule-editor {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 10px;
+  background: var(--color-fill-1);
+}
+
+.schedule-empty {
+  padding: 20px 12px;
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.35fr) minmax(105px, 1fr) minmax(105px, 1fr) 88px 52px;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-2);
+}
+
+.schedule-field {
+  min-width: 0;
+}
+
+.schedule-field > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.schedule-remove {
+  margin-bottom: 1px;
+}
+
+.schedule-original-time,
+.schedule-sold {
+  grid-column: 1 / -1;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.schedule-original-time {
+  color: rgb(var(--orange-6));
 }
 
 .qr-config-item {
