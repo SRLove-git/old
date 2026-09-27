@@ -26,7 +26,7 @@ Page({
     }
     const allOfferings = store.getOfferings(manager.id).map((item) => ({
       ...item,
-      art: ART[item.category] || ART[4],
+      art: store.assetUrl(item.coverImage) || ART[item.category] || ART[4],
       offerType: item.category === 5 ? 'product' : 'service',
       typeLabel: item.category === 5 ? '商品' : '服务'
     }))

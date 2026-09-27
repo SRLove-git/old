@@ -99,6 +99,7 @@ function getBrand() {
 function apiAssetUrl(value) {
   const url = String(value || '').trim()
   if (!url || /^(https?:|data:|wxfile:)/.test(url)) return url
+  if (url.startsWith('/assets/')) return url
   return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`
 }
 
@@ -690,6 +691,7 @@ module.exports = {
   getBrand,
   getSocialQrs,
   getHomeAssistant,
+  assetUrl: apiAssetUrl,
   getActivities,
   getRegions,
   refreshRegions,

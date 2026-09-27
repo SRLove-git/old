@@ -19,7 +19,7 @@ function decorateActivity(activity) {
     5: '/assets/event-benefit.jpg'
   }
   const regionText = store.getActivityRegionNames(activity).join('、') || activity.city || '线上/全国'
-  return { ...activity, city: regionText, regionText, art: artByCategory[activity.category] || artByCategory[1] }
+  return { ...activity, city: regionText, regionText, art: store.assetUrl(activity.coverImage) || artByCategory[activity.category] || artByCategory[1] }
 }
 
 Page({

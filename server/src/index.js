@@ -122,7 +122,7 @@ app.post('/api/uploads/image', adminAuth, wrap((req) => {
   const buffer = Buffer.from(match[2], 'base64')
   if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw httpError(400, '图片大小不能超过2MB')
   const ext = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg')
-  const filename = `qr-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.${ext}`
+  const filename = `image-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.${ext}`
   fs.writeFileSync(path.join(UPLOAD_DIR, filename), buffer)
   return { url: `/api/uploads/files/${filename}` }
 }))

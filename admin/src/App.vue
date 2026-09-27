@@ -45,6 +45,7 @@ const nav = [
   { key: 'dashboard', name: '数据看板', icon: IconDashboard },
   { key: 'activities', name: '活动管理', icon: IconCalendar },
   { key: 'products', name: '商品管理', icon: IconArchive },
+  { key: 'lives', name: '学堂管理', icon: IconFile },
   { key: 'categories', name: '分类管理', icon: IconTags },
   { key: 'regions', name: '地区管理', icon: IconLocation },
   { key: 'orders', name: '订单/退款', icon: IconFile },
@@ -66,6 +67,7 @@ const nav = [
 
 const stats = ref(null)
 const activities = ref([])
+const lives = ref([])
 const orders = ref([])
 const applications = ref([])
 const providerApplications = ref([])
@@ -116,14 +118,18 @@ const makeupTarget = ref(null)
 const makeupForm = ref({ date: '', time: '', reason: '' })
 
 const kw = ref('')
+const selectedMerchantId = ref('')
 const activityCategoryFilter = ref('all')
 const orderStatusFilter = ref('全部')
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '待评价', '已完成', '已核销', '退款中', '已退款', '已取消']
 
 const activityForm = ref(null)
+const activityCoverInput = ref(null)
+const activityCoverUploading = ref(false)
 const activitySchedulesJson = ref('')
 const activitySkusJson = ref('')
 const productForm = ref(null)
+const liveForm = ref(null)
 const regionForm = ref(null)
 const contentForm = ref(null)
 const productSkusJson = ref('')
@@ -250,8 +256,9 @@ function inferRegionIds(record) {
   return regions.value.filter((region) => city.split(/[、,，/]/).includes(region.name)).map((region) => String(region.id))
 }
 const managerOptions = computed(() =>
-  managers.value.map((m) => ({ label: m.name, value: String(m.id) }))
+  managers.value.filter((m) => m.status !== 3).map((m) => ({ label: `${m.shopName || m.name}（${m.name}）`, value: String(m.id) }))
 )
+const selectedMerchant = computed(() => managers.value.find((m) => String(m.id) === String(selectedMerchantId.value)) || null)
 const customerOptions = computed(() =>
   customers.value.map((c) => ({
     label: `${c.name}（${c.phone || '无手机号'}）`,
@@ -389,6 +396,15 @@ const productColumns = [
   { title: '销量', dataIndex: 'soldCount', align: 'right', width: 90 },
   { title: '库存', dataIndex: 'stock', align: 'right', width: 90 },
   { title: '状态', slotName: 'status', width: 90 },
+  { title: '操作', slotName: 'actions', width: 140 }
+]
+const liveColumns = [
+  { title: '课程名称', dataIndex: 'title', ellipsis: true, tooltip: true },
+  { title: '讲师', dataIndex: 'hostName', width: 120 },
+  { title: '分类', dataIndex: 'category', width: 120 },
+  { title: '会员价', slotName: 'price', width: 100, align: 'right' },
+  { title: '课时', dataIndex: 'lessonCount', width: 80, align: 'right' },
+  { title: '状态', slotName: 'status', width: 100 },
   { title: '操作', slotName: 'actions', width: 140 }
 ]
 const regionColumns = [
@@ -565,8 +581,10 @@ async function load() {
     categories.value = await api.get('/categories')
     regions.value = await api.get('/regions')
     if (view.value === 'dashboard') stats.value = await api.get('/stats/dashboard')
+    if (['activities', 'products', 'lives'].includes(view.value) && managers.value.length === 0) managers.value = await api.get('/managers')
     if (view.value === 'activities') activities.value = await api.get('/activities')
     if (view.value === 'products') products.value = await api.get('/products')
+    if (view.value === 'lives') lives.value = await api.get('/lives')
     if (view.value === 'orders') orders.value = await api.get('/orders')
     if (view.value === 'verify') customers.value = await api.get('/customers')
     if (view.value === 'customers') {
@@ -732,11 +750,18 @@ function submitReason() {
 const filteredActivities = computed(() => {
   const k = kw.value.trim()
   return activities.value.filter((a) => {
+    const matchesMerchant = selectedMerchantId.value && String(a.managerId) === String(selectedMerchantId.value)
     const matchesCategory = activityCategoryFilter.value === 'all' || String(a.category) === String(activityCategoryFilter.value)
     const text = [a.title, a.city, regionNames(a), a.address, a.highlight, a.detail, (a.points || []).join(' ')].filter(Boolean).join(' ')
-    return matchesCategory && fuzzyMatch(text, k)
+    return matchesMerchant && matchesCategory && fuzzyMatch(text, k)
   })
 })
+const merchantProducts = computed(() => selectedMerchantId.value
+  ? products.value.filter((item) => String(item.managerId) === String(selectedMerchantId.value))
+  : [])
+const merchantLives = computed(() => selectedMerchantId.value
+  ? lives.value.filter((item) => String(item.managerId) === String(selectedMerchantId.value))
+  : [])
 const activityFilterOptions = computed(() => [
   { label: '全部分类', value: 'all' },
   ...categoryList.value
@@ -785,15 +810,23 @@ const commissionManagerOptions = computed(() =>
 )
 
 function openActivity(a) {
+  if (!a && !selectedMerchantId.value) {
+    Message.warning('请先选择商家')
+    return
+  }
   activityForm.value = a
     ? { ...a, regionIds: inferRegionIds(a), sellType: a.sellType || 'date' }
-    : { title: '', category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
+    : { title: '', coverImage: '', managerId: Number(selectedMerchantId.value), category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
   activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
 
 function saveActivity() {
   const form = { ...activityForm.value }
+  if (!form.managerId) {
+    Message.error('请先选择商家')
+    return
+  }
   try {
     form.schedules = JSON.parse(activitySchedulesJson.value || '[]')
     form.skus = JSON.parse(activitySkusJson.value || '[]')
@@ -819,14 +852,22 @@ function removeActivity(id) {
 }
 
 function openProduct(p) {
+  if (!p && !selectedMerchantId.value) {
+    Message.warning('请先选择商家')
+    return
+  }
   productForm.value = p
     ? { ...p, regionIds: inferRegionIds(p) }
-    : { title: '', category: 5, city: '全国', regionIds: [], price: 0, memberPrice: 0, originalPrice: 0, soldCount: 0, stock: 0, highlight: '', points: [], detail: '', cover: '🛍️', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', sellType: 'sku', hasSku: false, skus: [], status: 1 }
+    : { title: '', managerId: Number(selectedMerchantId.value), category: 5, city: '全国', regionIds: [], price: 0, memberPrice: 0, originalPrice: 0, soldCount: 0, stock: 0, highlight: '', points: [], detail: '', cover: '🛍️', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', sellType: 'sku', hasSku: false, skus: [], status: 1 }
   productSkusJson.value = p && p.skus ? JSON.stringify(p.skus, null, 2) : '[]'
 }
 
 function saveProduct() {
   const form = { ...productForm.value }
+  if (!form.managerId) {
+    Message.error('请先选择商家')
+    return
+  }
   try {
     form.skus = JSON.parse(productSkusJson.value || '[]')
   } catch (e) {
@@ -855,6 +896,41 @@ function openRegion(region) {
   regionForm.value = region
     ? { ...region, ...area }
     : { name: '', provinceCode: '', cityCode: '', districtCode: '', sort: (regions.value.length + 1) * 10, enabled: true }
+}
+
+function openLive(item) {
+  if (!item && !selectedMerchantId.value) {
+    Message.warning('请先选择商家')
+    return
+  }
+  liveForm.value = item ? { ...item } : {
+    title: '', managerId: Number(selectedMerchantId.value), hostName: '', category: '视频课程',
+    status: 'scheduled', startAt: '', endAt: '', streamUrl: '', replayUrl: '', description: '',
+    memberPrice: 0, originalPrice: 0, lessonCount: 1, duration: '', coverImage: '', activityId: ''
+  }
+}
+
+function saveLive() {
+  const form = { ...liveForm.value }
+  if (!form.managerId) {
+    Message.error('请先选择商家')
+    return
+  }
+  if (!String(form.title || '').trim()) {
+    Message.error('请填写课程名称')
+    return
+  }
+  doAction(async () => {
+    if (form.id) await api.put(`/lives/${form.id}`, form)
+    else await api.post('/lives', form)
+    liveForm.value = null
+  }, '学堂课程已保存')
+}
+
+function removeLive(id) {
+  confirmDanger('确定删除该课程？删除后不可恢复。', () =>
+    doAction(() => api.del(`/lives/${id}`), '课程已删除')
+  )
 }
 
 function saveRegion() {
@@ -1333,6 +1409,35 @@ async function uploadQr(event, field) {
   }
 }
 
+function chooseActivityCover() {
+  if (activityCoverInput.value) activityCoverInput.value.click()
+}
+
+async function uploadActivityCover(event) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    Message.error('仅支持 PNG、JPG 或 WebP 图片')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    Message.error('活动图片不能超过2MB')
+    return
+  }
+  activityCoverUploading.value = true
+  try {
+    const dataUrl = await fileDataUrl(file)
+    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    activityForm.value.coverImage = result.url
+    Message.success('活动封面上传成功，保存活动后生效')
+  } catch (e) {
+    Message.error(e.message || '上传失败')
+  } finally {
+    activityCoverUploading.value = false
+  }
+}
+
 function exportCsv(filename, rows) {
   if (!rows.length) {
     Message.warning('没有可导出的数据')
@@ -1483,6 +1588,10 @@ function exportCsv(filename, rows) {
           </section>
 
           <section v-if="view === 'activities'">
+            <a-card title="第一步：选择商家" :bordered="false" class="merchant-scope-card">
+              <a-select v-model="selectedMerchantId" :options="managerOptions" allow-search allow-clear placeholder="请选择要管理的商家" style="width: 420px" />
+              <span v-if="selectedMerchant" class="muted">当前正在管理：{{ selectedMerchant.shopName || selectedMerchant.name }}</span>
+            </a-card>
             <a-alert type="info" class="toolbar">个人中心“商家福利”展示这里分类为“商家福利”的已上架内容。</a-alert>
             <div class="toolbar">
               <a-select v-model="activityCategoryFilter" :options="activityFilterOptions" style="width: 180px" />
@@ -1515,17 +1624,21 @@ function exportCsv(filename, rows) {
                 </template>
               </a-table>
             </a-card>
-            <a-button type="primary" shape="round" class="fab" @click="openActivity(null)">
+            <a-button type="primary" shape="round" class="fab" :disabled="!selectedMerchantId" @click="openActivity(null)">
               <template #icon><IconPlus /></template>
               新建活动
             </a-button>
           </section>
 
           <section v-if="view === 'products'">
+            <a-card title="第一步：选择商家" :bordered="false" class="merchant-scope-card">
+              <a-select v-model="selectedMerchantId" :options="managerOptions" allow-search allow-clear placeholder="请选择要管理的商家" style="width: 420px" />
+              <span v-if="selectedMerchant" class="muted">当前正在管理：{{ selectedMerchant.shopName || selectedMerchant.name }}</span>
+            </a-card>
             <a-card :bordered="false">
               <a-table
                 :columns="productColumns"
-                :data="products"
+                :data="merchantProducts"
                 :pagination="false"
                 row-key="id"
                 size="middle"
@@ -1544,10 +1657,28 @@ function exportCsv(filename, rows) {
                 </template>
               </a-table>
             </a-card>
-            <a-button type="primary" shape="round" class="fab" @click="openProduct(null)">
+            <a-button type="primary" shape="round" class="fab" :disabled="!selectedMerchantId" @click="openProduct(null)">
               <template #icon><IconPlus /></template>
               新建商品
             </a-button>
+          </section>
+
+          <section v-if="view === 'lives'">
+            <a-card title="第一步：选择商家" :bordered="false" class="merchant-scope-card">
+              <a-select v-model="selectedMerchantId" :options="managerOptions" allow-search allow-clear placeholder="请选择要管理的商家" style="width: 420px" />
+              <span v-if="selectedMerchant" class="muted">当前正在管理：{{ selectedMerchant.shopName || selectedMerchant.name }}</span>
+            </a-card>
+            <a-alert type="info" class="toolbar">选择商家后，可维护该商家的直播课、视频课和配套学堂内容。</a-alert>
+            <a-card :bordered="false">
+              <a-table :columns="liveColumns" :data="merchantLives" :pagination="false" row-key="id" size="middle">
+                <template #price="{ record }"><span class="num">¥{{ fmtMoney(record.memberPrice) }}</span></template>
+                <template #status="{ record }"><a-tag :color="record.status === 'live' ? 'red' : record.status === 'ended' ? 'gray' : 'arcoblue'">{{ record.status === 'live' ? '直播中' : record.status === 'ended' ? '已结束' : '未开课' }}</a-tag></template>
+                <template #actions="{ record }">
+                  <a-space :size="0"><a-button type="text" size="small" @click="openLive(record)">编辑</a-button><a-button type="text" status="danger" size="small" @click="removeLive(record.id)">删除</a-button></a-space>
+                </template>
+              </a-table>
+            </a-card>
+            <a-button type="primary" shape="round" class="fab" :disabled="!selectedMerchantId" @click="openLive(null)"><template #icon><IconPlus /></template>新建课程</a-button>
           </section>
 
           <section v-if="view === 'regions'">
@@ -2202,7 +2333,20 @@ function exportCsv(filename, rows) {
     @cancel="activityForm = null"
   >
     <a-form :model="activityForm" layout="vertical">
+      <a-form-item label="所属商家"><a-input :model-value="selectedMerchant ? (selectedMerchant.shopName || selectedMerchant.name) : activityForm.managerId" disabled /></a-form-item>
       <a-form-item label="标题"><a-input v-model="activityForm.title" /></a-form-item>
+      <a-form-item label="活动封面图片">
+        <div class="activity-cover-upload">
+          <img v-if="activityForm.coverImage" class="activity-cover-preview" :src="qrPreviewUrl(activityForm.coverImage)" alt="活动封面" />
+          <div v-else class="activity-cover-empty">未上传时使用分类默认图</div>
+          <input ref="activityCoverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadActivityCover" />
+          <a-space>
+            <a-button type="primary" :loading="activityCoverUploading" @click="chooseActivityCover">上传图片</a-button>
+            <a-button v-if="activityForm.coverImage" @click="activityForm.coverImage = ''">恢复默认图</a-button>
+          </a-space>
+          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，大小不超过 2MB，建议比例 16:9。</div>
+        </div>
+      </a-form-item>
       <a-row :gutter="12">
         <a-col :span="12"><a-form-item label="分类"><a-select v-model="activityForm.category" :options="categoryOptions" /></a-form-item></a-col>
         <a-col :span="12"><a-form-item label="适用地区（可多选）"><a-select v-model="activityForm.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示线上/全国" /></a-form-item></a-col>
@@ -2238,6 +2382,7 @@ function exportCsv(filename, rows) {
     @cancel="productForm = null"
   >
     <a-form :model="productForm" layout="vertical">
+      <a-form-item label="所属商家"><a-input :model-value="selectedMerchant ? (selectedMerchant.shopName || selectedMerchant.name) : productForm.managerId" disabled /></a-form-item>
       <a-form-item label="标题"><a-input v-model="productForm.title" /></a-form-item>
       <a-row :gutter="12">
         <a-col :span="12"><a-form-item label="分类"><a-select v-model="productForm.category" :options="productCategoryOptions" /></a-form-item></a-col>
@@ -2264,6 +2409,31 @@ function exportCsv(filename, rows) {
       <a-button @click="productForm = null">取消</a-button>
       <a-button type="primary" @click="saveProduct">保存</a-button>
     </template>
+  </a-modal>
+
+  <a-modal v-if="liveForm" :visible="true" :title="liveForm.id ? '编辑学堂课程' : '新建学堂课程'" :width="640" @cancel="liveForm = null">
+    <a-form :model="liveForm" layout="vertical">
+      <a-form-item label="所属商家"><a-input :model-value="selectedMerchant ? (selectedMerchant.shopName || selectedMerchant.name) : liveForm.managerId" disabled /></a-form-item>
+      <a-form-item label="课程名称"><a-input v-model="liveForm.title" /></a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="讲师"><a-input v-model="liveForm.hostName" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="课程分类"><a-input v-model="liveForm.category" placeholder="如：健康生活" /></a-form-item></a-col>
+      </a-row>
+      <a-row :gutter="12">
+        <a-col :span="8"><a-form-item label="会员价"><a-input-number v-model="liveForm.memberPrice" :min="0" style="width:100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="原价"><a-input-number v-model="liveForm.originalPrice" :min="0" style="width:100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="课时数"><a-input-number v-model="liveForm.lessonCount" :min="1" style="width:100%" /></a-form-item></a-col>
+      </a-row>
+      <a-row :gutter="12">
+        <a-col :span="12"><a-form-item label="状态"><a-select v-model="liveForm.status" :options="[{label:'未开课',value:'scheduled'},{label:'直播中',value:'live'},{label:'已结束',value:'ended'}]" /></a-form-item></a-col>
+        <a-col :span="12"><a-form-item label="课程时长"><a-input v-model="liveForm.duration" placeholder="如：约160分钟" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="封面图片地址"><a-input v-model="liveForm.coverImage" placeholder="可填写 HTTPS 或已上传图片地址" /></a-form-item>
+      <a-form-item label="直播地址"><a-input v-model="liveForm.streamUrl" /></a-form-item>
+      <a-form-item label="回放地址"><a-input v-model="liveForm.replayUrl" /></a-form-item>
+      <a-form-item label="课程介绍"><a-textarea v-model="liveForm.description" :auto-size="{minRows:3,maxRows:8}" /></a-form-item>
+    </a-form>
+    <template #footer><a-button @click="liveForm = null">取消</a-button><a-button type="primary" @click="saveLive">保存</a-button></template>
   </a-modal>
 
   <a-modal
@@ -2687,6 +2857,16 @@ function exportCsv(filename, rows) {
   margin-bottom: 16px;
 }
 
+.merchant-scope-card {
+  margin-bottom: 16px;
+}
+
+.merchant-scope-card :deep(.arco-card-body) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .qr-config-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2695,6 +2875,38 @@ function exportCsv(filename, rows) {
 
 .qr-config-grid-single {
   grid-template-columns: minmax(280px, 420px);
+}
+
+.activity-cover-upload {
+  padding: 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 10px;
+  background: var(--color-fill-1);
+}
+
+.activity-cover-preview,
+.activity-cover-empty {
+  width: 280px;
+  height: 158px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: var(--color-fill-2);
+}
+
+.activity-cover-preview {
+  display: block;
+  object-fit: cover;
+}
+
+.activity-cover-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-3);
+}
+
+.activity-cover-tip {
+  margin-top: 10px;
 }
 
 .qr-config-item {

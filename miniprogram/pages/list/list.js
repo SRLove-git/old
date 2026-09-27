@@ -147,7 +147,7 @@ Page({
         return {
           ...a,
           city: store.getActivityRegionNames(a).join('、') || a.city || '线上/全国',
-          art: ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/event-benefit.jpg' })[a.category] || '/assets/event-local.jpg',
+          art: store.assetUrl(a.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/event-benefit.jpg' })[a.category] || '/assets/event-local.jpg',
           status,
           statusLabel: STATUS_LABEL[status],
           scheduleFull: s0.full || '',

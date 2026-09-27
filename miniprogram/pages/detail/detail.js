@@ -16,7 +16,7 @@ const GALLERY_BY_CATEGORY = {
 }
 
 function decorateOffering(item) {
-  const art = item.coverImage || ART_BY_CATEGORY[item.category] || '/assets/event-local.jpg'
+  const art = store.assetUrl(item.coverImage) || ART_BY_CATEGORY[item.category] || '/assets/event-local.jpg'
   return { ...item, art, regionText: store.getActivityRegionNames(item).join('、') || item.city || '线上/全国' }
 }
 
@@ -70,7 +70,7 @@ Page({
     }
     const activity = decorateOffering({ ...source, skus: source.skus || [], schedules: source.schedules || [] })
     if (!activity.images || !activity.images.length) {
-      activity.images = [{ id: `img-${activity.id}-1`, tone: activity.coverTone, emoji: activity.cover, label: '活动图片' }]
+      activity.images = [{ id: `img-${activity.id}-1`, src: activity.art, tone: activity.coverTone, emoji: activity.cover, label: '活动图片' }]
     }
     const galleryFallbacks = GALLERY_BY_CATEGORY[activity.category] || [activity.art]
     activity.images = activity.images.map((image, index) => ({ ...image, src: image.src || galleryFallbacks[index % galleryFallbacks.length], id: image.id || `gallery-${activity.id}-${index}` }))

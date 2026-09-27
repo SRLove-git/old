@@ -139,6 +139,27 @@ function normalizeManagers(database) {
   return changed
 }
 
+function normalizeMerchantContent(database) {
+  const managers = (database.managers || []).filter((item) => item.status !== 3)
+  const fallback = managers[0]
+  if (!fallback) return false
+  let changed = false
+  ;['activities', 'products'].forEach((collection) => {
+    ;(database[collection] || []).forEach((item) => {
+      if (item.managerId && managers.some((manager) => String(manager.id) === String(item.managerId))) return
+      item.managerId = fallback.id
+      changed = true
+    })
+  })
+  ;(database.lives || []).forEach((item) => {
+    if (item.managerId && managers.some((manager) => String(manager.id) === String(item.managerId))) return
+    const matched = managers.find((manager) => String(manager.name) === String(item.hostName)) || fallback
+    item.managerId = matched.id
+    changed = true
+  })
+  return changed
+}
+
 const LEGACY_PLACEHOLDER_TIME = '刚刚'
 
 // 历史数据里的「刚刚」占位时间：用数据文件最后一次写入时间兜底，保证台账有时间可审
@@ -250,6 +271,7 @@ export function init() {
       normalizeCollections(db)
       normalizeTimestamps(db)
       normalizeManagers(db)
+      normalizeMerchantContent(db)
       normalizeOrders(db)
       normalizeParticipants(db)
       syncManagerTotals()
@@ -265,6 +287,7 @@ export function init() {
   normalizeContent(db)
   normalizeCollections(db)
   normalizeManagers(db)
+  normalizeMerchantContent(db)
   normalizeOrders(db)
   normalizeParticipants(db)
   syncManagerTotals()
@@ -285,6 +308,7 @@ export function reset() {
   normalizeCollections(db)
   normalizeConfig(db)
   normalizeManagers(db)
+  normalizeMerchantContent(db)
   normalizeOrders(db)
   normalizeParticipants(db)
   syncManagerTotals()
@@ -317,6 +341,8 @@ export function searchActivities(keyword, category) {
 }
 
 export function createActivity(data) {
+  const managerId = Number(data && data.managerId)
+  if (!managerId || !findManager(managerId)) throw badRequest('请先选择有效商家')
   const activity = {
     id: Date.now(),
     soldCount: 0,
@@ -324,6 +350,7 @@ export function createActivity(data) {
     skus: [],
     schedules: [],
     ...(data || {}),
+    managerId,
     regionIds: normalizeRegionIds(data && data.regionIds)
   }
   activity.city = regionText(activity.regionIds, activity.city || '线上/全国')
@@ -336,6 +363,8 @@ export function updateActivity(id, data) {
   const idx = db.activities.findIndex((a) => String(a.id) === String(id))
   if (idx < 0) return null
   const next = { ...db.activities[idx], ...(data || {}), id: db.activities[idx].id }
+  next.managerId = Number(next.managerId)
+  if (!next.managerId || !findManager(next.managerId)) throw badRequest('请先选择有效商家')
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   next.city = regionText(next.regionIds, next.city || '线上/全国')
   db.activities[idx] = next
@@ -1534,6 +1563,8 @@ export function listLives(userId) {
 }
 
 export function createLive(data) {
+  const managerId = Number(data && data.managerId)
+  if (!managerId || !findManager(managerId)) throw badRequest('请先选择有效商家')
   const live = {
     id: `live${Date.now()}`,
     title: String((data && data.title) || '未命名直播').trim(),
@@ -1541,7 +1572,7 @@ export function createLive(data) {
     coverTone: (data && data.coverTone) || 'linear-gradient(135deg,#c25e3d,#e19a6d)',
     hostName: (data && data.hostName) || '岁悦里',
     hostAvatar: (data && data.hostAvatar) || '🧑‍🏫',
-    managerId: (data && data.managerId != null && data.managerId !== '') ? Number(data.managerId) : null,
+    managerId,
     status: (data && data.status) || 'scheduled',
     startAt: (data && data.startAt) || '',
     endAt: (data && data.endAt) || '',
@@ -1569,6 +1600,7 @@ export function updateLive(id, data) {
   if (!live) return null
   const next = { ...live, ...(data || {}), id: live.id }
   if (data && data.managerId != null) next.managerId = data.managerId === '' ? null : Number(data.managerId)
+  if (!next.managerId || !findManager(next.managerId)) throw badRequest('请先选择有效商家')
   if (data && data.activityId != null) next.activityId = data.activityId === '' ? null : Number(data.activityId)
   if (data && data.viewers != null) next.viewers = Number(data.viewers)
   db.lives = (db.lives || []).map((l) => String(l.id) === String(id) ? next : l)
@@ -1587,6 +1619,8 @@ export function listProducts() {
 }
 
 export function createProduct(data) {
+  const managerId = Number(data && data.managerId)
+  if (!managerId || !findManager(managerId)) throw badRequest('请先选择有效商家')
   const product = {
     id: Date.now(),
     soldCount: 0,
@@ -1597,6 +1631,7 @@ export function createProduct(data) {
     stock: 0,
     status: 1,
     ...data,
+    managerId,
     regionIds: normalizeRegionIds(data && data.regionIds)
   }
   product.city = regionText(product.regionIds, product.city || '全国')
@@ -1610,6 +1645,8 @@ export function updateProduct(id, data) {
   const idx = (db.products || []).findIndex((p) => String(p.id) === String(id))
   if (idx < 0) return null
   const next = { ...db.products[idx], ...data, id: db.products[idx].id }
+  next.managerId = Number(next.managerId)
+  if (!next.managerId || !findManager(next.managerId)) throw badRequest('请先选择有效商家')
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   next.city = regionText(next.regionIds, next.city || '全国')
   db.products[idx] = next
