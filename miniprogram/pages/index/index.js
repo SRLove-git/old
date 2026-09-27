@@ -1,4 +1,5 @@
 const store = require('../../utils/store.js')
+const regionPicker = require('../../utils/region-picker.js')
 
 const CATEGORY_ENGLISH = {
   1: 'LOCAL EVENTS',
@@ -30,7 +31,10 @@ Page({
     coupons: [],
     boundManager: null,
     city: '全部',
-    cities: ['全部'],
+    cityLabel: '全部',
+    regionOptions: [],
+    regionPickerColumns: [[], [], []],
+    regionPickerIndexes: [0, 0, 0],
     cityOpen: false,
     serviceOpen: false,
     assistant: {},
@@ -45,7 +49,9 @@ Page({
 
   async onLoad() {
     await store.ready()
-    const cities = this.buildCities()
+    const regionOptions = store.getRegions()
+    const defaultRegion = regionOptions[0] || null
+    const picker = regionPicker.buildRegionPicker(regionOptions, defaultRegion)
     const brand = store.getBrand()
     this.setData({
       categories: this.buildCategories(),
@@ -57,8 +63,11 @@ Page({
       filing: store.getFiling(),
       assistant: store.getAssistant(),
       homeAssistant: store.getHomeAssistant(),
-      cities,
-      city: cities.length > 1 ? cities[1] : (cities[0] || '全部')
+      regionOptions,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes,
+      city: defaultRegion ? String(defaultRegion.id) : '全部',
+      cityLabel: defaultRegion ? (defaultRegion.district || defaultRegion.name) : '全部'
     })
     this.buildGroups()
     this.buildContent()
@@ -70,8 +79,11 @@ Page({
     }
     await store.ready()
     try {
-      await store.refreshConfig()
+      await Promise.all([store.refreshConfig(), store.refreshRegions()])
     } catch (e) {}
+    const regionOptions = store.getRegions()
+    const currentRegion = regionOptions.find((region) => String(region.id) === String(this.data.city)) || null
+    const picker = regionPicker.buildRegionPicker(regionOptions, currentRegion)
     const brand = store.getBrand()
     this.setData({
       coupons: store.get().coupons,
@@ -80,7 +92,12 @@ Page({
       slogan: brand.slogan,
       filing: store.getFiling(),
       assistant: store.getAssistant(),
-      homeAssistant: store.getHomeAssistant()
+      homeAssistant: store.getHomeAssistant(),
+      regionOptions,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes,
+      city: this.data.city === '全部' || currentRegion ? this.data.city : '全部',
+      cityLabel: this.data.city === '全部' ? '全部' : (currentRegion ? (currentRegion.district || currentRegion.name) : '全部')
     })
     this.buildGroups()
     this.buildContent()
@@ -97,10 +114,6 @@ Page({
   buildCategories() {
     const cats = store.get().categories
     return Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id] }))
-  },
-
-  buildCities() {
-    return ['全部', ...store.getRegions().map((region) => region.name)]
   },
 
   buildGroups() {
@@ -126,7 +139,7 @@ Page({
 
   buildContent() {
     const city = this.data.city
-    const currentRegion = store.getRegions().find((region) => region.name === city)
+    const currentRegion = store.getRegions().find((region) => String(region.id) === String(city))
     const visible = store.getContentPosts().filter((item) => {
       const ids = Array.isArray(item.regionIds) ? item.regionIds.map(String) : []
       return city === '全部' || ids.length === 0 || (currentRegion && ids.includes(String(currentRegion.id)))
@@ -142,7 +155,9 @@ Page({
   },
 
   openCity() {
-    this.setData({ cityOpen: true })
+    const selected = this.data.regionOptions.find((region) => String(region.id) === String(this.data.city))
+    const picker = regionPicker.buildRegionPicker(this.data.regionOptions, selected)
+    this.setData({ cityOpen: true, regionPickerColumns: picker.columns, regionPickerIndexes: picker.indexes })
     this.setTabBarVisible(false)
   },
 
@@ -159,8 +174,35 @@ Page({
 
   noop() {},
 
-  selectCity(e) {
-    this.setData({ city: e.currentTarget.dataset.city, cityOpen: false }, () => {
+  onRegionColumnChange(e) {
+    const picker = regionPicker.changeRegionPicker(this.data.regionOptions, {
+      columns: this.data.regionPickerColumns,
+      indexes: this.data.regionPickerIndexes
+    }, Number(e.detail.column), Number(e.detail.value))
+    this.setData({ regionPickerColumns: picker.columns, regionPickerIndexes: picker.indexes })
+  },
+
+  onRegionChange(e) {
+    const indexes = e.detail.value.map(Number)
+    const region = regionPicker.selectedRegion({ columns: this.data.regionPickerColumns }, indexes)
+    if (!region) {
+      wx.showToast({ title: '后台暂未配置可选地区', icon: 'none' })
+      return
+    }
+    this.setData({
+      city: String(region.id),
+      cityLabel: region.district || region.name,
+      regionPickerIndexes: indexes,
+      cityOpen: false
+    }, () => {
+      this.buildGroups()
+      this.buildContent()
+    })
+    this.setTabBarVisible(true)
+  },
+
+  selectAllRegions() {
+    this.setData({ city: '全部', cityLabel: '全部', cityOpen: false }, () => {
       this.buildGroups()
       this.buildContent()
     })

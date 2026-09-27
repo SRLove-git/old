@@ -1,6 +1,6 @@
 <view class="home-page">
   <view class="home-tools">
-    <view class="city-pill" bindtap="openCity"><view class="pin-icon"><view class="pin-dot"></view></view><text class="city-name">{{city}}</text><view class="chevron"></view></view>
+    <view class="city-pill" bindtap="openCity"><view class="pin-icon"><view class="pin-dot"></view></view><text class="city-name">{{cityLabel}}</text><view class="chevron"></view></view>
     <view class="search-box" bindtap="goList"><view class="search-line-icon"></view><text class="search-placeholder">搜索活动、旅行、课程</text></view>
   </view>
 
@@ -122,8 +122,15 @@
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
-      <view class="city-sheet-title">选择所在区域</view>
-      <scroll-view scroll-y class="city-list" enhanced show-scrollbar="{{false}}"><view wx:for="{{cities}}" wx:key="*this" class="city-item {{city === item ? 'selected' : ''}}" data-city="{{item}}" bindtap="selectCity"><text>{{item}}</text><text wx:if="{{city === item}}" class="city-check">✓</text></view></scroll-view>
+      <view class="city-sheet-title">选择所在地区</view>
+      <view class="city-item {{city === '全部' ? 'selected' : ''}}" bindtap="selectAllRegions"><text>全部地区</text><text wx:if="{{city === '全部'}}" class="city-check">✓</text></view>
+      <picker mode="multiSelector" range="{{regionPickerColumns}}" range-key="label" value="{{regionPickerIndexes}}" bindcolumnchange="onRegionColumnChange" bindchange="onRegionChange" disabled="{{regionOptions.length === 0}}">
+        <view class="region-picker-entry {{city !== '全部' ? 'selected' : ''}}">
+          <view><view class="region-picker-label">按省、市、区/县选择</view><view class="region-picker-value">{{city !== '全部' ? cityLabel : '请选择地区'}}</view></view>
+          <text class="region-picker-arrow">›</text>
+        </view>
+      </picker>
+      <view wx:if="{{regionOptions.length === 0}}" class="region-empty-tip">后台暂未配置可用地区</view>
       <button class="btn btn-ghost btn-block" bindtap="closeCity">取消</button>
     </view>
   </view>
