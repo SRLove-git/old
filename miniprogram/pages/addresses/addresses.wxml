@@ -35,8 +35,8 @@
       </view>
       <view class="field">
         <text class="field-label">配送地区<text class="required">*</text></text>
-        <picker mode="selector" range="{{regionOptions}}" range-key="name" value="{{regionIndex}}" bindchange="onRegionChange">
-          <view class="field-input picker-input {{form.region ? '' : 'placeholder'}}"><text>{{form.region || '请选择后台配置的地区'}}</text><text class="picker-arrow">›</text></view>
+        <picker mode="multiSelector" range="{{regionPickerColumns}}" range-key="label" value="{{regionPickerIndexes}}" bindcolumnchange="onRegionColumnChange" bindchange="onRegionChange" disabled="{{regionOptions.length === 0}}">
+          <view class="field-input picker-input {{form.regionText ? '' : 'placeholder'}}"><text>{{form.regionText || '请选择省、市、区/县'}}</text><text class="picker-arrow">›</text></view>
         </picker>
         <view wx:if="{{regionOptions.length === 0}}" class="region-empty-tip">后台暂未配置可用配送地区</view>
       </view>

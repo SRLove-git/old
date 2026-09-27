@@ -1,0 +1,32 @@
+<view class="benefit-page">
+  <view class="benefit-hero">
+    <view class="hero-kicker">MERCHANT BENEFITS</view>
+    <view class="hero-title">商家福利</view>
+    <view class="hero-sub">为岁悦里会员精选本地商家优惠与专属体验</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-text">正在加载福利…</view>
+
+  <view wx:elif="{{list.length}}" class="benefit-list">
+    <view wx:for="{{list}}" wx:key="id" class="benefit-card" data-id="{{item.id}}" bindtap="goDetail">
+      <image class="benefit-cover" src="{{item.art}}" mode="aspectFill" />
+      <view class="benefit-copy">
+        <view class="benefit-title">{{item.title}}</view>
+        <view wx:if="{{item.highlight}}" class="benefit-highlight">{{item.highlight}}</view>
+        <view class="benefit-meta"><text>地点</text><text class="meta-value">{{item.regionText}}</text></view>
+        <view class="benefit-meta"><text>时间</text><text class="meta-value">{{item.scheduleText}}</text></view>
+        <view class="benefit-bottom">
+          <view class="benefit-price"><text class="currency">¥</text><text>{{item.memberPrice}}</text><text class="price-tip">会员价</text></view>
+          <view class="benefit-action">查看福利</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="empty-state">
+    <view class="empty-icon"><view class="service-glyph"></view></view>
+    <view class="empty-title">福利正在准备中</view>
+    <view class="empty-sub">后台发布“商家福利”分类内容后，将在这里展示</view>
+    <button class="home-button" bindtap="goHome">返回首页</button>
+  </view>
+</view>

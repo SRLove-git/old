@@ -9,4 +9,5 @@
     <view class="tip-text">余额可用于报名活动、购买课程；充值请联系客服</view>
     <button class="btn btn-primary btn-block" bindtap="showService">联系客服</button>
   </view>
+  <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

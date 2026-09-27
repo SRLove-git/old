@@ -16,7 +16,8 @@ Page({
     statusSub: '',
     statusIcon: '✓',
     actionLabel: '',
-    payRemain: ''
+    payRemain: '',
+    serviceOpen: false
   },
 
   onLoad(options) {
@@ -202,12 +203,11 @@ Page({
   },
 
   contact() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '联系客服',
-      content: `客服电话：${a.phone}`,
-      showCancel: false
-    })
+    this.setData({ serviceOpen: true })
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
   },
 
   copyTracking() {

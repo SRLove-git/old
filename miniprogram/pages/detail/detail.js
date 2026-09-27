@@ -41,6 +41,7 @@ Page({
     serviceText: '',
     refundText: '',
     buyNowText: '立即购买',
+    serviceOpen: false,
     reviewOpen: false,
     reviewRating: 5,
     reviewContent: '',
@@ -168,7 +169,7 @@ Page({
 
   openSku() {
     if (this.data.activity && (this.data.activity.hasSku || this.data.activity.sellType === 'sku')) {
-      this.setData({ skuOpen: true })
+      this.setData({ skuOpen: true, cartIntent: false })
     } else {
       this.goBooking()
     }
@@ -239,13 +240,11 @@ Page({
   },
 
   showService() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '报名后请添加客服小助理',
-      content: `微信号：${a.wechat}\n客服电话：${a.phone}`,
-      showCancel: false,
-      confirmText: '我知道了'
-    })
+    this.setData({ serviceOpen: true })
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
   },
 
   copyAssistantWechat() {

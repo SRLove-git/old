@@ -61,6 +61,11 @@
 .asset-hover { opacity: 0.6; }
 .unbind-pending { padding: 10rpx 19rpx; border-radius: 999rpx; background: var(--color-warning-light); color: var(--color-warning); font-size: 23rpx; }
 .official-tip { margin: 7rpx 0 18rpx; color: #7f8582; font-size: 24rpx; }
+.social-qr-grid { display: flex; gap: 18rpx; }
+.social-qr-item { flex: 1; min-width: 0; padding: 20rpx 14rpx; border: 1rpx solid #ebe5dc; border-radius: 20rpx; background: #faf9f6; text-align: center; }
+.social-qr-image { width: 230rpx; max-width: 100%; height: 230rpx; display: block; margin: 0 auto; border-radius: 12rpx; background: #fff; }
+.social-qr-name { margin-top: 14rpx; color: #303735; font-size: 26rpx; font-weight: 700; }
+.social-qr-tip { margin-top: 5rpx; color: #929895; font-size: 21rpx; }
 .recommend-scroll { margin-top: 6rpx; }
 .recommend-row { display: flex; }
 .recommend-item { width: 220rpx; flex-shrink: 0; margin-right: 20rpx; }

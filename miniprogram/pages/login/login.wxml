@@ -1,0 +1,21 @@
+<view class="login-page">
+  <view class="brand-mark">
+    <view class="brand-ring"></view>
+    <text>岁</text>
+  </view>
+
+  <view class="brand-name">岁悦里</view>
+  <view class="brand-slogan">和同龄人一起，玩得开心又省心</view>
+
+  <view class="login-card">
+    <view class="login-title">欢迎来到岁悦里</view>
+    <view class="login-desc">登录后可查看活动、线上课堂及会员专属服务</view>
+    <button
+      class="login-button"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bindtap="handleLogin"
+    >{{loading ? '登录中…' : '微信一键登录'}}</button>
+    <view class="privacy-tip">登录即表示您同意平台按照隐私保护指引提供服务</view>
+  </view>
+</view>

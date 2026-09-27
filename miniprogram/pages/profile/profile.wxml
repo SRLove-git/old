@@ -43,6 +43,7 @@
     <view class="service-grid">
       <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><view class="service-icon tone-0"><view class="service-glyph glyph-cart-v2"><view></view></view></view><text>购物车</text></view>
       <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-coupon"></view></view><text>优惠券</text></view>
+      <view class="service-item" bindtap="goMerchantBenefits"><view class="service-icon tone-2"><view class="service-glyph glyph-shop"></view></view><text>商家福利</text></view>
       <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-contacts-v2"><view></view></view></view><text>常用报名人</text></view>
       <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><view class="service-glyph glyph-gift"></view></view><text>赠品中心</text></view>
       <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-pin"></view></view><text>收货地址</text></view>
@@ -75,9 +76,21 @@
   </view>
 
   <view class="profile-card panel">
-    <view class="panel-title heading-cn">关注公众号</view>
-    <view class="official-tip">关注「岁悦里」公众号，获取最新活动与优惠</view>
-    <official-account></official-account>
+    <view class="panel-title heading-cn">关注我们</view>
+    <view class="official-tip">长按二维码，关注「岁悦里」公众号和视频号</view>
+    <view wx:if="{{socialQrs.officialAccount || socialQrs.videoChannel}}" class="social-qr-grid">
+      <view wx:if="{{socialQrs.officialAccount}}" class="social-qr-item">
+        <image class="social-qr-image" src="{{socialQrs.officialAccount}}" mode="aspectFit" show-menu-by-longpress />
+        <view class="social-qr-name">岁悦里公众号</view>
+        <view class="social-qr-tip">长按识别二维码</view>
+      </view>
+      <view wx:if="{{socialQrs.videoChannel}}" class="social-qr-item">
+        <image class="social-qr-image" src="{{socialQrs.videoChannel}}" mode="aspectFit" show-menu-by-longpress />
+        <view class="social-qr-name">岁悦里视频号</view>
+        <view class="social-qr-tip">长按识别二维码</view>
+      </view>
+    </view>
+    <official-account wx:else></official-account>
   </view>
 
   <view wx:if="{{products.length > 0}}" class="profile-card panel">
@@ -94,4 +107,5 @@
   </view>
 
   <view wx:if="{{bindOpen}}" class="mask" bindtap="closeBind"><view class="sheet" catchtap="noop"><view class="bind-title">绑定主理人</view><view class="bind-sub">请输入主理人给您的邀请码</view><input class="field-input" value="{{code}}" bindinput="onCode" placeholder="例如：SYL001" /><button class="btn btn-primary btn-block" bindtap="bindByCode">确认绑定</button></view></view>
+  <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

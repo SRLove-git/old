@@ -5,8 +5,8 @@ Page({
     form: {
       name: '',
       phone: '',
-      groupCount: '',
-      memberCount: '',
+      groupCount: 0,
+      memberCount: 0,
       fields: [],
       intro: ''
     },
@@ -98,8 +98,8 @@ Page({
     }
     const groupCount = Number(form.groupCount)
     const memberCount = Number(form.memberCount)
-    if (!form.groupCount || !Number.isInteger(groupCount) || groupCount < 1 || groupCount > 50) errors.groupCount = '请填写1-50的微信群数量'
-    if (!form.memberCount || !Number.isInteger(memberCount) || memberCount < 1 || memberCount > 5000) errors.memberCount = '请填写1-5000的社群总人数'
+    if (form.groupCount === '' || form.groupCount == null || !Number.isInteger(groupCount) || groupCount < 0 || groupCount > 50) errors.groupCount = '请填写0-50的微信群数量'
+    if (form.memberCount === '' || form.memberCount == null || !Number.isInteger(memberCount) || memberCount < 0 || memberCount > 5000) errors.memberCount = '请填写0-5000的社群总人数'
     if (!agree) errors.agree = '请先阅读并同意协议'
     this.setData({ errors })
     if (Object.keys(errors).length) {

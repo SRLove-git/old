@@ -27,8 +27,9 @@ import {
   IconNotification
 } from '@arco-design/web-vue/es/icon'
 import { api } from './api.js'
+import areaRows from 'china-area-data/data-array.json'
 
-const view = ref('dashboard')
+const view = ref(new URLSearchParams(window.location.search).get('view') || 'dashboard')
 const loading = ref(false)
 const error = ref('')
 const collapsed = ref(false)
@@ -53,14 +54,14 @@ const nav = [
   { key: 'reviews', name: '评价管理', icon: IconMessage },
   { key: 'banners', name: 'Banner管理', icon: IconImage },
   { key: 'content', name: '资讯视频', icon: IconFile },
+  { key: 'config', name: '页面配置', icon: IconSettings },
   { key: 'applications', name: '主理人审核', icon: IconUserAdd },
   { key: 'providers', name: '服务商审核', icon: IconStamp },
   { key: 'managers', name: '主理人管理', icon: IconIdcard },
   { key: 'bindings', name: '归属管理', icon: IconLink },
   { key: 'commissions', name: '佣金管理', icon: IconSafe },
   { key: 'withdraws', name: '提现审核', icon: IconSwap },
-  { key: 'logs', name: '操作日志', icon: IconHistory },
-  { key: 'config', name: '规则配置', icon: IconSettings }
+  { key: 'logs', name: '操作日志', icon: IconHistory }
 ]
 
 const stats = ref(null)
@@ -83,7 +84,25 @@ const products = ref([])
 const regions = ref([])
 const contentPosts = ref([])
 const logs = ref([])
-const config = ref({ couponRefundReturn: 'auto' })
+const defaultConfig = () => ({
+  couponRefundReturn: 'auto',
+  refundNeedAudit: true,
+  brand: { englishName: 'SUI YUE LI', slogan: '和同龄人一起，玩得开心又省心' },
+  assistant: { name: '小助理', wechat: 'suiyueli6070', phone: '400-800-6070', avatar: '🧑‍💼', intro: '' },
+  homeAssistant: {
+    title: '小助理服务',
+    qrImage: '',
+    tip: '长按二维码，添加小助理微信',
+    wechatNote: '微信号：{wechat}（长按识别或保存二维码）'
+  },
+  socialQrs: { officialAccount: '', videoChannel: '' },
+  filing: { companyName: '', icp: '', police: '' }
+})
+const config = ref(defaultConfig())
+const officialQrInput = ref(null)
+const videoQrInput = ref(null)
+const homeQrInput = ref(null)
+const qrUploading = ref({ officialAccount: false, videoChannel: false, homeAssistant: false })
 
 const verifyCode = ref('')
 const verifyOrder = ref(null)
@@ -97,6 +116,7 @@ const makeupTarget = ref(null)
 const makeupForm = ref({ date: '', time: '', reason: '' })
 
 const kw = ref('')
+const activityCategoryFilter = ref('all')
 const orderStatusFilter = ref('全部')
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '待评价', '已完成', '已核销', '退款中', '已退款', '已取消']
 
@@ -123,6 +143,79 @@ const categoryForm = ref(null)
 const categoryTypes = { activity: '活动', product: '商品', news: '资讯', video: '视频' }
 const couponTypes = { 1: '无门槛', 2: '满减', 3: '品类券', 4: '指定商品券' }
 const bindSource = { 1: '扫码', 2: '链接', 3: '邀请码', 4: '手动变更' }
+
+const areaRowByCode = new Map(areaRows.map((item) => [String(item.value), item]))
+const areaChildrenByParent = areaRows.reduce((map, item) => {
+  const parent = String(item.parent || '86')
+  if (!map.has(parent)) map.set(parent, [])
+  map.get(parent).push({ label: item.name, value: String(item.value) })
+  return map
+}, new Map())
+const provinceOptions = areaChildrenByParent.get('86') || []
+const cityOptions = computed(() => areaChildrenByParent.get(String(regionForm.value?.provinceCode || '')) || [])
+const districtOptions = computed(() => areaChildrenByParent.get(String(regionForm.value?.cityCode || '')) || [])
+
+function areaName(code) {
+  return areaRowByCode.get(String(code || ''))?.name || ''
+}
+
+function normalizedAreaName(name) {
+  return String(name || '').replace(/特别行政区|自治区|自治州|市辖区|地区|省|市|区|县|盟/g, '')
+}
+
+function regionArea(region) {
+  if (!region) return { province: '', city: '', district: '', provinceCode: '', cityCode: '', districtCode: '' }
+  if (region.provinceCode && region.cityCode && (region.districtCode || region.code)) {
+    return {
+      province: region.province || areaName(region.provinceCode),
+      city: region.city || areaName(region.cityCode),
+      district: region.district || areaName(region.districtCode || region.code),
+      provinceCode: String(region.provinceCode),
+      cityCode: String(region.cityCode),
+      districtCode: String(region.districtCode || region.code)
+    }
+  }
+
+  const target = normalizedAreaName(region.district || region.name)
+  const candidates = areaRows.filter((item) => {
+    const parent = areaRowByCode.get(String(item.parent || ''))
+    return parent && parent.parent && normalizedAreaName(item.name) === target
+  })
+  const matched = candidates.find((item) => {
+    const city = areaRowByCode.get(String(item.parent))
+    const province = city && areaRowByCode.get(String(city.parent))
+    return province && province.name === '广东省'
+  }) || candidates[0]
+  if (!matched) {
+    return {
+      province: region.province || '',
+      city: region.city || '',
+      district: region.district || region.name || '',
+      provinceCode: '', cityCode: '', districtCode: ''
+    }
+  }
+  const city = areaRowByCode.get(String(matched.parent))
+  const province = city && areaRowByCode.get(String(city.parent))
+  return {
+    province: province?.name || '',
+    city: city?.name || '',
+    district: matched.name,
+    provinceCode: String(province?.value || ''),
+    cityCode: String(city?.value || ''),
+    districtCode: String(matched.value)
+  }
+}
+
+function onRegionProvinceChange(value) {
+  regionForm.value.provinceCode = String(value || '')
+  regionForm.value.cityCode = ''
+  regionForm.value.districtCode = ''
+}
+
+function onRegionCityChange(value) {
+  regionForm.value.cityCode = String(value || '')
+  regionForm.value.districtCode = ''
+}
 
 const categoryList = computed(() =>
   Object.keys(categories.value)
@@ -299,7 +392,10 @@ const productColumns = [
   { title: '操作', slotName: 'actions', width: 140 }
 ]
 const regionColumns = [
-  { title: '地区名称', dataIndex: 'name' },
+  { title: '省', slotName: 'province', width: 150 },
+  { title: '市', slotName: 'city', width: 150 },
+  { title: '区/县', slotName: 'district', width: 150 },
+  { title: '行政区划代码', slotName: 'code', width: 140 },
   { title: '排序', dataIndex: 'sort', width: 100 },
   { title: '前台状态', slotName: 'status', width: 120 },
   { title: '操作', slotName: 'actions', width: 180 }
@@ -497,7 +593,17 @@ async function load() {
     if (view.value === 'withdraws') withdraws.value = await api.get('/withdraws')
     if (view.value === 'logs') logs.value = await api.get('/logs')
     if (view.value === 'config') {
-      config.value = await api.get('/config')
+      const loadedConfig = await api.get('/config')
+      const defaults = defaultConfig()
+      config.value = {
+        ...defaults,
+        ...loadedConfig,
+        brand: { ...defaults.brand, ...(loadedConfig.brand || {}) },
+        assistant: { ...defaults.assistant, ...(loadedConfig.assistant || {}) },
+        homeAssistant: { ...defaults.homeAssistant, ...(loadedConfig.homeAssistant || {}) },
+        socialQrs: { ...defaults.socialQrs, ...(loadedConfig.socialQrs || {}) },
+        filing: { ...defaults.filing, ...(loadedConfig.filing || {}) }
+      }
       if (!config.value.assistant) {
         config.value.assistant = { name: '小助理', wechat: 'suiyueli6070', phone: '400-800-6070', avatar: '🧑‍💼', intro: '' }
       }
@@ -511,7 +617,20 @@ async function load() {
         config.value.managerApplyFee = 0
       }
       if (!config.value.brand) {
-        config.value.brand = { slogan: '和同龄人一起，玩得开心又省心' }
+        config.value.brand = { englishName: 'SUI YUE LI', slogan: '和同龄人一起，玩得开心又省心' }
+      } else if (config.value.brand.englishName === undefined) {
+        config.value.brand.englishName = 'SUI YUE LI'
+      }
+      if (!config.value.homeAssistant) {
+        config.value.homeAssistant = {
+          title: '小助理服务',
+          qrImage: '',
+          tip: '长按二维码，添加小助理微信',
+          wechatNote: '微信号：{wechat}（长按识别或保存二维码）'
+        }
+      }
+      if (!config.value.socialQrs) {
+        config.value.socialQrs = { officialAccount: '', videoChannel: '' }
       }
       if (!config.value.couponRefundReturn) {
         config.value.couponRefundReturn = 'auto'
@@ -546,6 +665,9 @@ function openNotification(item) {
 
 function switchView(key) {
   view.value = key
+  const url = new URL(window.location.href)
+  url.searchParams.set('view', key)
+  window.history.replaceState({}, '', url)
   kw.value = ''
   orderStatusFilter.value = '全部'
   load()
@@ -610,10 +732,17 @@ function submitReason() {
 const filteredActivities = computed(() => {
   const k = kw.value.trim()
   return activities.value.filter((a) => {
+    const matchesCategory = activityCategoryFilter.value === 'all' || String(a.category) === String(activityCategoryFilter.value)
     const text = [a.title, a.city, regionNames(a), a.address, a.highlight, a.detail, (a.points || []).join(' ')].filter(Boolean).join(' ')
-    return fuzzyMatch(text, k)
+    return matchesCategory && fuzzyMatch(text, k)
   })
 })
+const activityFilterOptions = computed(() => [
+  { label: '全部分类', value: 'all' },
+  ...categoryList.value
+    .filter((item) => item.type !== 'product')
+    .map((item) => ({ label: item.name, value: item.id }))
+])
 const filteredOrders = computed(() => {
   const k = kw.value.trim()
   return orders.value.filter((o) => {
@@ -658,7 +787,7 @@ const commissionManagerOptions = computed(() =>
 function openActivity(a) {
   activityForm.value = a
     ? { ...a, regionIds: inferRegionIds(a), sellType: a.sellType || 'date' }
-    : { title: '', category: 1, city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
+    : { title: '', category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0, memberPrice: 0, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
   activitySchedulesJson.value = a && a.schedules ? JSON.stringify(a.schedules, null, 2) : '[]'
   activitySkusJson.value = a && a.skus ? JSON.stringify(a.skus, null, 2) : '[]'
 }
@@ -722,14 +851,34 @@ function removeProduct(id) {
 }
 
 function openRegion(region) {
-  regionForm.value = region ? { ...region } : { name: '', sort: (regions.value.length + 1) * 10, enabled: true }
+  const area = regionArea(region)
+  regionForm.value = region
+    ? { ...region, ...area }
+    : { name: '', provinceCode: '', cityCode: '', districtCode: '', sort: (regions.value.length + 1) * 10, enabled: true }
 }
 
 function saveRegion() {
-  const form = { ...regionForm.value }
-  if (!String(form.name || '').trim()) {
-    Message.error('请输入地区名称')
+  const provinceCode = String(regionForm.value.provinceCode || '')
+  const cityCode = String(regionForm.value.cityCode || '')
+  const districtCode = String(regionForm.value.districtCode || '')
+  if (!provinceCode || !cityCode || !districtCode) {
+    Message.error('请选择完整的省、市、区/县')
     return
+  }
+  const province = areaName(provinceCode)
+  const city = areaName(cityCode)
+  const district = areaName(districtCode)
+  const form = {
+    ...regionForm.value,
+    province,
+    city,
+    district,
+    provinceCode,
+    cityCode,
+    districtCode,
+    code: districtCode,
+    name: district,
+    fullName: `${province}${city}${district}`
   }
   doAction(async () => {
     if (form.id) await api.put(`/regions/${form.id}`, form)
@@ -1132,6 +1281,58 @@ function saveConfig() {
   doAction(() => api.put('/config', config.value), '配置已保存')
 }
 
+function chooseQr(field) {
+  const inputs = {
+    officialAccount: officialQrInput.value,
+    videoChannel: videoQrInput.value,
+    homeAssistant: homeQrInput.value
+  }
+  const input = inputs[field]
+  if (input) input.click()
+}
+
+function qrPreviewUrl(value) {
+  const url = String(value || '')
+  if (!url || /^(https?:|data:)/.test(url)) return url
+  const base = String(import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+  return `${base}${url.startsWith('/') ? url : `/${url}`}`
+}
+
+function fileDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('读取图片失败'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function uploadQr(event, field) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    Message.error('仅支持 PNG、JPG 或 WebP 图片')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    Message.error('二维码图片不能超过2MB')
+    return
+  }
+  qrUploading.value = { ...qrUploading.value, [field]: true }
+  try {
+    const dataUrl = await fileDataUrl(file)
+    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    if (field === 'homeAssistant') config.value.homeAssistant.qrImage = result.url
+    else config.value.socialQrs[field] = result.url
+    Message.success('二维码上传成功，请点击“保存全部配置”使小程序生效')
+  } catch (e) {
+    Message.error(e.message || '上传失败')
+  } finally {
+    qrUploading.value = { ...qrUploading.value, [field]: false }
+  }
+}
+
 function exportCsv(filename, rows) {
   if (!rows.length) {
     Message.warning('没有可导出的数据')
@@ -1282,7 +1483,9 @@ function exportCsv(filename, rows) {
           </section>
 
           <section v-if="view === 'activities'">
+            <a-alert type="info" class="toolbar">个人中心“商家福利”展示这里分类为“商家福利”的已上架内容。</a-alert>
             <div class="toolbar">
+              <a-select v-model="activityCategoryFilter" :options="activityFilterOptions" style="width: 180px" />
               <a-input-search
                 v-model="kw"
                 placeholder="搜索标题/城市"
@@ -1353,6 +1556,10 @@ function exportCsv(filename, rows) {
             </a-alert>
             <a-card :bordered="false">
               <a-table :columns="regionColumns" :data="regions" :pagination="false" row-key="id">
+                <template #province="{ record }">{{ regionArea(record).province || '待完善' }}</template>
+                <template #city="{ record }">{{ regionArea(record).city || '待完善' }}</template>
+                <template #district="{ record }">{{ regionArea(record).district || record.name }}</template>
+                <template #code="{ record }">{{ record.code || regionArea(record).districtCode || '—' }}</template>
                 <template #status="{ record }">
                   <a-tag :color="record.enabled !== false ? 'green' : 'gray'">{{ record.enabled !== false ? '已启用' : '已停用' }}</a-tag>
                 </template>
@@ -1848,7 +2055,7 @@ function exportCsv(filename, rows) {
           </section>
 
           <section v-if="view === 'config' && config">
-            <a-card title="规则配置" :bordered="false" class="config-card">
+            <a-card title="业务规则配置" :bordered="false" class="config-card">
               <a-form :model="config" layout="vertical">
                 <a-form-item label="全局默认分佣比例（%）">
                   <a-input-number v-model="config.globalCommissionRate" :min="0" :max="100" style="width: 100%" />
@@ -1883,6 +2090,9 @@ function exportCsv(filename, rows) {
 
             <a-card title="品牌信息" :bordered="false" class="config-card">
               <a-form :model="config" layout="vertical">
+                <a-form-item label="页脚英文品牌名">
+                  <a-input v-model="config.brand.englishName" placeholder="例如：SUI YUE LI" />
+                </a-form-item>
                 <a-form-item label="首页口号">
                   <a-input v-model="config.brand.slogan" placeholder="例如：和同龄人一起，玩得开心又省心" />
                 </a-form-item>
@@ -1897,6 +2107,53 @@ function exportCsv(filename, rows) {
                 <a-form-item label="头像（emoji）"><a-input v-model="config.assistant.avatar" placeholder="例如：🧑‍💼" /></a-form-item>
                 <a-form-item label="一句话介绍"><a-input v-model="config.assistant.intro" placeholder="例如：报名咨询、活动群、售后都可以找我" /></a-form-item>
               </a-form>
+            </a-card>
+
+            <a-card title="首页小助理二维码区" :bordered="false" class="config-card">
+              <a-alert type="info" style="margin-bottom: 18px">微信说明支持使用 {wechat}，小程序会自动替换成上方配置的助理微信号。上传后请点击页面底部“保存全部配置”。</a-alert>
+              <a-form :model="config" layout="vertical">
+                <a-form-item label="区域标题"><a-input v-model="config.homeAssistant.title" placeholder="例如：小助理服务" /></a-form-item>
+                <a-form-item label="二维码引导语"><a-input v-model="config.homeAssistant.tip" placeholder="例如：长按二维码，添加小助理微信" /></a-form-item>
+                <a-form-item label="微信说明"><a-input v-model="config.homeAssistant.wechatNote" placeholder="例如：微信号：{wechat}（长按识别或保存二维码）" /></a-form-item>
+              </a-form>
+              <div class="qr-config-grid qr-config-grid-single">
+                <div class="qr-config-item">
+                  <div class="qr-config-title">首页小助理二维码</div>
+                  <img v-if="config.homeAssistant.qrImage" class="qr-config-preview" :src="qrPreviewUrl(config.homeAssistant.qrImage)" alt="首页小助理二维码" />
+                  <div v-else class="qr-config-empty">当前使用小程序内置二维码</div>
+                  <input ref="homeQrInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadQr($event, 'homeAssistant')" />
+                  <a-space>
+                    <a-button type="primary" :loading="qrUploading.homeAssistant" @click="chooseQr('homeAssistant')">上传图片</a-button>
+                    <a-button v-if="config.homeAssistant.qrImage" @click="config.homeAssistant.qrImage = ''">恢复内置二维码</a-button>
+                  </a-space>
+                </div>
+              </div>
+            </a-card>
+
+            <a-card title="公众号与视频号二维码" :bordered="false" class="config-card">
+              <a-alert type="info" style="margin-bottom: 18px">上传后请点击页面底部“保存全部配置”，个人中心才会显示最新二维码。</a-alert>
+              <div class="qr-config-grid">
+                <div class="qr-config-item">
+                  <div class="qr-config-title">公众号二维码</div>
+                  <img v-if="config.socialQrs.officialAccount" class="qr-config-preview" :src="qrPreviewUrl(config.socialQrs.officialAccount)" alt="公众号二维码" />
+                  <div v-else class="qr-config-empty">尚未上传</div>
+                  <input ref="officialQrInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadQr($event, 'officialAccount')" />
+                  <a-space>
+                    <a-button type="primary" :loading="qrUploading.officialAccount" @click="chooseQr('officialAccount')">上传图片</a-button>
+                    <a-button v-if="config.socialQrs.officialAccount" @click="config.socialQrs.officialAccount = ''">移除</a-button>
+                  </a-space>
+                </div>
+                <div class="qr-config-item">
+                  <div class="qr-config-title">视频号二维码</div>
+                  <img v-if="config.socialQrs.videoChannel" class="qr-config-preview" :src="qrPreviewUrl(config.socialQrs.videoChannel)" alt="视频号二维码" />
+                  <div v-else class="qr-config-empty">尚未上传</div>
+                  <input ref="videoQrInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadQr($event, 'videoChannel')" />
+                  <a-space>
+                    <a-button type="primary" :loading="qrUploading.videoChannel" @click="chooseQr('videoChannel')">上传图片</a-button>
+                    <a-button v-if="config.socialQrs.videoChannel" @click="config.socialQrs.videoChannel = ''">移除</a-button>
+                  </a-space>
+                </div>
+              </div>
             </a-card>
 
             <a-card title="备案信息" :bordered="false" class="config-card">
@@ -2013,11 +2270,19 @@ function exportCsv(filename, rows) {
     v-if="regionForm"
     :visible="true"
     :title="regionForm.id ? '编辑地区' : '新增地区'"
-    :width="440"
+    :width="560"
     @cancel="regionForm = null"
   >
     <a-form :model="regionForm" layout="vertical">
-      <a-form-item label="地区名称" required><a-input v-model="regionForm.name" placeholder="例如：佛山禅城" /></a-form-item>
+      <a-form-item label="省/自治区/直辖市" required>
+        <a-select :model-value="regionForm.provinceCode" :options="provinceOptions" allow-search placeholder="请选择省份" @change="onRegionProvinceChange" />
+      </a-form-item>
+      <a-form-item label="市/自治州" required>
+        <a-select :model-value="regionForm.cityCode" :options="cityOptions" allow-search :disabled="!regionForm.provinceCode" placeholder="请选择城市" @change="onRegionCityChange" />
+      </a-form-item>
+      <a-form-item label="区/县" required>
+        <a-select v-model="regionForm.districtCode" :options="districtOptions" allow-search :disabled="!regionForm.cityCode" placeholder="请选择区县" />
+      </a-form-item>
       <a-form-item label="显示排序"><a-input-number v-model="regionForm.sort" :min="0" style="width: 100%" /></a-form-item>
       <a-form-item label="前台显示"><a-switch v-model="regionForm.enabled" /></a-form-item>
     </a-form>
@@ -2420,6 +2685,49 @@ function exportCsv(filename, rows) {
 .config-card {
   max-width: 520px;
   margin-bottom: 16px;
+}
+
+.qr-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.qr-config-grid-single {
+  grid-template-columns: minmax(280px, 420px);
+}
+
+.qr-config-item {
+  padding: 18px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.qr-config-title {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.qr-config-preview,
+.qr-config-empty {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 14px;
+  border-radius: 8px;
+  background: var(--color-fill-2);
+}
+
+.qr-config-preview {
+  display: block;
+  object-fit: contain;
+}
+
+.qr-config-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-3);
 }
 
 .unbind-card {

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.58.0",
+    "china-area-data": "^5.0.1",
     "vue": "^3.4.38"
   },
   "devDependencies": {

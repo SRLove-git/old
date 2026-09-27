@@ -1,9 +1,14 @@
 const { API_BASE, DEV_USER_ID } = require('./config.js')
 
 // 登录身份发生过后台合并时升级缓存键，确保新版重新换取服务端会话。
-const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v2'
+const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v3'
+const LOGIN_CONSENT_KEY = 'suiyueli_login_consent_v1'
 let authState = DEV_USER_ID ? { token: 'local-dev', user: { id: String(DEV_USER_ID) }, expiresAt: Number.MAX_SAFE_INTEGER } : (wx.getStorageSync(AUTH_STORAGE_KEY) || null)
 let loginPromise = null
+
+function isLoggedIn() {
+  return !!DEV_USER_ID || wx.getStorageSync(LOGIN_CONSENT_KEY) === true
+}
 
 function getCurrentUserId() {
   return authState && authState.user ? String(authState.user.id || '') : ''
@@ -41,7 +46,7 @@ function exchangeCode(code) {
   })
 }
 
-function ensureLogin(force = false) {
+function authenticate(force = false) {
   const validUntil = Number(authState && authState.expiresAt)
   const valid = authState && authState.token && getCurrentUserId() && validUntil > Date.now() + 60000
   if (!force && valid) return Promise.resolve(authState)
@@ -57,6 +62,22 @@ function ensureLogin(force = false) {
     })
     .finally(() => { loginPromise = null })
   return loginPromise
+}
+
+function login() {
+  return authenticate(false).then((auth) => {
+    wx.setStorageSync(LOGIN_CONSENT_KEY, true)
+    return auth
+  })
+}
+
+function ensureLogin(force = false) {
+  if (!isLoggedIn()) {
+    const error = new Error('请先登录后再使用')
+    error.code = 'AUTH_REQUIRED'
+    return Promise.reject(error)
+  }
+  return authenticate(force)
 }
 
 function send(path, options, auth) {
@@ -105,4 +126,4 @@ const api = {
   del: (path) => request(path, { method: 'DELETE' })
 }
 
-module.exports = { api, ensureLogin, getCurrentUserId }
+module.exports = { api, ensureLogin, login, isLoggedIn, getCurrentUserId }

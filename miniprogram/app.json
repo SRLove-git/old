@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/login/login",
     "pages/index/index",
     "pages/lives/lives",
     "pages/live-room/live-room",
@@ -7,6 +8,7 @@
     "pages/detail/detail",
     "pages/content-detail/content-detail",
     "pages/content-list/content-list",
+    "pages/merchant-benefits/merchant-benefits",
     "pages/merchant-shop/merchant-shop",
     "pages/booking/booking",
     "pages/appointments/appointments",

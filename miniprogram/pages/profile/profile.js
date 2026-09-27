@@ -11,9 +11,11 @@ Page({
     couponCount: 0,
     pendingUnbind: null,
     products: [],
+    socialQrs: {},
     bindOpen: false,
     code: '',
-    phoneDisplay: ''
+    phoneDisplay: '',
+    serviceOpen: false
   },
 
   async onShow() {
@@ -23,7 +25,7 @@ Page({
     }
     try {
       await store.ready()
-      await store.refreshUserProfile()
+      await Promise.all([store.refreshUserProfile(), store.refreshConfig()])
       if (!this.pageVisible) return
       this.loadState()
       this.startStatusPolling()
@@ -87,7 +89,8 @@ Page({
       cards: state.cards || [],
       couponCount: state.coupons.length,
       pendingUnbind: state.pendingUnbind || null,
-      products: (state.products || []).slice(0, 6)
+      products: (state.products || []).slice(0, 6),
+      socialQrs: store.getSocialQrs()
     })
   },
 
@@ -107,6 +110,10 @@ Page({
   goAcademy() {
     wx.setStorageSync('academyTab', 'mine')
     wx.switchTab({ url: '/pages/lives/lives' })
+  },
+
+  goMerchantBenefits() {
+    wx.navigateTo({ url: '/pages/merchant-benefits/merchant-benefits' })
   },
 
   openBind() {
@@ -170,11 +177,12 @@ Page({
   },
 
   showService() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '需要帮忙吗？',
-      content: `客服电话：${a.phone}\n小助理微信：${a.wechat}`,
-      showCancel: false
-    })
+    this.setData({ serviceOpen: true })
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ hidden: true })
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ hidden: false })
   }
 })

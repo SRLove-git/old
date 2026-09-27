@@ -105,36 +105,21 @@
   </view>
 
   <view class="assistant-panel">
-    <view class="assistant-title">小助理服务</view>
-    <image class="assistant-qr" src="/assets/assistant-qr.png" show-menu-by-longpress mode="aspectFit" />
-    <view class="assistant-tip">长按二维码，添加小助理微信</view>
-    <view class="assistant-wechat">微信号：suiyueli6070（长按识别或保存二维码）</view>
+    <view class="assistant-title">{{homeAssistant.title}}</view>
+    <image class="assistant-qr" src="{{homeAssistant.qrImage}}" show-menu-by-longpress mode="aspectFit" />
+    <view class="assistant-tip">{{homeAssistant.tip}}</view>
+    <view class="assistant-wechat">{{homeAssistant.wechatNote}}</view>
   </view>
 
   <view class="brand-footer">
-    <view class="brand-word">SUI YUE LI</view><view class="brand-slogan">和同龄人一起，玩得开心又省心</view>
+    <view class="brand-word">{{brandEnglish}}</view><view class="brand-slogan">{{slogan}}</view>
     <view wx:if="{{filing.companyName || filing.icp || filing.police}}" class="filing">
       <text wx:if="{{filing.companyName}}" class="filing-text">{{filing.companyName}}</text><text wx:if="{{filing.icp}}" class="filing-text">{{filing.icp}}</text><text wx:if="{{filing.police}}" class="filing-text">{{filing.police}}</text>
     </view>
   </view>
 
   <view class="service-fab" role="button" aria-label="联系小助理" bindtap="showService"><view class="service-bubble-icon"><text></text><text></text><text></text></view></view>
-  <view wx:if="{{serviceOpen}}" class="contact-mask" bindtap="closeService">
-    <view class="contact-sheet" catchtap="noop">
-      <view class="contact-handle"></view>
-      <view class="contact-title">需要帮忙吗？</view>
-      <view class="contact-sub">不会操作没关系，联系我们，我们一步步教您。</view>
-      <view class="contact-row" data-field="phone" bindtap="copyServiceContact">
-        <view class="contact-copy"><text class="contact-label">客服电话</text><text class="contact-value">{{assistant.phone}}</text></view>
-        <view class="contact-copy-btn">复制</view>
-      </view>
-      <view class="contact-row" data-field="wechat" bindtap="copyServiceContact">
-        <view class="contact-copy"><text class="contact-label">小助理微信</text><text class="contact-value">{{assistant.wechat}}</text></view>
-        <view class="contact-copy-btn">复制</view>
-      </view>
-      <button class="contact-close" bindtap="closeService">我知道了</button>
-    </view>
-  </view>
+  <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
   <view wx:if="{{cityOpen}}" class="city-mask" bindtap="closeCity">
     <view class="city-sheet" catchtap="noop">
       <view class="city-sheet-title">选择所在区域</view>

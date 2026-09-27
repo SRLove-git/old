@@ -1,0 +1,16 @@
+<view wx:if="{{visible}}" class="contact-mask" bindtap="close">
+  <view class="contact-sheet" catchtap="noop">
+    <view class="contact-handle"></view>
+    <view class="contact-title">需要帮忙吗？</view>
+    <view class="contact-sub">不会操作没关系，联系我们，我们一步步教您。</view>
+    <view class="contact-row" data-field="phone" bindtap="copyContact">
+      <view class="contact-copy"><text class="contact-label">客服电话</text><text class="contact-value">{{assistant.phone}}</text></view>
+      <view class="contact-copy-btn">复制</view>
+    </view>
+    <view class="contact-row" data-field="wechat" bindtap="copyContact">
+      <view class="contact-copy"><text class="contact-label">小助理微信</text><text class="contact-value">{{assistant.wechat}}</text></view>
+      <view class="contact-copy-btn">复制</view>
+    </view>
+    <button class="contact-close" bindtap="close">我知道了</button>
+  </view>
+</view>

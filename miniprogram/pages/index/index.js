@@ -34,7 +34,9 @@ Page({
     cityOpen: false,
     serviceOpen: false,
     assistant: {},
+    homeAssistant: {},
     viewMode: 'recommend',
+    brandEnglish: '',
     slogan: '',
     filing: {},
     newsPosts: [],
@@ -44,14 +46,17 @@ Page({
   async onLoad() {
     await store.ready()
     const cities = this.buildCities()
+    const brand = store.getBrand()
     this.setData({
       categories: this.buildCategories(),
       banners: store.get().banners,
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
-      slogan: store.getBrand().slogan,
+      brandEnglish: brand.englishName,
+      slogan: brand.slogan,
       filing: store.getFiling(),
       assistant: store.getAssistant(),
+      homeAssistant: store.getHomeAssistant(),
       cities,
       city: cities.length > 1 ? cities[1] : (cities[0] || '全部')
     })
@@ -64,12 +69,18 @@ Page({
       this.getTabBar().setData({ selected: 0, hidden: false })
     }
     await store.ready()
+    try {
+      await store.refreshConfig()
+    } catch (e) {}
+    const brand = store.getBrand()
     this.setData({
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
-      slogan: store.getBrand().slogan,
+      brandEnglish: brand.englishName,
+      slogan: brand.slogan,
       filing: store.getFiling(),
-      assistant: store.getAssistant()
+      assistant: store.getAssistant(),
+      homeAssistant: store.getHomeAssistant()
     })
     this.buildGroups()
     this.buildContent()

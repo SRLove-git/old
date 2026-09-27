@@ -3,7 +3,8 @@ const store = require('../../utils/store.js')
 Page({
   data: {
     balanceText: '0.00',
-    points: 0
+    points: 0,
+    serviceOpen: false
   },
 
   async onShow() {
@@ -16,11 +17,10 @@ Page({
   },
 
   showService() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '需要帮忙吗？',
-      content: `客服电话：${a.phone}\n小助理微信：${a.wechat}`,
-      showCancel: false
-    })
+    this.setData({ serviceOpen: true })
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
   }
 })

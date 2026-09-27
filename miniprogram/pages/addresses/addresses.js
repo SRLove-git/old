@@ -1,18 +1,22 @@
 const store = require('../../utils/store.js')
+const regionPicker = require('../../utils/region-picker.js')
 
 Page({
   data: {
     addresses: [],
     editingId: null,
-    form: { name: '', phone: '', region: '', detail: '' },
+    form: { name: '', phone: '', regionText: '', regionId: '', detail: '' },
     regionOptions: [],
-    regionIndex: -1
+    regionPickerColumns: [[], [], []],
+    regionPickerIndexes: [0, 0, 0]
   },
 
   async onShow() {
     await store.ready()
     try { await store.refreshRegions() } catch (e) {}
-    this.setData({ regionOptions: store.getRegions() })
+    const regionOptions = store.getRegions()
+    const picker = regionPicker.buildRegionPicker(regionOptions)
+    this.setData({ regionOptions, regionPickerColumns: picker.columns, regionPickerIndexes: picker.indexes })
     this.loadList()
   },
 
@@ -21,22 +25,29 @@ Page({
   },
 
   openAdd() {
-    this.setData({ editingId: 'new', form: { name: '', phone: '', region: '', detail: '' }, regionIndex: -1 })
+    const picker = regionPicker.buildRegionPicker(this.data.regionOptions)
+    this.setData({
+      editingId: 'new',
+      form: { name: '', phone: '', regionText: '', regionId: '', detail: '' },
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes
+    })
   },
 
   openEdit(e) {
     const id = e.currentTarget.dataset.id
     const addr = this.data.addresses.find((a) => String(a.id) === String(id))
     if (!addr) return
-    const region = `${addr.province || ''}${addr.city || ''}${addr.district || ''}`
-    const regionIndex = this.data.regionOptions.findIndex((item) => item.name === region)
+    const picker = regionPicker.buildRegionPicker(this.data.regionOptions, addr)
     this.setData({
       editingId: id,
-      regionIndex,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes,
       form: {
         name: addr.name || '',
         phone: addr.phone || '',
-        region,
+        regionText: regionPicker.regionText(addr),
+        regionId: picker.selected ? String(picker.selected.id) : '',
         detail: addr.detail || ''
       }
     })
@@ -53,19 +64,32 @@ Page({
     this.setData({ [`form.${field}`]: e.detail.value })
   },
 
+  onRegionColumnChange(e) {
+    const picker = regionPicker.changeRegionPicker(this.data.regionOptions, {
+      columns: this.data.regionPickerColumns,
+      indexes: this.data.regionPickerIndexes
+    }, Number(e.detail.column), Number(e.detail.value))
+    this.setData({ regionPickerColumns: picker.columns, regionPickerIndexes: picker.indexes })
+  },
+
   onRegionChange(e) {
-    const regionIndex = Number(e.detail.value)
-    const region = this.data.regionOptions[regionIndex]
-    this.setData({ regionIndex, 'form.region': region ? region.name : '' })
+    const indexes = e.detail.value.map(Number)
+    const region = regionPicker.selectedRegion({ columns: this.data.regionPickerColumns }, indexes)
+    this.setData({
+      regionPickerIndexes: indexes,
+      'form.regionText': regionPicker.regionText(region),
+      'form.regionId': region ? String(region.id) : ''
+    })
   },
 
   async save() {
     const { form, editingId } = this.data
-    if (!form.name || !form.phone || !form.region || !form.detail) {
+    if (!form.name || !form.phone || !form.regionId || !form.detail) {
       wx.showToast({ title: '请填写完整收货信息', icon: 'none' })
       return
     }
-    if (!this.data.regionOptions.some((item) => item.name === form.region)) {
+    const region = this.data.regionOptions.find((item) => String(item.id) === String(form.regionId))
+    if (!region || region.enabled === false) {
       wx.showToast({ title: '请选择后台已启用地区', icon: 'none' })
       return
     }
@@ -73,7 +97,16 @@ Page({
       wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
       return
     }
-    const payload = { name: form.name, phone: form.phone, province: '', city: '', district: form.region || '', detail: form.detail }
+    const payload = {
+      name: form.name,
+      phone: form.phone,
+      province: region.province,
+      city: region.city,
+      district: region.district,
+      regionId: region.id,
+      regionCode: region.districtCode || region.code || '',
+      detail: form.detail
+    }
     try {
       if (editingId && editingId !== 'new') {
         await store.updateAddress(editingId, payload)

@@ -1,4 +1,5 @@
 const store = require('../../utils/store.js')
+const regionPicker = require('../../utils/region-picker.js')
 
 function selectedParticipantIds(info, memberList) {
   return [info, ...(memberList || [])]
@@ -47,13 +48,15 @@ Page({
     addressOpen: false,
     addressForm: {},
     regionOptions: [],
-    regionIndex: -1,
+    regionPickerColumns: [[], [], []],
+    regionPickerIndexes: [0, 0, 0],
     showAll: false,
     visibleSchedules: [],
     hasMore: false,
     refundText: '',
     memberList: [],
-    payOpen: false
+    payOpen: false,
+    serviceOpen: false
   },
 
   async onLoad(options) {
@@ -74,6 +77,8 @@ Page({
     const memberPrice = sku ? sku.memberPrice : activity.memberPrice
     const firstParticipant = state.participants[0] || { id: null, name: '', phone: '', idCard: '' }
 
+    const regionOptions = store.getRegions()
+    const picker = regionPicker.buildRegionPicker(regionOptions)
     this.setData({
       id,
       activity,
@@ -90,7 +95,9 @@ Page({
       needDiscount: !!(activity.participantFields && activity.participantFields.discount),
       isGoods: activity.category === 5,
       address: activity.category === 5 ? store.getDefaultAddress() : null,
-      regionOptions: store.getRegions(),
+      regionOptions,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes,
       refundText: store.refundRuleText(activity.refundRule) || activity.refund || '',
       info: {
         participantId: firstParticipant.id,
@@ -106,11 +113,16 @@ Page({
 
   async onShow() {
     await store.ready()
+    try { await store.refreshRegions() } catch (e) {}
     const state = store.get()
+    const regionOptions = store.getRegions()
+    const picker = regionPicker.buildRegionPicker(regionOptions, this.data.address)
     this.setData({
       participants: decorateParticipants(state.participants, this.data.info, this.data.memberList),
       coupons: state.coupons,
-      regionOptions: store.getRegions()
+      regionOptions,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes
     })
   },
 
@@ -341,15 +353,16 @@ Page({
 
   openAddress() {
     const addr = this.data.address || store.getDefaultAddress() || {}
-    const region = `${addr.province || ''}${addr.city || ''}${addr.district || ''}`
-    const regionIndex = this.data.regionOptions.findIndex((item) => item.name === region)
+    const picker = regionPicker.buildRegionPicker(this.data.regionOptions, addr)
     this.setData({
       addressOpen: true,
-      regionIndex,
+      regionPickerColumns: picker.columns,
+      regionPickerIndexes: picker.indexes,
       addressForm: {
         name: addr.name || '',
         phone: addr.phone || '',
-        region,
+        regionText: regionPicker.regionText(addr),
+        regionId: picker.selected ? String(picker.selected.id) : '',
         detail: addr.detail || ''
       }
     })
@@ -364,15 +377,27 @@ Page({
     this.setData({ [`addressForm.${field}`]: e.detail.value })
   },
 
+  onAddressRegionColumnChange(e) {
+    const picker = regionPicker.changeRegionPicker(this.data.regionOptions, {
+      columns: this.data.regionPickerColumns,
+      indexes: this.data.regionPickerIndexes
+    }, Number(e.detail.column), Number(e.detail.value))
+    this.setData({ regionPickerColumns: picker.columns, regionPickerIndexes: picker.indexes })
+  },
+
   onAddressRegionChange(e) {
-    const regionIndex = Number(e.detail.value)
-    const region = this.data.regionOptions[regionIndex]
-    this.setData({ regionIndex, 'addressForm.region': region ? region.name : '' })
+    const indexes = e.detail.value.map(Number)
+    const region = regionPicker.selectedRegion({ columns: this.data.regionPickerColumns }, indexes)
+    this.setData({
+      regionPickerIndexes: indexes,
+      'addressForm.regionText': regionPicker.regionText(region),
+      'addressForm.regionId': region ? String(region.id) : ''
+    })
   },
 
   async saveAddressNow() {
     const { addressForm } = this.data
-    if (!addressForm.name || !addressForm.phone || !addressForm.region || !addressForm.detail) {
+    if (!addressForm.name || !addressForm.phone || !addressForm.regionId || !addressForm.detail) {
       wx.showToast({ title: '请填写完整收货信息', icon: 'none' })
       return
     }
@@ -380,16 +405,19 @@ Page({
       wx.showToast({ title: '请填写正确的11位手机号', icon: 'none' })
       return
     }
-    if (!this.data.regionOptions.some((item) => item.name === addressForm.region)) {
+    const region = this.data.regionOptions.find((item) => String(item.id) === String(addressForm.regionId))
+    if (!region || region.enabled === false) {
       wx.showToast({ title: '请选择后台已启用地区', icon: 'none' })
       return
     }
     const payload = {
       name: addressForm.name,
       phone: addressForm.phone,
-      province: '',
-      city: '',
-      district: addressForm.region || '',
+      province: region.province,
+      city: region.city,
+      district: region.district,
+      regionId: region.id,
+      regionCode: region.districtCode || region.code || '',
       detail: addressForm.detail,
       isDefault: true
     }
@@ -453,11 +481,10 @@ Page({
   },
 
   showService() {
-    const a = store.getAssistant()
-    wx.showModal({
-      title: '报名遇到问题？',
-      content: `客服电话：${a.phone}`,
-      showCancel: false
-    })
+    this.setData({ serviceOpen: true })
+  },
+
+  closeService() {
+    this.setData({ serviceOpen: false })
   }
 })

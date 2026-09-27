@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "我的余额"
+  "navigationBarTitleText": "我的余额",
+  "usingComponents": {
+    "contact-sheet": "/components/contact-sheet/contact-sheet"
+  }
 }

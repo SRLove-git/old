@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "岁悦里"
+  "navigationBarTitleText": "岁悦里",
+  "usingComponents": {
+    "contact-sheet": "/components/contact-sheet/contact-sheet"
+  }
 }

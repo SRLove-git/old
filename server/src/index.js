@@ -1,6 +1,9 @@
 import express from 'express'
 import cors from 'cors'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as store from './store.js'
 
 const app = express()
@@ -10,9 +13,13 @@ const WECHAT_APPID = process.env.WECHAT_APPID || 'wx5d1ccdf824e45e73'
 const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET || ''
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-local-session-secret')
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+const UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads')
+
+fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '5mb' }))
+app.use('/api/uploads/files', express.static(UPLOAD_DIR, { maxAge: '7d', fallthrough: false }))
 
 function adminAuth(req, res, next) {
   if (req.headers['x-admin-token'] !== ADMIN_TOKEN) {
@@ -107,6 +114,18 @@ const wrap = (fn) => (req, res) => {
     res.status(status).json({ code: status, message: e.message })
   }
 }
+
+app.post('/api/uploads/image', adminAuth, wrap((req) => {
+  const dataUrl = String((req.body && req.body.dataUrl) || '')
+  const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) throw httpError(400, '仅支持 PNG、JPG 或 WebP 图片')
+  const buffer = Buffer.from(match[2], 'base64')
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw httpError(400, '图片大小不能超过2MB')
+  const ext = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg')
+  const filename = `qr-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.${ext}`
+  fs.writeFileSync(path.join(UPLOAD_DIR, filename), buffer)
+  return { url: `/api/uploads/files/${filename}` }
+}))
 
 // 微信静默登录：小程序只提交 wx.login 得到的临时 code，AppSecret 始终只保留在服务端。
 app.post('/api/auth/wechat', async (req, res) => {

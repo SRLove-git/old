@@ -180,8 +180,8 @@
       </view>
       <view class="field">
         <text class="field-label">配送地区<text class="required">*</text></text>
-        <picker mode="selector" range="{{regionOptions}}" range-key="name" value="{{regionIndex}}" bindchange="onAddressRegionChange">
-          <view class="field-input address-picker {{addressForm.region ? '' : 'placeholder'}}"><text>{{addressForm.region || '请选择后台配置的地区'}}</text><text class="address-picker-arrow">›</text></view>
+        <picker mode="multiSelector" range="{{regionPickerColumns}}" range-key="label" value="{{regionPickerIndexes}}" bindcolumnchange="onAddressRegionColumnChange" bindchange="onAddressRegionChange" disabled="{{regionOptions.length === 0}}">
+          <view class="field-input address-picker {{addressForm.regionText ? '' : 'placeholder'}}"><text>{{addressForm.regionText || '请选择省、市、区/县'}}</text><text class="address-picker-arrow">›</text></view>
         </picker>
         <view wx:if="{{regionOptions.length === 0}}" class="region-empty-tip">后台暂未配置可用配送地区</view>
       </view>
@@ -192,4 +192,5 @@
       <button class="btn btn-primary btn-block" bindtap="saveAddressNow">保存地址</button>
     </view>
   </view>
+  <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

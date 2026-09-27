@@ -62,7 +62,16 @@ function normalizeActivities(db) {
 function normalizeConfig(db) {
   if (!db.config) db.config = {}
   // 合并种子默认配置，缺失的字段用种子值补齐（用户已改的值保留）
-  db.config = { ...clone(seed.config), ...db.config }
+  const savedConfig = db.config
+  db.config = {
+    ...clone(seed.config),
+    ...savedConfig,
+    brand: { ...clone(seed.config.brand), ...(savedConfig.brand || {}) },
+    assistant: { ...clone(seed.config.assistant), ...(savedConfig.assistant || {}) },
+    homeAssistant: { ...clone(seed.config.homeAssistant), ...(savedConfig.homeAssistant || {}) },
+    socialQrs: { ...clone(seed.config.socialQrs), ...(savedConfig.socialQrs || {}) },
+    filing: { ...clone(seed.config.filing), ...(savedConfig.filing || {}) }
+  }
   if (!Array.isArray(db.config.regions)) db.config.regions = clone(seed.config.regions)
 }
 
@@ -189,11 +198,21 @@ export function listRegions(options = {}) {
 export function createRegion(data) {
   const database = get()
   const name = String((data && data.name) || '').trim()
+  const code = String((data && (data.code || data.districtCode)) || '').trim()
   if (!name) throw new Error('地区名称不能为空')
-  if (listRegions().some((r) => r.name === name)) throw new Error('地区名称已存在')
+  if (code && listRegions().some((r) => String(r.code || r.districtCode || '') === code)) throw new Error('该行政区已经存在')
+  if (!code && listRegions().some((r) => r.name === name && !r.code)) throw new Error('地区名称已存在')
   const region = {
     id: `region-${Date.now()}`,
     name,
+    province: String((data && data.province) || '').trim(),
+    city: String((data && data.city) || '').trim(),
+    district: String((data && data.district) || name).trim(),
+    provinceCode: String((data && data.provinceCode) || '').trim(),
+    cityCode: String((data && data.cityCode) || '').trim(),
+    districtCode: code,
+    code,
+    fullName: String((data && data.fullName) || '').trim(),
     enabled: data && data.enabled !== undefined ? !!data.enabled : true,
     sort: Number((data && data.sort) ?? (listRegions().length + 1) * 10)
   }
@@ -207,9 +226,13 @@ export function updateRegion(id, data) {
   const region = (database.config.regions || []).find((r) => String(r.id) === String(id))
   if (!region) return null
   const name = data && data.name !== undefined ? String(data.name).trim() : region.name
+  const code = data && (data.code !== undefined || data.districtCode !== undefined)
+    ? String(data.code || data.districtCode || '').trim()
+    : String(region.code || region.districtCode || '').trim()
   if (!name) throw new Error('地区名称不能为空')
-  if ((database.config.regions || []).some((r) => String(r.id) !== String(id) && r.name === name)) throw new Error('地区名称已存在')
-  Object.assign(region, data || {}, { id: region.id, name })
+  if (code && (database.config.regions || []).some((r) => String(r.id) !== String(id) && String(r.code || r.districtCode || '') === code)) throw new Error('该行政区已经存在')
+  if (!code && (database.config.regions || []).some((r) => String(r.id) !== String(id) && r.name === name && !r.code)) throw new Error('地区名称已存在')
+  Object.assign(region, data || {}, { id: region.id, name, code, districtCode: code })
   region.enabled = region.enabled !== false
   region.sort = Number(region.sort || 0)
   save()
@@ -1188,7 +1211,8 @@ export function applyManager(form) {
   const scaleText = String(form.scale || '')
   const groupCount = Number(form.groupCount ?? (scaleText.match(/(\d+)\s*个?群/) || [])[1] ?? 0)
   const memberCount = Number(form.memberCount ?? (scaleText.match(/(\d+)\s*人/) || [])[1] ?? 0)
-  if (groupCount > 50 || memberCount > 5000) throw badRequest('社群规模超出限制')
+  if (!Number.isInteger(groupCount) || groupCount < 0 || groupCount > 50) throw badRequest('微信群数量应为0-50的整数')
+  if (!Number.isInteger(memberCount) || memberCount < 0 || memberCount > 5000) throw badRequest('社群总人数应为0-5000的整数')
   const hasPending = db.managerApplications.some((a) => a.status === '待审核' && String(a.userId) === String(userId))
   const alreadyManager = Boolean(findManagerByUser(userId)) || Boolean(customer.isManager)
   if (hasPending || alreadyManager) throw badRequest('已有待审核的申请或已是主理人')

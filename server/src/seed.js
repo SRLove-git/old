@@ -343,11 +343,11 @@ const contentPosts = [
 
 const config = {
   regions: [
-    { id: 'nansha', name: '南沙', enabled: true, sort: 10 },
-    { id: 'huangpu', name: '黄埔', enabled: true, sort: 20 },
-    { id: 'tianhe', name: '天河', enabled: true, sort: 30 },
-    { id: 'panyu', name: '番禺', enabled: true, sort: 40 },
-    { id: 'shunde', name: '顺德', enabled: true, sort: 50 }
+    { id: 'nansha', name: '南沙区', province: '广东省', city: '广州市', district: '南沙区', provinceCode: '440000', cityCode: '440100', districtCode: '440115', code: '440115', fullName: '广东省广州市南沙区', enabled: true, sort: 10 },
+    { id: 'huangpu', name: '黄埔区', province: '广东省', city: '广州市', district: '黄埔区', provinceCode: '440000', cityCode: '440100', districtCode: '440112', code: '440112', fullName: '广东省广州市黄埔区', enabled: true, sort: 20 },
+    { id: 'tianhe', name: '天河区', province: '广东省', city: '广州市', district: '天河区', provinceCode: '440000', cityCode: '440100', districtCode: '440106', code: '440106', fullName: '广东省广州市天河区', enabled: true, sort: 30 },
+    { id: 'panyu', name: '番禺区', province: '广东省', city: '广州市', district: '番禺区', provinceCode: '440000', cityCode: '440100', districtCode: '440113', code: '440113', fullName: '广东省广州市番禺区', enabled: true, sort: 40 },
+    { id: 'shunde', name: '顺德区', province: '广东省', city: '佛山市', district: '顺德区', provinceCode: '440000', cityCode: '440600', districtCode: '440606', code: '440606', fullName: '广东省佛山市顺德区', enabled: true, sort: 50 }
   ],
   globalCommissionRate: 8,
   minWithdraw: 100,
@@ -358,6 +358,7 @@ const config = {
   // 用户申请退款是否需要运营审核（true：先进入「退款中」，false：即时退款）
   refundNeedAudit: true,
   brand: {
+    englishName: 'SUI YUE LI',
     slogan: '和同龄人一起，玩得开心又省心'
   },
   assistant: {
@@ -366,6 +367,16 @@ const config = {
     phone: '400-800-6070',
     avatar: '🧑‍💼',
     intro: '报名咨询、活动群、售后都可以找我'
+  },
+  homeAssistant: {
+    title: '小助理服务',
+    qrImage: '',
+    tip: '长按二维码，添加小助理微信',
+    wechatNote: '微信号：{wechat}（长按识别或保存二维码）'
+  },
+  socialQrs: {
+    officialAccount: '',
+    videoChannel: ''
   },
   filing: {
     companyName: '北京岁悦里科技有限公司',

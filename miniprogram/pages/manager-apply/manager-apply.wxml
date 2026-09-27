@@ -47,12 +47,12 @@
     </view>
     <view class="field">
       <text class="field-label">微信群数量<text class="required">*</text></text>
-      <input class="field-input" type="number" value="{{form.groupCount}}" data-field="groupCount" bindinput="onInput" placeholder="最多50个群" />
+      <input class="field-input" type="number" value="{{form.groupCount}}" data-field="groupCount" bindinput="onInput" placeholder="0-50个群" />
       <text wx:if="{{errors.groupCount}}" class="field-error">{{errors.groupCount}}</text>
     </view>
     <view class="field">
       <text class="field-label">社群总人数<text class="required">*</text></text>
-      <input class="field-input" type="number" value="{{form.memberCount}}" data-field="memberCount" bindinput="onInput" placeholder="最多5000人" />
+      <input class="field-input" type="number" value="{{form.memberCount}}" data-field="memberCount" bindinput="onInput" placeholder="0-5000人" />
       <text wx:if="{{errors.memberCount}}" class="field-error">{{errors.memberCount}}</text>
     </view>
     <view class="field">

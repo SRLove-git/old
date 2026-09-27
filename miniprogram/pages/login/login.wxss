@@ -1,0 +1,126 @@
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 150rpx 48rpx 70rpx;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fdf8f1 0%, #f7ecdf 56%, #efe0cf 100%);
+  text-align: center;
+}
+
+.login-page::before,
+.login-page::after {
+  content: '';
+  position: absolute;
+  border: 1rpx solid rgba(185, 133, 85, 0.14);
+  border-radius: 50%;
+}
+
+.login-page::before {
+  width: 470rpx;
+  height: 470rpx;
+  right: -230rpx;
+  top: -150rpx;
+}
+
+.login-page::after {
+  width: 330rpx;
+  height: 330rpx;
+  left: -190rpx;
+  bottom: 50rpx;
+}
+
+.brand-mark {
+  position: relative;
+  z-index: 1;
+  width: 154rpx;
+  height: 154rpx;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c9996d, #a87345);
+  box-shadow: 0 18rpx 40rpx rgba(121, 80, 47, 0.2);
+  color: #ffffff;
+  font-family: serif;
+  font-size: 76rpx;
+  font-weight: 700;
+}
+
+.brand-ring {
+  position: absolute;
+  left: 13rpx;
+  right: 13rpx;
+  top: 13rpx;
+  bottom: 13rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+}
+
+.brand-name {
+  position: relative;
+  z-index: 1;
+  margin-top: 34rpx;
+  color: #45372b;
+  font-size: 52rpx;
+  font-weight: 700;
+  letter-spacing: 10rpx;
+}
+
+.brand-slogan {
+  position: relative;
+  z-index: 1;
+  margin-top: 12rpx;
+  color: #8b7969;
+  font-size: 27rpx;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  margin-top: 92rpx;
+  padding: 48rpx 38rpx 36rpx;
+  border: 1rpx solid rgba(138, 103, 70, 0.12);
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 20rpx 60rpx rgba(83, 62, 43, 0.09);
+}
+
+.login-title {
+  color: #2f2b27;
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.login-desc {
+  margin: 15rpx 12rpx 38rpx;
+  color: #7d756e;
+  font-size: 27rpx;
+  line-height: 1.7;
+}
+
+.login-button {
+  width: 100%;
+  min-height: 104rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22rpx;
+  background: #b98555;
+  box-shadow: 0 12rpx 28rpx rgba(121, 80, 47, 0.2);
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.login-button[disabled] {
+  background: #c9ab8e;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.privacy-tip {
+  margin-top: 24rpx;
+  color: #aaa098;
+  font-size: 22rpx;
+  line-height: 1.55;
+}

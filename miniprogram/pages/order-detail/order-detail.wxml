@@ -109,4 +109,5 @@
       <button class="btn btn-primary btn-block" bindtap="submitReview">提交评价</button>
     </view>
   </view>
+  <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

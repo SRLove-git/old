@@ -1,5 +1,6 @@
 // 登录会员身份由 request.js 的微信会话统一管理。
 const { api, ensureLogin, getCurrentUserId: authUserId } = require('./request.js')
+const { API_BASE } = require('./config.js')
 
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
@@ -90,7 +91,34 @@ function getFiling() {
 function getBrand() {
   const b = (cache.config && cache.config.brand) || {}
   return {
+    englishName: b.englishName || 'SUI YUE LI',
     slogan: b.slogan || '和同龄人一起，玩得开心又省心'
+  }
+}
+
+function apiAssetUrl(value) {
+  const url = String(value || '').trim()
+  if (!url || /^(https?:|data:|wxfile:)/.test(url)) return url
+  return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`
+}
+
+function getSocialQrs() {
+  const value = (cache.config && cache.config.socialQrs) || {}
+  return {
+    officialAccount: apiAssetUrl(value.officialAccount),
+    videoChannel: apiAssetUrl(value.videoChannel)
+  }
+}
+
+function getHomeAssistant() {
+  const value = (cache.config && cache.config.homeAssistant) || {}
+  const assistant = getAssistant()
+  const note = value.wechatNote || '微信号：{wechat}（长按识别或保存二维码）'
+  return {
+    title: value.title || '小助理服务',
+    qrImage: value.qrImage ? apiAssetUrl(value.qrImage) : '/assets/assistant-qr.png',
+    tip: value.tip || '长按二维码，添加小助理微信',
+    wechatNote: note.replace(/\{wechat\}/g, assistant.wechat)
   }
 }
 
@@ -232,6 +260,11 @@ function getRegions() {
 async function refreshRegions() {
   cache.regions = await api.get('/regions?enabled=1')
   return getRegions()
+}
+
+async function refreshConfig() {
+  cache.config = await api.get('/config')
+  return cache.config
 }
 
 function getActivityRegionNames(activity) {
@@ -655,9 +688,12 @@ module.exports = {
   getAssistant,
   getFiling,
   getBrand,
+  getSocialQrs,
+  getHomeAssistant,
   getActivities,
   getRegions,
   refreshRegions,
+  refreshConfig,
   getActivityRegionNames,
   activityInRegion,
   getActivity,
