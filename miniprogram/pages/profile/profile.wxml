@@ -17,7 +17,7 @@
 
   <view class="assets">
     <view class="asset" hover-class="asset-hover" data-url="/pages/balance/balance" bindtap="go"><text class="asset-value">{{user.balance || '0.00'}}</text><text class="asset-label">余额</text></view>
-    <view class="asset" hover-class="asset-hover" data-url="/pages/member-code/member-code" bindtap="go"><text class="asset-value">{{user.points || 0}}</text><text class="asset-label">积分</text></view>
+    <view class="asset" hover-class="asset-hover" data-url="/pages/points-mall/points-mall" bindtap="go"><text class="asset-value">{{user.points || 0}}</text><text class="asset-label">积分</text></view>
     <view class="asset" hover-class="asset-hover" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="asset-value">{{cards.length}}</text><text class="asset-label">计次卡</text></view>
     <view class="asset" hover-class="asset-hover" data-url="/pages/coupons/coupons" bindtap="go"><text class="asset-value">{{couponCount}}</text><text class="asset-label">优惠券</text></view>
   </view>
@@ -45,7 +45,7 @@
       <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-coupon"></view></view><text>优惠券</text></view>
       <view class="service-item" bindtap="goMerchantBenefits"><view class="service-icon tone-2"><view class="service-glyph glyph-shop"></view></view><text>商家福利</text></view>
       <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-contacts-v2"><view></view></view></view><text>常用报名人</text></view>
-      <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><view class="service-glyph glyph-gift"></view></view><text>赠品中心</text></view>
+      <view class="service-item" data-url="/pages/points-mall/points-mall" bindtap="go"><view class="service-icon tone-3"><view class="service-glyph glyph-gift"></view></view><text>积分商城</text></view>
       <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-pin"></view></view><text>收货地址</text></view>
       <view class="service-item" bindtap="goAcademy"><view class="service-icon tone-0"><view class="service-glyph glyph-book"></view></view><text>我的课程</text></view>
       <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-note"></view></view><text>学习记录</text></view>

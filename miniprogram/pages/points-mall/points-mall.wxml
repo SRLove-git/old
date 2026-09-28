@@ -1,0 +1,57 @@
+<view class="mall-page">
+  <view class="points-hero">
+    <view class="points-label">我的可用积分</view>
+    <view class="points-value">{{user.points || 0}}</view>
+    <view class="points-tip">积分可直接兑换好礼，无需支付现金</view>
+  </view>
+
+  <view class="section-head">
+    <view><view class="section-title">积分好礼</view><view class="section-sub">库存有限，兑完即止</view></view>
+    <view class="rules">1积分 = 1积分</view>
+  </view>
+
+  <view wx:if="{{products.length}}" class="product-grid">
+    <view wx:for="{{products}}" wx:key="id" class="product-card">
+      <image class="product-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view class="product-body">
+        <view class="product-title">{{item.title}}</view>
+        <view class="product-desc">{{item.description || '会员积分专享好礼'}}</view>
+        <view class="product-stock">剩余 {{item.stock}} 件 · 每人限兑 {{item.limitPerUser}} 件</view>
+        <view class="product-foot">
+          <view><text class="cost">{{item.pointsCost}}</text><text class="cost-unit"> 积分</text></view>
+          <button class="redeem-btn" disabled="{{item.stock <= 0 || user.points < item.pointsCost}}" data-id="{{item.id}}" bindtap="openRedeem">{{item.stock <= 0 ? '已兑完' : (user.points < item.pointsCost ? '积分不足' : '立即兑换')}}</button>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view wx:elif="{{!loading}}" class="empty">暂无可兑换商品，敬请期待</view>
+
+  <view wx:if="{{orders.length}}" class="orders-section">
+    <view class="section-title">兑换记录</view>
+    <view wx:for="{{orders}}" wx:key="id" class="order-card">
+      <image class="order-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view class="order-main">
+        <view class="order-title">{{item.productTitle}}</view>
+        <view class="order-meta">{{item.pointsUsed}}积分 · {{item.createdAt}}</view>
+        <view wx:if="{{item.trackingNo}}" class="order-meta">{{item.carrier}} {{item.trackingNo}}</view>
+      </view>
+      <view class="order-status">{{item.status}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedProduct}}" class="mask" bindtap="closeRedeem">
+    <view class="redeem-sheet" catchtap="noop">
+      <view class="sheet-bar"></view>
+      <view class="sheet-title">确认兑换</view>
+      <view class="sheet-product"><image src="{{selectedProduct.coverUrl}}" mode="aspectFill" /><view><view class="sheet-product-title">{{selectedProduct.title}}</view><view class="sheet-cost">{{selectedProduct.pointsCost}} 积分</view></view></view>
+      <view class="address-head"><text>配送地址</text><text bindtap="goAddresses">管理地址 ›</text></view>
+      <view class="address-list">
+        <view wx:for="{{addresses}}" wx:key="id" class="address-item {{selectedAddressId == item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectAddress">
+          <view class="radio"><view></view></view>
+          <view><view class="address-person">{{item.name}}　{{item.phone}}</view><view class="address-detail">{{item.province}}{{item.city}}{{item.district}} {{item.detail}}</view></view>
+        </view>
+      </view>
+      <button class="confirm-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="confirmRedeem">确认兑换 · {{selectedProduct.pointsCost}}积分</button>
+    </view>
+  </view>
+</view>

@@ -118,6 +118,22 @@ const managers = [
   { id: 1002, userId: 'u5', name: '王建国', shopName: '建国品质生活馆', shopIntro: '精选实用课程、健康服务与生活好物，让日常更轻松。', phone: '13913577782', inviteCode: 'SYL002', commissionRate: 8, status: 1, totalPerformance: 0, totalCommission: 0, totalCustomers: 0, customers: 0, monthPerformance: 0, monthCommission: 0, pending: 0, available: 0, total: 0 }
 ]
 
+const pointProducts = [
+  {
+    id: 'point-1',
+    title: '岁悦里定制保温杯',
+    coverImage: '/assets/product-tumbler-v2.jpg',
+    pointsCost: 100,
+    stock: 50,
+    soldCount: 0,
+    limitPerUser: 2,
+    status: 1,
+    description: '500ml 容量，316 不锈钢内胆，全国包邮。'
+  }
+]
+
+const pointOrders = []
+
 const customers = [
   { id: 'u1', name: '李桂芳', phone: '13812346688', member: true, balance: 0, points: 120, memberLevel: 4, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: null, isManager: false },
   { id: 'u2', name: '刘淑华', phone: '13656782031', member: true, balance: 0, points: 60, memberLevel: 2, memberSince: '2026年9月', memberExpireAt: '长期有效', managerId: 1001, isManager: false },
@@ -391,6 +407,8 @@ export const seed = {
   contentPosts,
   activities,
   products,
+  pointProducts,
+  pointOrders,
   managers,
   managerApplications,
   customers,

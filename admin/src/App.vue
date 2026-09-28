@@ -45,6 +45,7 @@ const nav = [
   { key: 'dashboard', name: '数据看板', icon: IconDashboard },
   { key: 'activities', name: '活动管理', icon: IconCalendar },
   { key: 'products', name: '商品管理', icon: IconArchive },
+  { key: 'pointsMall', name: '积分商城', icon: IconGift },
   { key: 'lives', name: '学堂管理', icon: IconFile },
   { key: 'categories', name: '分类管理', icon: IconTags },
   { key: 'regions', name: '地区管理', icon: IconLocation },
@@ -83,6 +84,8 @@ const coupons = ref([])
 const reviews = ref([])
 const banners = ref([])
 const products = ref([])
+const pointProducts = ref([])
+const pointOrders = ref([])
 const regions = ref([])
 const contentPosts = ref([])
 const logs = ref([])
@@ -129,6 +132,9 @@ const activityCoverUploading = ref(false)
 const activitySchedules = ref([])
 const activitySkusJson = ref('')
 const productForm = ref(null)
+const pointProductForm = ref(null)
+const pointCoverInput = ref(null)
+const pointCoverUploading = ref(false)
 const liveForm = ref(null)
 const regionForm = ref(null)
 const contentForm = ref(null)
@@ -398,6 +404,26 @@ const productColumns = [
   { title: '状态', slotName: 'status', width: 90 },
   { title: '操作', slotName: 'actions', width: 140 }
 ]
+const pointProductColumns = [
+  { title: '商品', slotName: 'product' },
+  { title: '兑换积分', dataIndex: 'pointsCost', align: 'right', width: 110 },
+  { title: '库存', dataIndex: 'stock', align: 'right', width: 90 },
+  { title: '已兑换', dataIndex: 'soldCount', align: 'right', width: 90 },
+  { title: '每人限兑', dataIndex: 'limitPerUser', align: 'right', width: 100 },
+  { title: '状态', slotName: 'status', width: 90 },
+  { title: '操作', slotName: 'actions', width: 140 }
+]
+const pointOrderColumns = [
+  { title: '兑换单号', dataIndex: 'id', width: 170 },
+  { title: '会员', dataIndex: 'customerName', width: 110 },
+  { title: '商品', dataIndex: 'productTitle' },
+  { title: '数量', dataIndex: 'count', align: 'right', width: 70 },
+  { title: '使用积分', dataIndex: 'pointsUsed', align: 'right', width: 100 },
+  { title: '收货信息', slotName: 'address', width: 260 },
+  { title: '状态', dataIndex: 'status', width: 90 },
+  { title: '兑换时间', dataIndex: 'createdAt', width: 160 },
+  { title: '操作', slotName: 'actions', width: 130 }
+]
 const liveColumns = [
   { title: '课程名称', dataIndex: 'title', ellipsis: true, tooltip: true },
   { title: '讲师', dataIndex: 'hostName', width: 120 },
@@ -584,6 +610,10 @@ async function load() {
     if (['activities', 'products', 'lives'].includes(view.value) && managers.value.length === 0) managers.value = await api.get('/managers')
     if (view.value === 'activities') activities.value = await api.get('/activities')
     if (view.value === 'products') products.value = await api.get('/products')
+    if (view.value === 'pointsMall') {
+      pointProducts.value = await api.get('/point-products')
+      pointOrders.value = await api.get('/point-orders')
+    }
     if (view.value === 'lives') lives.value = await api.get('/lives')
     if (view.value === 'orders') orders.value = await api.get('/orders')
     if (view.value === 'verify') customers.value = await api.get('/customers')
@@ -960,6 +990,36 @@ function openRegion(region) {
   regionForm.value = region
     ? { ...region, ...area }
     : { name: '', provinceCode: '', cityCode: '', districtCode: '', sort: (regions.value.length + 1) * 10, enabled: true }
+}
+
+function openPointProduct(product) {
+  pointProductForm.value = product
+    ? { ...product }
+    : { title: '', coverImage: '', description: '', pointsCost: 100, stock: 0, limitPerUser: 1, status: 1 }
+}
+
+function savePointProduct() {
+  const form = { ...pointProductForm.value }
+  if (!String(form.title || '').trim()) {
+    Message.warning('请填写商品名称')
+    return
+  }
+  doAction(async () => {
+    if (form.id) await api.put(`/point-products/${form.id}`, form)
+    else await api.post('/point-products', form)
+    pointProductForm.value = null
+  }, '积分商品已保存')
+}
+
+function removePointProduct(id) {
+  confirmDanger('确定删除该积分商品？已有兑换记录的商品请改为下架。', () =>
+    doAction(() => api.del(`/point-products/${id}`), '积分商品已删除')
+  )
+}
+
+function advancePointOrder(record) {
+  const next = record.status === '待发货' ? '已发货' : '已完成'
+  doAction(() => api.put(`/point-orders/${record.id}`, { status: next }), `兑换单已更新为${next}`)
 }
 
 function openLive(item) {
@@ -1477,6 +1537,35 @@ function chooseActivityCover() {
   if (activityCoverInput.value) activityCoverInput.value.click()
 }
 
+function choosePointCover() {
+  if (pointCoverInput.value) pointCoverInput.value.click()
+}
+
+async function uploadPointCover(event) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    Message.error('仅支持 PNG、JPG 或 WebP 图片')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    Message.error('商品图片不能超过2MB')
+    return
+  }
+  pointCoverUploading.value = true
+  try {
+    const dataUrl = await fileDataUrl(file)
+    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    pointProductForm.value.coverImage = result.url
+    Message.success('商品图片上传成功，保存商品后生效')
+  } catch (e) {
+    Message.error(e.message || '上传失败')
+  } finally {
+    pointCoverUploading.value = false
+  }
+}
+
 async function uploadActivityCover(event) {
   const file = event.target.files && event.target.files[0]
   event.target.value = ''
@@ -1743,6 +1832,31 @@ function exportCsv(filename, rows) {
               </a-table>
             </a-card>
             <a-button type="primary" shape="round" class="fab" :disabled="!selectedMerchantId" @click="openLive(null)"><template #icon><IconPlus /></template>新建课程</a-button>
+          </section>
+
+          <section v-if="view === 'pointsMall'">
+            <a-alert type="info" class="toolbar">积分商品与普通现金商品相互独立。会员兑换时系统会实时校验并扣减积分和库存。</a-alert>
+            <a-card title="积分商品" :bordered="false">
+              <a-table :columns="pointProductColumns" :data="pointProducts" :pagination="false" row-key="id" size="middle">
+                <template #product="{ record }">
+                  <a-space>
+                    <a-avatar shape="square" :size="48"><img v-if="record.coverImage" :src="qrPreviewUrl(record.coverImage)" /></a-avatar>
+                    <div><div>{{ record.title }}</div><div class="muted">{{ record.description }}</div></div>
+                  </a-space>
+                </template>
+                <template #status="{ record }"><a-tag :color="record.status === 1 ? 'green' : 'gray'">{{ record.status === 1 ? '上架' : '下架' }}</a-tag></template>
+                <template #actions="{ record }">
+                  <a-space :size="0"><a-button type="text" size="small" @click="openPointProduct(record)">编辑</a-button><a-button type="text" status="danger" size="small" @click="removePointProduct(record.id)">删除</a-button></a-space>
+                </template>
+              </a-table>
+            </a-card>
+            <a-card title="兑换记录" :bordered="false" style="margin-top: 18px">
+              <a-table :columns="pointOrderColumns" :data="pointOrders" :pagination="{ pageSize: 10 }" row-key="id" size="middle">
+                <template #address="{ record }"><span v-if="record.address">{{ record.address.name }} {{ record.address.phone }}<br>{{ record.address.province }}{{ record.address.city }}{{ record.address.district }} {{ record.address.detail }}</span></template>
+                <template #actions="{ record }"><a-button v-if="record.status !== '已完成'" type="text" size="small" @click="advancePointOrder(record)">{{ record.status === '待发货' ? '标记发货' : '完成' }}</a-button></template>
+              </a-table>
+            </a-card>
+            <a-button type="primary" shape="round" class="fab" @click="openPointProduct(null)"><template #icon><IconPlus /></template>新建积分商品</a-button>
           </section>
 
           <section v-if="view === 'regions'">
@@ -2501,6 +2615,29 @@ function exportCsv(filename, rows) {
       <a-button @click="productForm = null">取消</a-button>
       <a-button type="primary" @click="saveProduct">保存</a-button>
     </template>
+  </a-modal>
+
+  <a-modal v-if="pointProductForm" :visible="true" :title="pointProductForm.id ? '编辑积分商品' : '新建积分商品'" :width="620" @cancel="pointProductForm = null">
+    <a-form :model="pointProductForm" layout="vertical">
+      <a-form-item label="商品名称" required><a-input v-model="pointProductForm.title" placeholder="例如：岁悦里定制保温杯" /></a-form-item>
+      <a-form-item label="商品封面">
+        <div class="activity-cover-upload">
+          <img v-if="pointProductForm.coverImage" class="activity-cover-preview" :src="qrPreviewUrl(pointProductForm.coverImage)" alt="积分商品封面" />
+          <div v-else class="activity-cover-empty">请上传商品图片</div>
+          <input ref="pointCoverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadPointCover" />
+          <a-space><a-button type="primary" :loading="pointCoverUploading" @click="choosePointCover">上传图片</a-button><a-button v-if="pointProductForm.coverImage" @click="pointProductForm.coverImage = ''">移除图片</a-button></a-space>
+          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，不超过 2MB，建议使用正方形商品图。</div>
+        </div>
+      </a-form-item>
+      <a-row :gutter="12">
+        <a-col :span="8"><a-form-item label="兑换积分" required><a-input-number v-model="pointProductForm.pointsCost" :min="1" :precision="0" style="width:100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="库存" required><a-input-number v-model="pointProductForm.stock" :min="0" :precision="0" style="width:100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="每人限兑" required><a-input-number v-model="pointProductForm.limitPerUser" :min="1" :precision="0" style="width:100%" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="商品说明"><a-textarea v-model="pointProductForm.description" :auto-size="{ minRows: 3, maxRows: 8 }" placeholder="规格、材质、配送范围等说明" /></a-form-item>
+      <a-form-item label="状态"><a-select v-model="pointProductForm.status" :options="publishOptions" /></a-form-item>
+    </a-form>
+    <template #footer><a-button @click="pointProductForm = null">取消</a-button><a-button type="primary" @click="savePointProduct">保存</a-button></template>
   </a-modal>
 
   <a-modal v-if="liveForm" :visible="true" :title="liveForm.id ? '编辑学堂课程' : '新建学堂课程'" :width="640" @cancel="liveForm = null">

@@ -87,6 +87,8 @@ function normalizeCollections(db) {
   db.settlementRecords ||= []
   db.commissions ||= []
   db.withdraws ||= []
+  db.pointProducts ||= clone(seed.pointProducts || [])
+  db.pointOrders ||= []
 }
 
 // 订单状态与品类对齐：「待发货」只属于实物/到店商品类订单（分类 4、5），
@@ -1658,6 +1660,123 @@ export function deleteProduct(id) {
   db.products = (db.products || []).filter((p) => String(p.id) !== String(id))
   save()
   return { ok: true }
+}
+
+function normalizePointProduct(data, current = {}) {
+  const next = {
+    ...current,
+    ...data,
+    title: String(data?.title ?? current.title ?? '').trim(),
+    coverImage: String(data?.coverImage ?? current.coverImage ?? '').trim(),
+    description: String(data?.description ?? current.description ?? '').trim(),
+    pointsCost: Number(data?.pointsCost ?? current.pointsCost ?? 0),
+    stock: Number(data?.stock ?? current.stock ?? 0),
+    soldCount: Number(data?.soldCount ?? current.soldCount ?? 0),
+    limitPerUser: Number(data?.limitPerUser ?? current.limitPerUser ?? 1),
+    status: Number(data?.status ?? current.status ?? 1)
+  }
+  if (!next.title) throw badRequest('请填写积分商品名称')
+  if (!Number.isInteger(next.pointsCost) || next.pointsCost <= 0) throw badRequest('兑换积分必须是大于0的整数')
+  if (!Number.isInteger(next.stock) || next.stock < 0) throw badRequest('库存必须是大于等于0的整数')
+  if (!Number.isInteger(next.limitPerUser) || next.limitPerUser <= 0) throw badRequest('每人限兑必须是大于0的整数')
+  next.status = next.status === 1 ? 1 : 0
+  return next
+}
+
+export function listPointProducts(options = {}) {
+  const products = get().pointProducts || []
+  return options.publishedOnly ? products.filter((item) => item.status === 1) : products
+}
+
+export function createPointProduct(data) {
+  const product = normalizePointProduct(data)
+  product.id = `point-${Date.now()}`
+  product.soldCount = 0
+  db.pointProducts.unshift(product)
+  addLog('积分商城', `新增积分商品：${product.title}`)
+  save()
+  return product
+}
+
+export function updatePointProduct(id, data) {
+  const index = (db.pointProducts || []).findIndex((item) => String(item.id) === String(id))
+  if (index < 0) return null
+  const product = normalizePointProduct(data, db.pointProducts[index])
+  product.id = db.pointProducts[index].id
+  db.pointProducts[index] = product
+  addLog('积分商城', `编辑积分商品：${product.title}`)
+  save()
+  return product
+}
+
+export function deletePointProduct(id) {
+  const product = (db.pointProducts || []).find((item) => String(item.id) === String(id))
+  if (!product) return null
+  if ((db.pointOrders || []).some((order) => String(order.productId) === String(id))) {
+    throw badRequest('该商品已有兑换记录，请改为下架，不能删除')
+  }
+  db.pointProducts = db.pointProducts.filter((item) => String(item.id) !== String(id))
+  addLog('积分商城', `删除积分商品：${product.title}`)
+  save()
+  return { ok: true }
+}
+
+export function listPointOrders(userId = null) {
+  const orders = get().pointOrders || []
+  return userId ? orders.filter((item) => String(item.userId) === String(userId)) : orders
+}
+
+export function redeemPointProduct(userId, payload = {}) {
+  const product = (db.pointProducts || []).find((item) => String(item.id) === String(payload.productId))
+  const user = (db.customers || []).find((item) => String(item.id) === String(userId))
+  const address = (db.addresses || []).find((item) => String(item.id) === String(payload.addressId) && String(item.userId) === String(userId))
+  const count = Number(payload.count || 1)
+  if (!user) throw badRequest('会员信息不存在')
+  if (!product || product.status !== 1) throw badRequest('商品已下架或不存在')
+  if (!Number.isInteger(count) || count <= 0) throw badRequest('兑换数量不正确')
+  if (!address) throw badRequest('请选择有效的收货地址')
+  if (product.stock < count) throw badRequest('商品库存不足')
+  const exchanged = (db.pointOrders || [])
+    .filter((item) => String(item.userId) === String(userId) && String(item.productId) === String(product.id) && item.status !== '已取消')
+    .reduce((sum, item) => sum + Number(item.count || 0), 0)
+  if (exchanged + count > product.limitPerUser) throw badRequest(`每位会员限兑${product.limitPerUser}件`)
+  const pointsUsed = product.pointsCost * count
+  if (Number(user.points || 0) < pointsUsed) throw badRequest('积分不足，暂时无法兑换')
+
+  user.points = Number(user.points || 0) - pointsUsed
+  product.stock -= count
+  product.soldCount = Number(product.soldCount || 0) + count
+  const order = {
+    id: `JF${Date.now()}`,
+    userId: String(userId),
+    customerName: user.name || '会员',
+    productId: product.id,
+    productTitle: product.title,
+    coverImage: product.coverImage,
+    pointsCost: product.pointsCost,
+    pointsUsed,
+    count,
+    address: clone(address),
+    status: '待发货',
+    createdAt: nowText()
+  }
+  db.pointOrders.unshift(order)
+  addLog('积分商城', `${user.name || user.id}兑换${product.title}，扣除${pointsUsed}积分`)
+  save()
+  return { order, user: { ...user, ...memberIdentity(user) }, product }
+}
+
+export function updatePointOrder(id, data = {}) {
+  const order = (db.pointOrders || []).find((item) => String(item.id) === String(id))
+  if (!order) return null
+  const allowed = ['待发货', '已发货', '已完成']
+  if (data.status && allowed.includes(data.status)) order.status = data.status
+  if (data.carrier !== undefined) order.carrier = String(data.carrier || '').trim()
+  if (data.trackingNo !== undefined) order.trackingNo = String(data.trackingNo || '').trim()
+  order.updatedAt = nowText()
+  addLog('积分商城', `更新兑换单${order.id}：${order.status}`)
+  save()
+  return order
 }
 
 const MEMBER_LEVELS = {

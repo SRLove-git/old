@@ -8,6 +8,8 @@ const CART_KEY = 'suiyueli_cart_v1'
 let cache = {
   activities: [],
   products: [],
+  pointProducts: [],
+  pointOrders: [],
   regions: [],
   contentPosts: [],
   banners: [],
@@ -266,6 +268,27 @@ async function refreshRegions() {
 async function refreshConfig() {
   cache.config = await api.get('/config')
   return cache.config
+}
+
+async function refreshPointMall() {
+  const [products, orders] = await Promise.all([
+    api.get('/point-products'),
+    api.get('/point-orders')
+  ])
+  cache.pointProducts = products || []
+  cache.pointOrders = orders || []
+  return { products: cache.pointProducts, orders: cache.pointOrders }
+}
+
+async function redeemPointProduct(productId, addressId, count = 1) {
+  const result = await api.post('/point-orders', { productId, addressId, count })
+  if (result.user) cache.user = result.user
+  if (result.order) cache.pointOrders.unshift(result.order)
+  if (result.product) {
+    const index = cache.pointProducts.findIndex((item) => String(item.id) === String(result.product.id))
+    if (index >= 0) cache.pointProducts[index] = result.product
+  }
+  return result
 }
 
 function getActivityRegionNames(activity) {
@@ -696,6 +719,8 @@ module.exports = {
   getRegions,
   refreshRegions,
   refreshConfig,
+  refreshPointMall,
+  redeemPointProduct,
   getActivityRegionNames,
   activityInRegion,
   getActivity,

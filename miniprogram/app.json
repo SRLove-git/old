@@ -26,7 +26,8 @@
     "pages/addresses/addresses",
     "pages/study-records/study-records",
     "pages/booking-success/booking-success",
-    "pages/balance/balance"
+    "pages/balance/balance",
+    "pages/points-mall/points-mall"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

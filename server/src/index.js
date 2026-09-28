@@ -208,6 +208,24 @@ app.post('/api/products', adminAuth, wrap((req) => store.createProduct(req.body)
 app.put('/api/products/:id', adminAuth, wrap((req) => store.updateProduct(req.params.id, req.body)))
 app.delete('/api/products/:id', adminAuth, wrap((req) => store.deleteProduct(req.params.id)))
 
+// 积分商城：商品由运营后台维护，兑换时校验当前会员、积分、库存和地址。
+app.get('/api/point-products', wrap((req) => store.listPointProducts({ publishedOnly: !isAdminRequest(req) })))
+app.post('/api/point-products', adminAuth, wrap((req) => store.createPointProduct(req.body)))
+app.put('/api/point-products/:id', adminAuth, wrap((req) => store.updatePointProduct(req.params.id, req.body)))
+app.delete('/api/point-products/:id', adminAuth, wrap((req) => store.deletePointProduct(req.params.id)))
+app.get('/api/point-orders', wrap((req) => {
+  if (isAdminRequest(req)) return store.listPointOrders()
+  const userId = requestUserId(req)
+  if (!userId) throw httpError(401, '登录已失效，请重新登录')
+  return store.listPointOrders(userId)
+}))
+app.post('/api/point-orders', wrap((req) => {
+  const userId = requestUserId(req)
+  if (!userId) throw httpError(401, '登录已失效，请重新登录')
+  return store.redeemPointProduct(userId, req.body)
+}))
+app.put('/api/point-orders/:id', adminAuth, wrap((req) => store.updatePointOrder(req.params.id, req.body)))
+
 // Banner 管理
 app.get('/api/banners', wrap(() => store.get().banners))
 app.post('/api/banners', adminAuth, wrap((req) => {
