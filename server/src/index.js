@@ -13,6 +13,8 @@ const WECHAT_APPID = process.env.WECHAT_APPID || 'wx5d1ccdf824e45e73'
 const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET || ''
 const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-local-session-secret')
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+const ADMIN_USER = process.env.ADMIN_USER || 'admin'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'suiyueli-admin'
 const UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads')
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true })
@@ -22,15 +24,19 @@ app.use(express.json({ limit: '5mb' }))
 app.use('/api/uploads/files', express.static(UPLOAD_DIR, { maxAge: '7d', fallthrough: false }))
 
 function adminAuth(req, res, next) {
-  if (req.headers['x-admin-token'] !== ADMIN_TOKEN) {
+  if (!isAdminRequest(req)) {
     return res.status(401).json({ code: 401, message: '需要管理员权限' })
   }
   next()
 }
 
-// 公开接口上的可选管理端身份：Token 正确时返回全量数据（如主理人余额）
+// 公开接口上的可选管理端身份：静态 ADMIN_TOKEN 或登录签发的管理端会话令牌均可。
 function isAdminRequest(req) {
-  return req.headers['x-admin-token'] === ADMIN_TOKEN
+  const token = String((req.headers && req.headers['x-admin-token']) || '')
+  if (!token) return false
+  if (token === ADMIN_TOKEN) return true
+  const session = decodeSession(token)
+  return !!(session && session.role === 'admin')
 }
 
 function encodeSession(payload) {
@@ -114,6 +120,23 @@ const wrap = (fn) => (req, res) => {
     res.status(status).json({ code: status, message: e.message })
   }
 }
+
+// 运营后台登录：账号密码校验通过后签发签名会话令牌。
+app.post('/api/admin/login', wrap((req) => {
+  const username = String((req.body && req.body.username) || '').trim()
+  const password = String((req.body && req.body.password) || '')
+  if (!username || !password) throw httpError(400, '请输入账号和密码')
+  if (username !== ADMIN_USER || password !== ADMIN_PASSWORD) {
+    throw httpError(401, '账号或密码错误')
+  }
+  const token = encodeSession({
+    userId: 'admin',
+    role: 'admin',
+    name: '运营管理员',
+    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS
+  })
+  return { token, username: ADMIN_USER }
+}))
 
 app.post('/api/uploads/image', adminAuth, wrap((req) => {
   const dataUrl = String((req.body && req.body.dataUrl) || '')

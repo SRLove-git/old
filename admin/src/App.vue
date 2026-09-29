@@ -26,13 +26,18 @@ import {
   IconLocation,
   IconNotification
 } from '@arco-design/web-vue/es/icon'
-import { api } from './api.js'
+import { api, isAuthed, setToken, clearToken } from './api.js'
 import areaRows from 'china-area-data/data-array.json'
 
 const view = ref(new URLSearchParams(window.location.search).get('view') || 'dashboard')
 const loading = ref(false)
 const error = ref('')
 const collapsed = ref(false)
+const authed = ref(isAuthed())
+const loginUsername = ref('')
+const loginPassword = ref('')
+const loginLoading = ref(false)
+const loginError = ref('')
 const notifications = ref([])
 const notificationLoading = ref(false)
 const notificationOpen = ref(false)
@@ -721,7 +726,39 @@ function switchView(key) {
   load()
 }
 
+async function handleLogin() {
+  if (!loginUsername.value.trim() || !loginPassword.value) {
+    loginError.value = '请输入账号和密码'
+    return
+  }
+  loginLoading.value = true
+  loginError.value = ''
+  try {
+    const result = await api.login(loginUsername.value.trim(), loginPassword.value)
+    if (result && result.token) {
+      setToken(result.token)
+      authed.value = true
+      loginPassword.value = ''
+      await Promise.all([load(), loadNotifications()])
+    } else {
+      loginError.value = '登录失败，请稍后重试'
+    }
+  } catch (e) {
+    loginError.value = e.message || '登录失败'
+  } finally {
+    loginLoading.value = false
+  }
+}
+
+function handleLogout() {
+  clearToken()
+  authed.value = false
+  view.value = 'dashboard'
+  notifications.value = []
+}
+
 onMounted(async () => {
+  if (!authed.value) return
   await Promise.all([load(), loadNotifications()])
   notificationTimer = setInterval(() => loadNotifications(true), 30000)
 })
@@ -1608,7 +1645,24 @@ function exportCsv(filename, rows) {
 </script>
 
 <template>
-  <a-layout class="layout">
+  <div v-if="!authed" class="login-page">
+    <div class="login-card">
+      <div class="login-logo">岁</div>
+      <div class="login-title">岁悦里 · 运营后台</div>
+      <div class="login-sub">请使用管理员账号登录</div>
+      <a-form layout="vertical" class="login-form">
+        <a-form-item label="账号">
+          <a-input v-model="loginUsername" size="large" placeholder="请输入账号" allow-clear @press-enter="handleLogin" />
+        </a-form-item>
+        <a-form-item label="密码">
+          <a-input-password v-model="loginPassword" size="large" placeholder="请输入密码" @press-enter="handleLogin" />
+        </a-form-item>
+        <div v-if="loginError" class="login-error">{{ loginError }}</div>
+        <a-button type="primary" size="large" long :loading="loginLoading" @click="handleLogin">登 录</a-button>
+      </a-form>
+    </div>
+  </div>
+  <a-layout v-else class="layout">
     <a-layout-sider
       collapsible
       :collapsed="collapsed"
@@ -1673,6 +1727,7 @@ function exportCsv(filename, rows) {
             <a-avatar :size="30" class="avatar">管</a-avatar>
             <span class="topbar-user">运营管理员</span>
           </a-space>
+          <a-button type="text" size="small" @click="handleLogout">退出登录</a-button>
         </div>
       </a-layout-header>
 
@@ -2896,6 +2951,59 @@ function exportCsv(filename, rows) {
 </template>
 
 <style scoped>
+.login-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f6efe6 0%, #ead7bd 100%);
+}
+
+.login-card {
+  width: 360px;
+  padding: 40px 36px 36px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(55, 44, 31, 0.16);
+}
+
+.login-logo {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #26312f;
+}
+
+.login-sub {
+  margin: 8px 0 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #7a817f;
+}
+
+.login-error {
+  margin-bottom: 14px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #ffece8;
+  color: #f53f3f;
+  font-size: 13px;
+}
+
 .layout {
   height: 100vh;
 }
