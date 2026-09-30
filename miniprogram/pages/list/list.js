@@ -208,7 +208,12 @@ Page({
     wx.navigateTo({ url: `/pages/detail/detail?id=${e.currentTarget.dataset.id}` })
   },
 
-  goBooking(e) {
+  async goBooking(e) {
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     wx.navigateTo({ url: `/pages/booking/booking?id=${e.currentTarget.dataset.id}` })
   },
 

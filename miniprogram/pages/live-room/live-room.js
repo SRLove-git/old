@@ -79,8 +79,13 @@ Page({
     this.setData({ countdown: `${d}天 ${h}小时 ${m}分钟` })
   },
 
-  buyCourse() {
+  async buyCourse() {
     const course = this.data.live
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     wx.showModal({
       title: '确认购买课程',
       content: `${course.title}\n会员价 ¥${course.memberPrice}，购买后可永久回看。`,

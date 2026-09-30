@@ -1,13 +1,23 @@
 const { API_BASE, DEV_USER_ID } = require('./config.js')
 
-// 登录身份发生过后台合并时升级缓存键，确保新版重新换取服务端会话。
-const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v3'
+// 按需登录门控升级后换用新缓存键，避免旧版静默登录 Token 绕过登录页面。
+const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v4'
 const LOGIN_CONSENT_KEY = 'suiyueli_login_consent_v1'
 let authState = DEV_USER_ID ? { token: 'local-dev', user: { id: String(DEV_USER_ID) }, expiresAt: Number.MAX_SAFE_INTEGER } : (wx.getStorageSync(AUTH_STORAGE_KEY) || null)
 let loginPromise = null
+let loginGatePromise = null
+
+function hasLoginConsent() {
+  return !!DEV_USER_ID || wx.getStorageSync(LOGIN_CONSENT_KEY) === true
+}
+
+function hasValidAuth() {
+  const validUntil = Number(authState && authState.expiresAt)
+  return !!(authState && authState.token && getCurrentUserId() && validUntil > Date.now() + 60000)
+}
 
 function isLoggedIn() {
-  return !!DEV_USER_ID || wx.getStorageSync(LOGIN_CONSENT_KEY) === true
+  return hasLoginConsent() && hasValidAuth()
 }
 
 function getCurrentUserId() {
@@ -18,6 +28,11 @@ function saveAuth(value) {
   authState = value || null
   if (authState) wx.setStorageSync(AUTH_STORAGE_KEY, authState)
   else wx.removeStorageSync(AUTH_STORAGE_KEY)
+}
+
+function clearAuth(clearConsent = false) {
+  saveAuth(null)
+  if (clearConsent) wx.removeStorageSync(LOGIN_CONSENT_KEY)
 }
 
 function loginCode() {
@@ -38,8 +53,12 @@ function exchangeCode(code) {
       data: { code },
       header: { 'Content-Type': 'application/json' },
       success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0) resolve(res.data.data)
-        else reject(new Error((res.data && res.data.message) || `登录失败(${res.statusCode})`))
+        const result = res.data && res.data.data
+        if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0 && result && result.token && result.user && result.user.id) {
+          resolve(result)
+        } else {
+          reject(new Error((res.data && res.data.message) || `登录失败(${res.statusCode})`))
+        }
       },
       fail: (error) => reject(new Error(error.errMsg || '登录服务不可用'))
     })
@@ -47,11 +66,9 @@ function exchangeCode(code) {
 }
 
 function authenticate(force = false) {
-  const validUntil = Number(authState && authState.expiresAt)
-  const valid = authState && authState.token && getCurrentUserId() && validUntil > Date.now() + 60000
-  if (!force && valid) return Promise.resolve(authState)
+  if (!force && hasValidAuth()) return Promise.resolve(authState)
   if (loginPromise) return loginPromise
-  if (force) saveAuth(null)
+  if (force) clearAuth()
   loginPromise = loginCode()
     .then(exchangeCode)
     .then((result) => {
@@ -71,13 +88,43 @@ function login() {
   })
 }
 
+function loginRequiredError(message = '请先登录后再使用') {
+  const error = new Error(message)
+  error.code = 'AUTH_REQUIRED'
+  return error
+}
+
+function promptLogin() {
+  if (loginGatePromise) return loginGatePromise
+  loginGatePromise = new Promise((resolve, reject) => {
+    const current = getCurrentPages()
+    const route = current.length ? current[current.length - 1].route : ''
+    if (route === 'pages/login/login') {
+      reject(loginRequiredError())
+      return
+    }
+    wx.navigateTo({
+      url: '/pages/login/login?gate=1',
+      events: {
+        loginSuccess: (auth) => resolve(auth),
+        loginCancel: () => reject(loginRequiredError('已取消登录'))
+      },
+      fail: () => reject(loginRequiredError('无法打开登录页面，请稍后重试'))
+    })
+  }).finally(() => { loginGatePromise = null })
+  return loginGatePromise
+}
+
 function ensureLogin(force = false) {
+  // 只有仍然有效的会员 Token 才算已登录；仅有历史同意标记时也必须展示登录页。
   if (!isLoggedIn()) {
-    const error = new Error('请先登录后再使用')
-    error.code = 'AUTH_REQUIRED'
-    return Promise.reject(error)
+    return promptLogin()
   }
   return authenticate(force)
+}
+
+function logout() {
+  clearAuth(true)
 }
 
 function send(path, options, auth) {
@@ -92,6 +139,27 @@ function send(path, options, auth) {
         ...(DEV_USER_ID ? { 'x-user-id': String(DEV_USER_ID) } : {}),
         ...(options.header || {})
       },
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0) {
+          resolve(res.data.data)
+        } else {
+          const error = new Error((res.data && res.data.message) || `请求失败(${res.statusCode})`)
+          error.statusCode = res.statusCode
+          reject(error)
+        }
+      },
+      fail: (error) => reject(new Error(error.errMsg || '网络错误'))
+    })
+  })
+}
+
+function sendPublic(path, options = {}) {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: API_BASE + '/api' + path,
+      method: options.method || 'GET',
+      data: options.data || {},
+      header: { 'Content-Type': 'application/json', ...(options.header || {}) },
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300 && res.data && res.data.code === 0) {
           resolve(res.data.data)
@@ -126,4 +194,8 @@ const api = {
   del: (path) => request(path, { method: 'DELETE' })
 }
 
-module.exports = { api, ensureLogin, login, isLoggedIn, getCurrentUserId }
+const publicApi = {
+  get: (path) => sendPublic(path)
+}
+
+module.exports = { api, publicApi, ensureLogin, login, logout, isLoggedIn, hasLoginConsent, getCurrentUserId }

@@ -83,10 +83,15 @@ Page({
     wx.switchTab({ url: '/pages/index/index' })
   },
 
-  checkout() {
+  async checkout() {
     const selected = this.data.cart.filter((item) => item.selected)
     if (!selected.length || this.data.paying) {
       if (!selected.length) wx.showToast({ title: '请先选择结算项目', icon: 'none' })
+      return
+    }
+    try {
+      await store.requireLogin()
+    } catch (error) {
       return
     }
     wx.showModal({

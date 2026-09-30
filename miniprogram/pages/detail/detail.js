@@ -167,7 +167,12 @@ Page({
     this.setData({ tab: e.currentTarget.dataset.tab })
   },
 
-  openSku() {
+  async openSku() {
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     if (this.data.activity && (this.data.activity.hasSku || this.data.activity.sellType === 'sku')) {
       this.setData({ skuOpen: true, cartIntent: false })
     } else {
@@ -228,7 +233,12 @@ Page({
     wx.navigateTo({ url: `/pages/booking/booking?id=${id}&sku=${selectedSkuId}` })
   },
 
-  goBooking() {
+  async goBooking() {
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     const { id, activity, selectedSkuId } = this.data
     const hasSku = activity.hasSku || activity.sellType === 'sku'
     const query = hasSku ? `&sku=${selectedSkuId}` : ''

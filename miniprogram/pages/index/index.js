@@ -236,12 +236,18 @@ Page({
       confirmText: '同意绑定',
       cancelText: '暂不绑定',
       confirmColor: '#b98555',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
-          store.confirmPendingBind().then((bound) => {
+          try {
+            await store.requireLogin()
+            const bound = await store.confirmPendingBind()
             this.setData({ boundManager: bound })
             wx.showToast({ title: `已绑定${manager.name}`, icon: 'none' })
-          })
+          } catch (error) {
+            if (!error || error.code !== 'AUTH_REQUIRED') {
+              wx.showToast({ title: error.message || '绑定失败，请稍后重试', icon: 'none' })
+            }
+          }
         } else {
           store.cancelPendingBind()
           wx.showToast({ title: '您仍可正常使用', icon: 'none' })
@@ -285,8 +291,13 @@ Page({
     wx.navigateTo({ url: `/pages/detail/detail?id=${id}` })
   },
 
-  goBooking(e) {
+  async goBooking(e) {
     const id = e.currentTarget.dataset.id
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     wx.navigateTo({ url: `/pages/booking/booking?id=${id}` })
   },
 

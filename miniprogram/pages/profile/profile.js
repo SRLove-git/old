@@ -116,7 +116,12 @@ Page({
     wx.navigateTo({ url: '/pages/merchant-benefits/merchant-benefits' })
   },
 
-  openBind() {
+  async openBind() {
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     this.setData({ bindOpen: true, code: '' })
   },
 
@@ -131,9 +136,15 @@ Page({
   },
 
   async bindByCode() {
-    const manager = await store.bindByCode(this.data.code)
-    this.setData({ boundManager: manager, bindOpen: false })
-    wx.showToast({ title: `已绑定${manager.name}`, icon: 'none' })
+    try {
+      await store.requireLogin()
+      const manager = await store.bindByCode(this.data.code)
+      this.setData({ boundManager: manager, bindOpen: false })
+      wx.showToast({ title: `已绑定${manager.name}`, icon: 'none' })
+    } catch (error) {
+      if (error && error.code === 'AUTH_REQUIRED') return
+      wx.showToast({ title: error.message || '绑定失败，请稍后重试', icon: 'none' })
+    }
   },
 
   unbind() {

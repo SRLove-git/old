@@ -1,5 +1,5 @@
 // 登录会员身份由 request.js 的微信会话统一管理。
-const { api, ensureLogin, getCurrentUserId: authUserId } = require('./request.js')
+const { api, publicApi, ensureLogin, isLoggedIn, getCurrentUserId: authUserId } = require('./request.js')
 const { API_BASE } = require('./config.js')
 
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
@@ -190,16 +190,10 @@ async function ready() {
   if (loaded) return cache
   wx.showLoading({ title: '加载中', mask: true })
   try {
-    await ensureLogin()
-    const currentUserId = authUserId()
-    const [home, profile, orders, participants, reviews, managers] = await Promise.all([
-      api.get('/home'),
-      api.get(`/users/${currentUserId}`),
-      api.get('/orders'),
-      api.get('/participants'),
-      api.get('/reviews'),
-      api.get('/managers')
-    ])
+    const memberActive = isLoggedIn()
+    const currentUserId = memberActive ? authUserId() : ''
+    // 首页是游客浏览的核心数据，不能被评价、主理人、直播等可选接口的失败连带阻断。
+    const home = await publicApi.get('/home')
     cache.activities = home.activities
     cache.products = home.products || []
     cache.regions = home.regions || []
@@ -207,16 +201,27 @@ async function ready() {
     cache.banners = home.banners
     cache.categories = home.categories
     cache.config = home.config
-    applyUserProfile(profile)
-    cache.orders = orders
-    cache.participants = participants
+    const [reviews, managers, lives] = await Promise.all([
+      publicApi.get('/reviews').catch(() => cache.reviews || []),
+      publicApi.get('/managers').catch(() => cache.managers || []),
+      (memberActive ? api.get(`/lives?userId=${currentUserId}`) : publicApi.get('/lives')).catch(() => cache.lives || [])
+    ])
     cache.reviews = reviews
     cache.managers = managers
-    cache.lives = []
-    try {
-      cache.lives = await api.get(`/lives?userId=${currentUserId}`)
-    } catch (e) {
-      // 后端未部署直播接口时静默降级为空列表，不影响其它功能
+    cache.lives = lives || []
+    if (memberActive) {
+      try {
+        const [profile, orders, participants] = await Promise.all([
+          api.get(`/users/${currentUserId}`),
+          api.get('/orders'),
+          api.get('/participants')
+        ])
+        applyUserProfile(profile)
+        cache.orders = orders
+        cache.participants = participants
+      } catch (error) {
+        // 会员资料加载失败不影响公开内容展示，后续会员操作仍会按需重新鉴权。
+      }
     }
     loaded = true
     return cache
@@ -261,19 +266,19 @@ function getRegions() {
 }
 
 async function refreshRegions() {
-  cache.regions = await api.get('/regions?enabled=1')
+  cache.regions = await publicApi.get('/regions?enabled=1')
   return getRegions()
 }
 
 async function refreshConfig() {
-  cache.config = await api.get('/config')
+  cache.config = await publicApi.get('/config')
   return cache.config
 }
 
 async function refreshPointMall() {
   const [products, orders] = await Promise.all([
-    api.get('/point-products'),
-    api.get('/point-orders')
+    publicApi.get('/point-products'),
+    isLoggedIn() ? api.get('/point-orders') : Promise.resolve([])
   ])
   cache.pointProducts = products || []
   cache.pointOrders = orders || []
@@ -487,6 +492,7 @@ function getPendingBind() {
 
 async function confirmPendingBind() {
   if (!pendingBindManagerId) return null
+  await ensureLogin()
   const managerId = pendingBindManagerId
   const source = pendingBindSource || 2
   pendingBindManagerId = null
@@ -502,6 +508,7 @@ function cancelPendingBind() {
 }
 
 async function bindByCode(code) {
+  await ensureLogin()
   const manager = await api.post(`/customers/${authUserId()}/bind`, { code, source: 3 })
   cache.boundManager = manager
   return manager
@@ -707,6 +714,7 @@ module.exports = {
   ready,
   refresh,
   refreshUserProfile,
+  requireLogin: ensureLogin,
   get,
   getCategory,
   getAssistant,

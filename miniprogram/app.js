@@ -1,7 +1,4 @@
 const store = require('./utils/store.js')
-const { isLoggedIn } = require('./utils/request.js')
-
-const LOGIN_PATH = 'pages/login/login'
 
 App({
   onLaunch(options) {
@@ -10,16 +7,8 @@ App({
       store.setPendingBind(query.ref, 2)
     }
   },
-  onShow(options) {
-    if (isLoggedIn()) {
-      store.init()
-      return
-    }
-
-    const launchPath = String((options && options.path) || '').replace(/^\//, '')
-    if (!launchPath || launchPath === LOGIN_PATH) return
-    setTimeout(() => {
-      if (!isLoggedIn()) wx.reLaunch({ url: `/${LOGIN_PATH}` })
-    }, 0)
+  onShow() {
+    // 游客也可以预取首页公开数据；会员身份只在报名、提交等操作发生时请求。
+    store.init()
   }
 })
