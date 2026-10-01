@@ -103,7 +103,12 @@ Page({
     wx.navigateTo({ url })
   },
 
-  goMemberCode() {
+  async goMemberCode() {
+    try {
+      await store.requireLogin()
+    } catch (error) {
+      return
+    }
     wx.navigateTo({ url: '/pages/member-code/member-code' })
   },
 
