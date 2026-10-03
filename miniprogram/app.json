@@ -17,6 +17,7 @@
     "pages/order-detail/order-detail",
     "pages/orders/orders",
     "pages/profile/profile",
+    "pages/profile-edit/profile-edit",
     "pages/coupons/coupons",
     "pages/participants/participants",
     "pages/provider-apply/provider-apply",

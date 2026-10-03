@@ -1,0 +1,18 @@
+.edit-page { min-height: 100vh; padding: 32rpx 24rpx calc(50rpx + env(safe-area-inset-bottom)); background: #f8f7f3; box-sizing: border-box; }
+.intro-card { display: flex; align-items: center; padding: 32rpx; border: 1rpx solid #eadfce; border-radius: 26rpx; background: linear-gradient(145deg,#fcf5ec,#f4e5d5); }
+.intro-icon { flex: none; width: 88rpx; height: 88rpx; display: flex; align-items: center; justify-content: center; border: 5rpx solid rgba(255,255,255,.9); border-radius: 50%; background: linear-gradient(145deg,#ddb98f,#b98555); color: #fff; font-size: 38rpx; font-weight: 700; box-shadow: 0 8rpx 20rpx rgba(70,52,37,.1); }
+.intro-copy { min-width: 0; margin-left: 22rpx; }
+.intro-title { color: #302f2e; font-size: 33rpx; font-weight: 700; }
+.intro-desc { margin-top: 8rpx; color: #80766d; font-size: 24rpx; line-height: 1.55; }
+.form-card { margin-top: 24rpx; padding: 32rpx 28rpx; border: 1rpx solid #ebe6de; border-radius: 26rpx; background: #fff; box-shadow: 0 8rpx 24rpx rgba(51,43,33,.045); }
+.field-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; }
+.field-label { color: #303735; font-size: 28rpx; font-weight: 700; }
+.field-count { color: #a09a93; font-size: 22rpx; }
+.input-wrap { display: flex; align-items: center; min-height: 100rpx; padding: 0 18rpx 0 24rpx; border: 2rpx solid #dfd6cb; border-radius: 18rpx; background: #fcfbf9; }
+.input-wrap:focus-within { border-color: #b98555; background: #fff; }
+.name-input { flex: 1; min-width: 0; height: 100rpx; color: #292f2d; font-size: 30rpx; }
+.clear-btn { flex: 0 0 48rpx; width: 48rpx; height: 48rpx; display: flex; align-items: center; justify-content: center; margin-left: 12rpx; border-radius: 50%; background: #e9e5df; color: #8b8883; font-size: 32rpx; line-height: 1; }
+.field-tip { margin-top: 16rpx; color: #99938c; font-size: 22rpx; line-height: 1.5; }
+.save-btn { margin-top: 34rpx; height: 96rpx; border-radius: 999rpx; background: linear-gradient(135deg,#c99a6c,#ae7547); color: #fff; font-size: 29rpx; font-weight: 700; line-height: 96rpx; box-shadow: 0 10rpx 22rpx rgba(153,103,63,.2); }
+.save-btn::after { border: 0; }
+.save-btn[disabled] { opacity: .55; }

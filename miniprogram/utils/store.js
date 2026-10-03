@@ -248,6 +248,13 @@ async function refreshUserProfile() {
   return profileRefreshPromise
 }
 
+async function updateUserName(name) {
+  await ensureLogin()
+  const user = await api.put(`/users/${authUserId()}`, { name })
+  cache.user = user
+  return user
+}
+
 function get() {
   return cache
 }
@@ -714,6 +721,7 @@ module.exports = {
   ready,
   refresh,
   refreshUserProfile,
+  updateUserName,
   requireLogin: ensureLogin,
   get,
   getCategory,

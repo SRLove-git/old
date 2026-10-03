@@ -1848,6 +1848,22 @@ export function getUserProfile(userId) {
   }
 }
 
+export function updateUserProfile(userId, data) {
+  const user = db.customers.find((item) => String(item.id) === String(userId))
+  if (!user) throw badRequest('会员不存在')
+
+  const name = String((data && data.name) || '').trim()
+  if (!name) throw badRequest('请输入用户名')
+  if (name.length > 20) throw badRequest('用户名不能超过20个字符')
+  if (/[\u0000-\u001f\u007f]/.test(name)) throw badRequest('用户名包含无效字符')
+
+  if (user.name === name) return { ...user, ...memberIdentity(user) }
+  user.name = name
+  addLog('用户管理', `会员 ${user.id} 修改用户名为 ${name}`)
+  save()
+  return { ...user, ...memberIdentity(user) }
+}
+
 export function joinMember(userId) {
   const user = db.customers.find((c) => String(c.id) === String(userId))
   if (!user) throw badRequest('会员不存在')

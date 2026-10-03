@@ -8,7 +8,9 @@
 .avatar { flex-shrink: 0; width: 116rpx; height: 116rpx; display: flex; align-items: center; justify-content: center; border: 8rpx solid rgba(255,255,255,.9); border-radius: 50%; background: linear-gradient(145deg,#f1d0b5,#c79569); box-shadow: 0 8rpx 20rpx rgba(70,52,37,.12); }
 .avatar text { color: #fff; font-size: 46rpx; font-weight: 700; }
 .profile-info { flex: 1; min-width: 0; margin-left: 22rpx; }
-.name { color: #302f2e; font-size: 39rpx; font-weight: 700; } .phone { margin-top: 3rpx; color: #7c7875; font-size: 23rpx; }
+.name { overflow: hidden; color: #302f2e; font-size: 39rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.phone { margin-top: 3rpx; color: #7c7875; font-size: 23rpx; }
+.profile-complete { display: inline-flex; align-items: center; padding: 5rpx 0; color: #93663f; }
 .member-pill { display: inline-flex; margin-top: 11rpx; padding: 6rpx 15rpx; border-radius: 999rpx; background: #f3d2a7; color: #6f451f; font-size: 21rpx; }
 .code-entry {
   display: flex;
@@ -57,7 +59,6 @@
 .bind-log:last-child { border-bottom: 0; } .bind-log-reason { margin-top: 5rpx; color: var(--color-text-3); }
 .bind-title { text-align: center; font-size: 36rpx; font-weight: 700; }
 .bind-sub { margin: 14rpx 0 24rpx; color: var(--color-text-3); text-align: center; } .field-input { width: 100%; min-height: 96rpx; margin-bottom: 24rpx; padding: 22rpx 24rpx; border: 2rpx solid var(--color-border); border-radius: 18rpx; }
-
 .asset-hover { opacity: 0.6; }
 .unbind-pending { padding: 10rpx 19rpx; border-radius: 999rpx; background: var(--color-warning-light); color: var(--color-warning); font-size: 23rpx; }
 .official-tip { margin: 7rpx 0 18rpx; color: #7f8582; font-size: 24rpx; }

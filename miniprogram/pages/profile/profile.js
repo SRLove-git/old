@@ -38,6 +38,10 @@ Page({
   onHide() {
     this.pageVisible = false
     this.stopStatusPolling()
+    this.setTabBarVisible(true)
+    if (this.data.bindOpen || this.data.serviceOpen) {
+      this.setData({ bindOpen: false, serviceOpen: false })
+    }
   },
 
   onUnload() {
@@ -112,6 +116,16 @@ Page({
     wx.navigateTo({ url: '/pages/member-code/member-code' })
   },
 
+  async goEditName() {
+    try {
+      await store.requireLogin()
+      wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+    } catch (error) {
+      if (error && error.code === 'AUTH_REQUIRED') return
+      wx.showToast({ title: error.message || '请稍后重试', icon: 'none' })
+    }
+  },
+
   goAcademy() {
     wx.setStorageSync('academyTab', 'mine')
     wx.switchTab({ url: '/pages/lives/lives' })
@@ -128,10 +142,12 @@ Page({
       return
     }
     this.setData({ bindOpen: true, code: '' })
+    this.setTabBarVisible(false)
   },
 
   closeBind() {
     this.setData({ bindOpen: false })
+    this.setTabBarVisible(true)
   },
 
   noop() {},
@@ -145,6 +161,7 @@ Page({
       await store.requireLogin()
       const manager = await store.bindByCode(this.data.code)
       this.setData({ boundManager: manager, bindOpen: false })
+      this.setTabBarVisible(true)
       wx.showToast({ title: `已绑定${manager.name}`, icon: 'none' })
     } catch (error) {
       if (error && error.code === 'AUTH_REQUIRED') return
@@ -194,11 +211,17 @@ Page({
 
   showService() {
     this.setData({ serviceOpen: true })
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ hidden: true })
+    this.setTabBarVisible(false)
   },
 
   closeService() {
     this.setData({ serviceOpen: false })
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) this.getTabBar().setData({ hidden: false })
+    this.setTabBarVisible(true)
+  },
+
+  setTabBarVisible(visible) {
+    if (typeof this.getTabBar !== 'function') return
+    const tabBar = this.getTabBar()
+    if (tabBar) tabBar.setData({ hidden: !visible })
   }
 })

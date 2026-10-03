@@ -1,0 +1,23 @@
+<view class="edit-page">
+  <view class="intro-card">
+    <view class="intro-icon">悦</view>
+    <view class="intro-copy">
+      <view class="intro-title">设置用户名</view>
+      <view class="intro-desc">一个亲切的名称，方便在岁悦里识别您</view>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view class="field-head">
+      <text class="field-label">用户名</text>
+      <text class="field-count">{{name.length}}/20</text>
+    </view>
+    <view class="input-wrap">
+      <input class="name-input" value="{{name}}" bindinput="onNameInput" maxlength="20" focus="{{!loading}}" placeholder="请输入用户名" confirm-type="done" bindconfirm="save" disabled="{{saving || loading}}" />
+      <view wx:if="{{name && !saving}}" class="clear-btn" bindtap="clearName" role="button" aria-label="清空">×</view>
+    </view>
+    <view class="field-tip">支持中文、英文、数字等，最多20个字符</view>
+  </view>
+
+  <button class="save-btn" bindtap="save" loading="{{saving}}" disabled="{{saving || loading}}">保存修改</button>
+</view>

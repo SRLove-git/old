@@ -455,6 +455,10 @@ app.get('/api/users/:id', wrap((req) => {
   requireUser(req, req.params.id)
   return store.getUserProfile(req.params.id)
 }))
+app.put('/api/users/:id', wrap((req) => {
+  requireUser(req, req.params.id)
+  return store.updateUserProfile(req.params.id, req.body)
+}))
 app.post('/api/members/join', wrap((req) => {
   const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
   requireUser(req, userId)
