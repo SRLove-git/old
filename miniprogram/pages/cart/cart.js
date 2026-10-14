@@ -95,17 +95,26 @@ Page({
       return
     }
     wx.showModal({
-      title: `合并付款（${selected.length}项）`,
-      content: `本次共需支付 ¥${this.data.total}。活动将使用最近一期排班和默认报名人。`,
+      title: `支付所选项目（${selected.length}项）`,
+      content: `本次共需支付 ¥${this.data.total}，将按项目依次调起微信支付。活动使用最近一期排班和默认报名人。`,
       confirmText: '确认付款',
       confirmColor: '#b98555',
       success: (res) => {
-        if (res.confirm) this.paySelected(selected)
+        if (!res.confirm) return
+        const balance = Number(store.get().user.balance || 0)
+        if (balance > 0) {
+          wx.showActionSheet({
+            itemList: [`使用余额抵扣（可用 ¥${store.money(balance)}）`, '仅使用微信支付'],
+            success: (choice) => this.paySelected(selected, choice.tapIndex === 0)
+          })
+        } else {
+          this.paySelected(selected, false)
+        }
       }
     })
   },
 
-  async paySelected(selected) {
+  async paySelected(selected, useBalance) {
     this.setData({ paying: true })
     wx.showLoading({ title: '正在付款', mask: true })
     const completedIds = []
@@ -116,7 +125,7 @@ Page({
       for (const item of selected) {
         if (item.kind === 'course') {
           try {
-            await store.purchaseLive(item.targetId)
+            await store.purchaseLive(item.targetId, useBalance)
           } catch (err) {
             if (!err.message || !err.message.includes('已购买过')) throw err
           }
@@ -126,26 +135,28 @@ Page({
           const isGoods = activity.category === 5
           const address = isGoods ? store.getDefaultAddress() : null
           if (isGoods && !address) throw new Error(`${item.title} 需要先设置收货地址`)
-          await store.createOrder({
+          const order = await store.createOrder({
             activityId: activity.id,
             skuId: item.skuId,
             scheduleId: item.scheduleId,
             count: Number(item.count || 1),
             couponId: null,
-            deferred: false,
+            useBalance,
+            deferred: true,
             address,
             participants: isGoods ? `${address.name} ${address.phone}` : `${participant.name}${item.count > 1 ? `等${item.count}人` : ''}`
           })
+          if (order && order.status === '待付款') await store.payOrder(order.id)
           hasOrder = true
         }
         completedIds.push(item.id)
+        store.removeCartItems([item.id])
       }
-      store.removeCartItems(completedIds)
       wx.hideLoading()
       this.setData({ paying: false })
       wx.showModal({
         title: '付款成功',
-        content: `已完成 ${completedIds.length} 个项目的合并付款。`,
+        content: `已完成 ${completedIds.length} 个项目的微信支付。`,
         showCancel: false,
         confirmText: hasOrder ? '查看订单' : '开始学习',
         success: () => {

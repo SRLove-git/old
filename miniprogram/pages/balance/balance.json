@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "我的余额",
+  "navigationBarBackgroundColor": "#f7f6f2",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f7f6f2",
   "usingComponents": {
     "contact-sheet": "/components/contact-sheet/contact-sheet"
   }

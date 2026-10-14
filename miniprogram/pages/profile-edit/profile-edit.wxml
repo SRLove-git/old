@@ -3,7 +3,7 @@
     <view class="intro-icon">悦</view>
     <view class="intro-copy">
       <view class="intro-title">设置用户名</view>
-      <view class="intro-desc">一个亲切的名称，方便在岁悦里识别您</view>
+      <view class="intro-desc">{{copy.profileEditDescription}}</view>
     </view>
   </view>
 

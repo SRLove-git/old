@@ -1,111 +1,117 @@
 <view class="profile-page">
   <view class="profile-hero">
-    <view class="profile-watermark"><text>岁</text><view></view></view>
-    <view class="user-row" bindtap="goMemberCode">
-      <view class="avatar"><text>悦</text></view>
-      <view class="profile-info">
-        <view class="name">{{user.name || '未登录'}}</view>
-        <view wx:if="{{phoneDisplay}}" class="phone">{{phoneDisplay}}</view>
-        <view wx:else class="phone profile-complete" catchtap="goEditName">点击完善个人信息</view>
-        <view class="member-pill">金穗会员 · 成长值 {{user.points || 0}}</view>
+    <view class="hero-orbit orbit-one"></view>
+    <view class="hero-orbit orbit-two"></view>
+
+    <view class="user-row">
+      <view class="avatar" bindtap="goEditName">
+        <text class="avatar-label">悦</text>
+        <view class="avatar-edit"><view class="edit-pencil"></view></view>
       </view>
-      <view class="code-entry"><view class="code-icon"><view></view><view></view><view></view><view></view></view><text>会员码</text></view>
+      <view class="profile-info" bindtap="goEditName">
+        <view class="name-row"><view class="name">{{user.name || '未登录'}}</view><view class="verified-dot"></view></view>
+        <view wx:if="{{phoneDisplay}}" class="phone">{{phoneDisplay}}</view>
+        <view wx:else class="phone profile-complete">点击完善个人信息 <text class="profile-complete-arrow">›</text></view>
+        <view class="member-pill"><view class="member-star">✦</view><text>{{user.memberLevelName || user.memberType || '会员'}}</text><view class="pill-line"></view><text>成长值 {{user.points || 0}}</text></view>
+      </view>
+      <view class="code-entry" catchtap="goMemberCode">
+        <view class="code-icon"><view class="code-icon-dot"></view><view class="code-icon-dot"></view><view class="code-icon-dot"></view><view class="code-icon-dot"></view></view><text>会员码</text>
+      </view>
     </view>
+
     <view class="member-banner" bindtap="goMemberCode">
-      <text class="diamond">◆</text><text class="banner-copy">会员价 · 专属优惠 · 活动优先报名</text><text class="banner-link">查看权益 ›</text>
+      <view class="member-medal"><view class="medal-diamond"></view></view>
+      <view class="banner-content"><view class="banner-title">会员专属权益</view><view class="banner-copy">{{copy.memberBenefitsSummary}}</view></view>
+      <view class="banner-link">查看权益 <text class="banner-link-arrow">›</text></view>
     </view>
   </view>
 
   <view class="assets">
     <view class="asset" hover-class="asset-hover" data-url="/pages/balance/balance" bindtap="go"><text class="asset-value">{{user.balance || '0.00'}}</text><text class="asset-label">余额</text></view>
+    <view class="asset-divider"></view>
     <view class="asset" hover-class="asset-hover" data-url="/pages/points-mall/points-mall" bindtap="go"><text class="asset-value">{{user.points || 0}}</text><text class="asset-label">积分</text></view>
+    <view class="asset-divider"></view>
     <view class="asset" hover-class="asset-hover" data-url="/pages/card-attendance/card-attendance" bindtap="go"><text class="asset-value">{{cards.length}}</text><text class="asset-label">计次卡</text></view>
+    <view class="asset-divider"></view>
     <view class="asset" hover-class="asset-hover" data-url="/pages/coupons/coupons" bindtap="go"><text class="asset-value">{{couponCount}}</text><text class="asset-label">优惠券</text></view>
   </view>
 
   <view class="order-panel panel">
-    <view class="panel-head"><text class="panel-title heading-cn">我的订单</text><text class="panel-more" data-url="/pages/orders/orders" bindtap="go">查看全部订单 ›</text></view>
+    <view class="panel-head"><view><view class="panel-title">我的订单</view><view class="panel-subtitle">查看您的全部消费记录</view></view><view class="panel-more" data-url="/pages/orders/orders" bindtap="go">全部订单 <text class="panel-more-arrow">›</text></view></view>
     <view class="order-grid">
-      <view class="order-state" data-url="/pages/orders/orders?status=待付款" bindtap="go"><view class="line-icon icon-wallet"></view><text>待付款</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待出行" bindtap="go"><view class="line-icon icon-calendar"></view><text>待出行</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待完成" bindtap="go"><view class="line-icon icon-check"></view><text>待完成</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=待评价" bindtap="go"><view class="line-icon icon-star"></view><text>待评价</text></view>
-      <view class="order-state" data-url="/pages/orders/orders?status=退款售后" bindtap="go"><view class="line-icon icon-return"></view><text>退款/售后</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待付款" bindtap="go"><view class="order-icon-wrap order-tone-1"><image class="line-icon image-icon" src="/assets/profile-icons/payment.png" mode="aspectFit" /></view><text>待付款</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待签到" bindtap="go"><view class="order-icon-wrap order-tone-2"><image class="line-icon image-icon" src="/assets/profile-icons/check-in.png" mode="aspectFit" /></view><text>待签到</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待收货" bindtap="go"><view class="order-icon-wrap order-tone-3"><image class="line-icon image-icon" src="/assets/profile-icons/trip.png" mode="aspectFit" /></view><text>待收货</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=待评价" bindtap="go"><view class="order-icon-wrap order-tone-4"><image class="line-icon image-icon" src="/assets/profile-icons/review.png" mode="aspectFit" /></view><text>待评价</text></view>
+      <view class="order-state" data-url="/pages/orders/orders?status=退款售后" bindtap="go"><view class="order-icon-wrap order-tone-5"><image class="line-icon image-icon" src="/assets/profile-icons/after-sales.png" mode="aspectFit" /></view><text>售后</text></view>
+    </view>
+    <view class="logistics-entry" hover-class="logistics-entry-hover" data-url="/pages/logistics-query/logistics-query" bindtap="go">
+      <view class="logistics-entry-icon">
+        <view class="logistics-truck"><view class="logistics-truck-cab"></view></view>
+      </view>
+      <view class="logistics-entry-copy">
+        <text class="logistics-entry-title">待收货物流</text>
+        <text class="logistics-entry-sub">查看包裹运输进度与最新动态</text>
+      </view>
+      <view class="logistics-entry-action">查看物流 <text class="logistics-entry-arrow">›</text></view>
     </view>
   </view>
 
-  <view class="shortcut-panel panel">
-    <view class="shortcut-row" data-url="/pages/appointments/appointments" bindtap="go"><view class="shortcut-icon icon-clipboard"></view><text class="shortcut-text">我的预约单</text><text class="arrow">›</text></view>
-    <view class="shortcut-row" data-url="/pages/card-attendance/card-attendance" bindtap="go"><view class="shortcut-icon icon-ticket"></view><text class="shortcut-text">课程核销与签到</text><text class="arrow">›</text></view>
+  <view class="shortcut-panel">
+    <view class="shortcut-card" data-url="/pages/appointments/appointments" bindtap="go"><view class="shortcut-icon-wrap shortcut-green"><image class="shortcut-icon image-icon" src="/assets/profile-icons/appointment.png" mode="aspectFit" /></view><view class="shortcut-copy"><text class="shortcut-text">我的预约</text><text class="shortcut-sub">查看活动预约单</text></view><view class="round-arrow">›</view></view>
+    <view class="shortcut-card" data-url="/pages/card-attendance/card-attendance" bindtap="go"><view class="shortcut-icon-wrap shortcut-gold"><image class="shortcut-icon image-icon" src="/assets/profile-icons/check-in.png" mode="aspectFit" /></view><view class="shortcut-copy"><text class="shortcut-text">课程签到</text><text class="shortcut-sub">核销计次卡</text></view><view class="round-arrow">›</view></view>
   </view>
 
   <view class="panel services-panel">
-    <view class="panel-title heading-cn">常用服务</view>
+    <view class="panel-head service-head"><view><view class="panel-title">常用服务</view><view class="panel-subtitle">便捷工具，一键直达</view></view></view>
     <view class="service-grid">
-      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><view class="service-icon tone-0"><view class="service-glyph glyph-cart-v2"><view></view></view></view><text>购物车</text></view>
-      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-coupon"></view></view><text>优惠券</text></view>
-      <view class="service-item" bindtap="goMerchantBenefits"><view class="service-icon tone-2"><view class="service-glyph glyph-shop"></view></view><text>商家福利</text></view>
-      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-contacts-v2"><view></view></view></view><text>常用报名人</text></view>
-      <view class="service-item" data-url="/pages/points-mall/points-mall" bindtap="go"><view class="service-icon tone-3"><view class="service-glyph glyph-gift"></view></view><text>积分商城</text></view>
-      <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-pin"></view></view><text>收货地址</text></view>
-      <view class="service-item" bindtap="goAcademy"><view class="service-icon tone-0"><view class="service-glyph glyph-book"></view></view><text>我的课程</text></view>
-      <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><view class="service-icon tone-1"><view class="service-glyph glyph-note"></view></view><text>学习记录</text></view>
-      <view wx:if="{{isManager}}" class="service-item" data-url="/pages/manager/manager" bindtap="go"><view class="service-icon tone-2"><view class="service-glyph glyph-shop"></view></view><text>主理人工作台</text></view>
-      <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><view class="service-glyph glyph-headset-v2"><view></view></view></view><text>联系商家</text></view>
-      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><view class="service-icon tone-4"><view class="service-glyph glyph-briefcase"></view></view><text>申请服务商</text></view>
+      <view class="service-item" data-url="/pages/cart/cart" bindtap="go"><view class="service-icon tone-0"><image class="service-glyph image-icon" src="/assets/profile-icons/cart.png" mode="aspectFit" /></view><text>购物车</text></view>
+      <view class="service-item" data-url="/pages/coupons/coupons" bindtap="go"><view class="service-icon tone-1"><image class="service-glyph image-icon" src="/assets/profile-icons/coupon.png" mode="aspectFit" /></view><text>优惠券</text></view>
+      <view class="service-item" bindtap="goMerchantBenefits"><view class="service-icon tone-2"><image class="service-glyph image-icon" src="/assets/profile-icons/merchant.png" mode="aspectFit" /></view><text>商家福利</text></view>
+      <view class="service-item" data-url="/pages/participants/participants" bindtap="go"><view class="service-icon tone-3"><image class="service-glyph image-icon" src="/assets/profile-icons/contacts.png" mode="aspectFit" /></view><text>常用报名人</text></view>
+      <view class="service-item" data-url="/pages/points-mall/points-mall" bindtap="go"><view class="service-icon tone-4"><image class="service-glyph image-icon" src="/assets/profile-icons/points.png" mode="aspectFit" /></view><text>积分商城</text></view>
+      <view class="service-item" data-url="/pages/addresses/addresses" bindtap="go"><view class="service-icon tone-5"><image class="service-glyph image-icon" src="/assets/profile-icons/address.png" mode="aspectFit" /></view><text>收货地址</text></view>
+      <view class="service-item" data-url="/pages/logistics-query/logistics-query" bindtap="go"><view class="service-icon tone-5"><image class="service-glyph image-icon" src="/assets/profile-icons/station.png" mode="aspectFit" /></view><text>物流查询</text></view>
+      <view class="service-item" bindtap="goAcademy"><view class="service-icon tone-0"><image class="service-glyph image-icon" src="/assets/profile-icons/courses.png" mode="aspectFit" /></view><text>我的课程</text></view>
+      <view class="service-item" data-url="/pages/study-records/study-records" bindtap="go"><view class="service-icon tone-1"><image class="service-glyph image-icon" src="/assets/profile-icons/study-record.png" mode="aspectFit" /></view><text>学习记录</text></view>
+      <view wx:if="{{isManager}}" class="service-item" data-url="/pages/manager/manager" bindtap="go"><view class="service-icon tone-2"><image class="service-glyph image-icon" src="/assets/profile-icons/manager.png" mode="aspectFit" /></view><text>主理人工作台</text></view>
+      <view class="service-item" bindtap="showService"><view class="service-icon tone-3"><image class="service-glyph image-icon" src="/assets/profile-icons/support.png" mode="aspectFit" /></view><text>联系商家</text></view>
+      <view class="service-item" data-url="/pages/provider-apply/provider-apply" bindtap="go"><view class="service-icon tone-4"><image class="service-glyph image-icon" src="/assets/profile-icons/provider.png" mode="aspectFit" /></view><text>申请服务商</text></view>
     </view>
   </view>
 
   <view class="profile-card panel">
-    <view class="panel-title heading-cn">我的专属主理人</view>
-    <block wx:if="{{boundManager}}">
-      <view class="manager-bound"><view class="manager-avatar">悦</view><view class="manager-info"><view class="manager-name">{{boundManager.name}}</view><view class="manager-sub">邀请码 {{boundManager.inviteCode}} · 有问题随时联系</view></view><text wx:if="{{pendingUnbind}}" class="unbind-pending">解绑申请审核中</text><button wx:else class="small-btn" bindtap="unbind">解绑</button></view>
-    </block>
-    <block wx:else><view class="manager-empty">绑定熟悉的主理人，获得专属活动服务</view><button class="btn btn-primary btn-block" bindtap="openBind">绑定主理人</button></block>
+    <view class="info-card-head"><view class="info-icon manager-icon"><image class="info-image-icon" src="/assets/profile-icons/profile.png" mode="aspectFit" /></view><view><view class="panel-title">我的专属主理人</view><view class="panel-subtitle">活动咨询与专属服务</view></view></view>
+    <block wx:if="{{boundManager}}"><view class="manager-bound"><view class="manager-avatar">悦</view><view class="manager-info"><view class="manager-name">{{boundManager.name}}</view><view class="manager-sub">邀请码 {{boundManager.inviteCode}} · 有问题随时联系</view></view><text wx:if="{{pendingUnbind}}" class="unbind-pending">解绑审核中</text><button wx:else class="small-btn" bindtap="unbind">解绑</button></view></block>
+    <block wx:else><view class="manager-empty">绑定熟悉的主理人，获得更贴心的活动服务。</view><button class="btn btn-primary btn-block compact-btn" bindtap="openBind">绑定主理人</button></block>
   </view>
 
-  <view class="profile-card panel">
-    <view class="panel-title heading-cn">想一起组织活动？</view><view class="manager-empty">成为主理人，可推广活动并获得服务佣金</view>
-    <block wx:if="{{isManager}}"><button class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button></block>
-    <block wx:elif="{{application}}"><view class="apply-status">{{application.status === '待审核' ? '申请已提交，预计1-2个工作日审核' : (application.status === '已拒绝' ? '申请被拒绝' : '申请已通过')}}</view><button wx:if="{{application.status === '已拒绝'}}" class="btn btn-secondary btn-block" bindtap="goManagerApply">修改后重新提交</button><button wx:if="{{application.status === '已通过'}}" class="btn btn-primary btn-block" bindtap="enterManager">进入主理人工作台</button></block>
-    <block wx:else><button class="btn btn-secondary btn-block" bindtap="goManagerApply">申请成为主理人</button></block>
+  <view class="profile-card panel organizer-card">
+    <view class="info-card-head"><view class="info-icon organizer-icon"><view class="flag-glyph"></view></view><view><view class="panel-title">想一起组织活动？</view><view class="panel-subtitle">成为主理人，分享热爱与收获</view></view></view>
+    <view class="manager-empty">推广优质活动，为身边的朋友提供服务并获得佣金。</view>
+    <block wx:if="{{isManager}}"><button class="btn btn-primary btn-block compact-btn" bindtap="enterManager">进入主理人工作台</button></block>
+    <block wx:elif="{{application}}"><view class="apply-status">{{application.status === '待审核' ? copy.managerReviewPendingText : (application.status === '已拒绝' ? '申请被拒绝：' + (application.rejectReason || '请修改后重新提交') : '申请已通过')}}</view><button wx:if="{{application.status === '已拒绝'}}" class="btn btn-secondary btn-block compact-btn" bindtap="goManagerApply">修改后重新提交</button><button wx:if="{{application.status === '已通过'}}" class="btn btn-primary btn-block compact-btn" bindtap="enterManager">进入主理人工作台</button></block>
+    <block wx:else><button class="btn btn-secondary btn-block compact-btn" bindtap="goManagerApply">申请成为主理人</button></block>
   </view>
 
-  <view wx:if="{{bindLogs.length > 0}}" class="profile-card panel">
-    <view class="panel-title heading-cn">主理人归属记录</view>
-    <view wx:for="{{bindLogs}}" wx:key="id" class="bind-log"><text>{{item.time}} · {{item.action}} · {{item.managerName}}</text><text class="bind-log-reason">{{item.reason}}</text></view>
-  </view>
+  <view wx:if="{{bindLogs.length > 0}}" class="profile-card panel"><view class="panel-title">主理人归属记录</view><view wx:for="{{bindLogs}}" wx:key="id" class="bind-log"><text>{{item.time}} · {{item.action}} · {{item.managerName}}</text><text class="bind-log-reason">{{item.reason}}</text></view></view>
 
-  <view class="profile-card panel">
-    <view class="panel-title heading-cn">关注我们</view>
-    <view class="official-tip">长按二维码，关注「岁悦里」公众号和视频号</view>
+  <view class="profile-card panel social-card">
+    <view class="info-card-head"><view class="info-icon qr-info-icon"><image class="info-image-icon" src="/assets/profile-icons/qr.png" mode="aspectFit" /></view><view><view class="panel-title">关注我们</view><view class="panel-subtitle">获取最新活动与会员福利</view></view></view>
+    <view class="official-tip">{{copy.socialFollowTip}}</view>
     <view wx:if="{{socialQrs.officialAccount || socialQrs.videoChannel}}" class="social-qr-grid">
-      <view wx:if="{{socialQrs.officialAccount}}" class="social-qr-item">
-        <image class="social-qr-image" src="{{socialQrs.officialAccount}}" mode="aspectFit" show-menu-by-longpress />
-        <view class="social-qr-name">岁悦里公众号</view>
-        <view class="social-qr-tip">长按识别二维码</view>
-      </view>
-      <view wx:if="{{socialQrs.videoChannel}}" class="social-qr-item">
-        <image class="social-qr-image" src="{{socialQrs.videoChannel}}" mode="aspectFit" show-menu-by-longpress />
-        <view class="social-qr-name">岁悦里视频号</view>
-        <view class="social-qr-tip">长按识别二维码</view>
-      </view>
+      <view wx:if="{{socialQrs.officialAccount}}" class="social-qr-item"><image class="social-qr-image" src="{{socialQrs.officialAccount}}" mode="aspectFit" show-menu-by-longpress /><view class="social-qr-name">{{copy.officialAccountName}}</view><view class="social-qr-tip">长按识别二维码</view></view>
+      <view wx:if="{{socialQrs.videoChannel}}" class="social-qr-item"><image class="social-qr-image" src="{{socialQrs.videoChannel}}" mode="aspectFit" show-menu-by-longpress /><view class="social-qr-name">{{copy.videoChannelName}}</view><view class="social-qr-tip">长按识别二维码</view></view>
     </view>
     <official-account wx:else></official-account>
   </view>
 
-  <view wx:if="{{products.length > 0}}" class="profile-card panel">
-    <view class="panel-title heading-cn">为您推荐</view>
-    <scroll-view scroll-x class="recommend-scroll" enhanced show-scrollbar="{{false}}">
-      <view class="recommend-row">
-        <view wx:for="{{products}}" wx:key="id" class="recommend-item" data-id="{{item.id}}" bindtap="goDetail">
-          <image class="recommend-cover" src="{{item.coverImage || '/assets/product-tumbler-v2.jpg'}}" mode="aspectFill" />
-          <view class="recommend-name">{{item.title}}</view>
-          <view class="recommend-price">¥{{item.memberPrice}} <text class="recommend-price-note">会员价</text></view>
-        </view>
-      </view>
-    </scroll-view>
+  <view wx:if="{{products.length > 0}}" class="profile-card panel recommend-panel">
+    <view class="panel-head"><view><view class="panel-title">为您推荐</view><view class="panel-subtitle">会员精选好物</view></view></view>
+    <scroll-view scroll-x class="recommend-scroll" enhanced show-scrollbar="{{false}}"><view class="recommend-row"><view wx:for="{{products}}" wx:key="id" class="recommend-item" data-id="{{item.id}}" bindtap="goDetail"><image class="recommend-cover" src="{{item.coverImage || '/assets/product-tumbler-v2.jpg'}}" mode="aspectFill" data-index="{{index}}" binderror="onProductImageError" /><view class="recommend-name">{{item.title}}</view><view class="recommend-price"><text class="price-symbol">¥</text>{{item.memberPrice}} <text class="recommend-price-note">会员价</text></view></view></view></scroll-view>
   </view>
+
+  <view class="profile-footer"><view class="footer-line"></view><text>{{brandEnglish}}{{slogan ? ' · ' + slogan : ''}}</text><view class="footer-line"></view></view>
 
   <view wx:if="{{bindOpen}}" class="mask" bindtap="closeBind"><view class="sheet" catchtap="noop"><view class="bind-title">绑定主理人</view><view class="bind-sub">请输入主理人给您的邀请码</view><input class="field-input" value="{{code}}" bindinput="onCode" placeholder="例如：SYL001" /><button class="btn btn-primary btn-block" bindtap="bindByCode">确认绑定</button></view></view>
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />

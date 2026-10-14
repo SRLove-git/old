@@ -1,113 +1,105 @@
 <view wx:if="{{order}}" class="order-detail-page">
   <view class="status-hero hero-{{statusTone}}">
-    <view class="status-icon">{{statusIcon}}</view>
+    <view class="hero-decoration hero-decoration-one"></view>
+    <view class="hero-decoration hero-decoration-two"></view>
+    <view class="status-eyebrow"><view class="status-dot"></view><text>ORDER STATUS</text></view>
     <view class="status-text">{{displayStatus}}</view>
     <view class="status-sub">{{statusSub}}</view>
+    <view class="status-order-no">订单号 {{order.id}}</view>
   </view>
 
-  <view class="detail-card page-pad">
-    <view class="order-title">{{order.title}}</view>
-    <view class="order-meta">📅 {{timeText}}</view>
-    <view wx:if="{{order.skuName}}" class="order-meta">🏷️ {{order.skuName}}</view>
-    <view wx:if="{{order.venueAddress}}" class="order-venue"><text class="order-venue-pin">📍</text><view class="order-venue-body"><view class="order-venue-label">活动地点</view><view class="order-venue-text">{{order.venueAddress}}</view></view></view>
-    <view class="order-meta">👥 {{order.participants}}</view>
-    <view class="order-meta">🧾 订单号 {{order.id}}</view>
-  </view>
-
-  <view wx:if="{{order.status === '待付款'}}" class="detail-card page-pad">
-    <view class="panel-title">订单待支付</view>
-    <view class="pay-deadline">剩余支付时间：{{payRemain}}（超时自动取消并释放名额）</view>
-  </view>
-
-  <view wx:if="{{order.category === 4}}" class="detail-card page-pad">
-    <view class="panel-title">核销码</view>
-    <view class="code-box">
-      <view class="qr">二维码</view>
-      <view class="code">{{order.code}}</view>
-      <view class="code-tip">到店出示给工作人员核销</view>
+  <view class="content-wrap">
+    <view class="detail-card booking-card">
+      <view class="card-heading">
+        <view><view class="card-title">预约信息</view><view class="card-subtitle">BOOKING DETAILS</view></view>
+        <view class="status-chip chip-{{statusTone}}">{{displayStatus}}</view>
+      </view>
+      <view class="order-title">{{order.title}}</view>
+      <view class="meta-list">
+        <view class="meta-row">
+          <image class="meta-icon-image" src="/assets/profile-icons/appointment.png" mode="aspectFit" />
+          <view class="meta-content"><view class="meta-label">预约时间</view><view class="meta-value">{{timeText}}</view></view>
+        </view>
+        <view wx:if="{{order.skuName}}" class="meta-row">
+          <image class="meta-icon-image" src="/assets/profile-icons/check-in.png" mode="aspectFit" />
+          <view class="meta-content"><view class="meta-label">预约项目</view><view class="meta-value">{{order.skuName}}</view></view>
+        </view>
+        <view class="meta-row">
+          <image class="meta-icon-image" src="/assets/profile-icons/contacts.png" mode="aspectFit" />
+          <view class="meta-content"><view class="meta-label">参与人</view><view class="meta-value">{{order.participants}}</view></view>
+        </view>
+      </view>
+      <view wx:if="{{order.venueAddress}}" class="venue-box">
+        <image class="venue-icon" src="/assets/profile-icons/address.png" mode="aspectFit" />
+        <view class="venue-body"><view class="venue-label">活动地点</view><view class="venue-text">{{order.venueAddress}}</view></view>
+      </view>
     </view>
-  </view>
 
-  <view wx:if="{{order.shipTime || order.trackingNo}}" class="detail-card page-pad">
-    <view class="panel-title">物流信息</view>
-    <view class="confirm-row"><text>配送方式</text><text>{{order.deliveryType === 'self' ? '无需物流（线下交付/自提）' : '快递发货'}}</text></view>
-    <view wx:if="{{order.trackingNo}}" class="confirm-row"><text>快递单号</text><text>{{order.carrier}} {{order.trackingNo}}</text></view>
-    <view wx:if="{{order.shipTime}}" class="confirm-row"><text>发货时间</text><text>{{order.shipTime}}</text></view>
-    <view wx:if="{{order.shippingNote}}" class="confirm-row"><text>商家备注</text><text>{{order.shippingNote}}</text></view>
-    <button wx:if="{{order.trackingNo}}" class="copy-tracking" bindtap="copyTracking">复制快递单号</button>
-  </view>
+    <view wx:if="{{order.status === '待付款'}}" class="detail-card pay-card">
+      <view class="notice-icon">!</view>
+      <view class="notice-content"><view class="notice-title">订单待支付</view><view class="pay-deadline">剩余 {{payRemain}}，超时将自动取消并释放名额</view></view>
+    </view>
 
-  <view class="detail-card page-pad">
-    <view class="confirm-row"><text>实付金额</text><text>¥{{payAmountText}}</text></view>
-    <view class="confirm-row"><text>优惠券</text><text>{{order.coupon}}</text></view>
-    <view class="confirm-row"><text>下单时间</text><text>{{order.createdAt}}</text></view>
-    <view wx:if="{{order.venueAddress}}" class="confirm-row"><text>活动地址</text><text>{{order.venueAddress}}</text></view>
-    <view wx:if="{{order.address}}" class="confirm-row"><text>收货地址</text><text>{{order.address.name}} {{order.address.phone}} {{order.address.district}} {{order.address.detail}}</text></view>
-    <view wx:if="{{order.refundAmount}}" class="confirm-row"><text>退款金额</text><text class="red">¥{{refundAmountText}}</text></view>
+    <view wx:if="{{order.serviceMode === 'verify_code' || (!order.serviceMode && order.category === 4)}}" class="detail-card code-card">
+      <view class="card-heading simple-heading"><view><view class="card-title">核销凭证</view><view class="card-subtitle">VERIFICATION CODE</view></view></view>
+      <view class="code-box">
+        <view class="qr"><view class="qr-corner qr-top-left"></view><view class="qr-corner qr-top-right"></view><view class="qr-corner qr-bottom-left"></view><view class="qr-corner qr-bottom-right"></view><text>二维码</text></view>
+        <view class="code">{{order.code}}</view><view class="code-tip">到店后请向工作人员出示</view>
+      </view>
+    </view>
+
+    <view wx:if="{{order.shipTime || order.trackingNo}}" class="detail-card logistics-card">
+      <view class="card-heading logistics-head">
+        <view><view class="card-title">物流信息</view><view class="card-subtitle">DELIVERY TRACKING</view></view>
+        <button wx:if="{{order.trackingNo}}" class="logistics-refresh" loading="{{logisticsLoading}}" bindtap="refreshLogistics">刷新物流</button>
+      </view>
+      <view class="info-row"><text>配送方式</text><text>{{order.deliveryType === 'self' ? '线下交付 / 自提' : '快递发货'}}</text></view>
+      <view wx:if="{{order.trackingNo}}" class="info-row tracking-number-row"><text>快递单号</text><view class="tracking-number"><text>{{order.carrier}} {{order.trackingNo}}</text><button bindtap="copyTracking">复制</button></view></view>
+      <view wx:if="{{order.shipTime}}" class="info-row"><text>发货时间</text><text>{{order.shipTime}}</text></view>
+      <view wx:if="{{order.shippingNote}}" class="info-row"><text>商家备注</text><text>{{order.shippingNote}}</text></view>
+      <view wx:if="{{logistics}}" class="tracking-panel">
+        <view class="tracking-current"><view><view class="tracking-kicker">当前物流状态</view><text class="tracking-status">{{logistics.status}}</text></view><text class="tracking-updated">{{logistics.lastSyncedAt ? '更新于 ' + logistics.lastSyncedAt : '等待快递公司更新'}}</text></view>
+        <view wx:if="{{logistics.subscriptionError}}" class="tracking-error">{{logistics.subscriptionError}}</view>
+        <view wx:if="{{!logistics.events.length}}" class="tracking-empty">{{logistics.latestDescription || '暂无物流轨迹'}}</view>
+        <view wx:for="{{logistics.events}}" wx:key="id" class="tracking-event {{index === 0 ? 'tracking-event-latest' : ''}}"><view class="tracking-dot"></view><view class="tracking-event-body"><view class="tracking-desc">{{item.description}}</view><view class="tracking-time">{{item.time}}{{item.location ? ' · ' + item.location : ''}}</view></view></view>
+      </view>
+    </view>
+
+    <view class="detail-card bill-card">
+      <view class="card-heading simple-heading"><view><view class="card-title">费用明细</view><view class="card-subtitle">PAYMENT SUMMARY</view></view></view>
+      <view class="info-row"><text>商品金额</text><text>¥{{goodsAmountText}}</text></view>
+      <view wx:if="{{hasCouponDiscount}}" class="info-row coupon-row"><text>优惠券 · {{order.coupon}}</text><text>-¥{{couponDiscountText}}</text></view>
+      <view wx:elif="{{order.coupon}}" class="info-row"><text>优惠券</text><text>{{order.coupon}}</text></view>
+      <view wx:if="{{order.balancePaidAmount > 0}}" class="info-row"><text>余额支付</text><text>¥{{balancePaidText}}</text></view>
+      <view wx:if="{{order.balancePaidAmount > 0 && order.wechatPayAmount > 0}}" class="info-row"><text>微信支付</text><text>¥{{wechatPayText}}</text></view>
+      <view class="total-row"><text>实付金额</text><view class="total-price"><text class="currency">¥</text><text>{{payAmountText}}</text></view></view>
+    </view>
+
+    <view class="detail-card order-info-card">
+      <view class="card-heading simple-heading"><view><view class="card-title">订单信息</view><view class="card-subtitle">ORDER INFORMATION</view></view></view>
+      <view class="info-row"><text>订单编号</text><text>{{order.id}}</text></view>
+      <view class="info-row"><text>下单时间</text><text>{{order.createdAt}}</text></view>
+      <view wx:if="{{order.fulfillmentStatus}}" class="info-row"><text>履约状态</text><text>{{order.fulfillmentStatus}}{{order.checkedAt ? ' · ' + order.checkedAt : ''}}</text></view>
+      <view wx:if="{{order.address}}" class="address-row"><text>收货信息</text><view><text>{{order.address.name}} · {{order.address.phone}}</text><text>{{order.address.district}} {{order.address.detail}}</text></view></view>
+      <view wx:if="{{order.refundAmount}}" class="info-row refund-row"><text>退款金额</text><text>¥{{refundAmountText}}</text></view>
+    </view>
   </view>
 
   <view class="fixed-bottom order-bottom">
-    <button class="contact" bindtap="contact">🎧 联系客服</button>
-
-    <block wx:if="{{order.status === '待付款'}}">
-      <button class="btn btn-ghost" bindtap="cancelNow">取消订单</button>
-      <button class="btn btn-primary" bindtap="payNow">去支付</button>
-    </block>
-
-    <block wx:elif="{{order.status === '待发货'}}">
-      <button wx:if="{{refundInfo.can}}" class="btn btn-danger" bindtap="openRefund">申请退款</button>
-      <view wx:if="{{order.category !== 4}}" class="ship-hint">等待商家发货</view>
-    </block>
-
-    <block wx:elif="{{order.status === '待收货'}}">
-      <button wx:if="{{refundInfo.can}}" class="btn btn-danger" bindtap="openRefund">申请退款</button>
-      <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
-    </block>
-
-    <block wx:elif="{{order.status === '退款中'}}">
-      <view class="ship-hint">退款申请审核中，通过后原路退回</view>
-    </block>
-
-    <block wx:elif="{{order.status === '已核销'}}">
-      <button class="btn btn-primary" bindtap="advance">{{actionLabel}}</button>
-    </block>
-
-    <block wx:elif="{{order.status === '待评价'}}">
-      <button class="btn btn-primary" bindtap="openReview">{{actionLabel}}</button>
-    </block>
+    <button class="contact" bindtap="contact"><image class="contact-icon" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>联系客服</text></button>
+    <block wx:if="{{order.status === '待付款'}}"><button class="btn btn-ghost bottom-action" bindtap="cancelNow">取消订单</button><button class="btn btn-primary bottom-action bottom-action-main" bindtap="payNow">去支付</button></block>
+    <block wx:elif="{{order.status === '待发货'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><view wx:if="{{order.category !== 4}}" class="ship-hint">等待商家发货</view></block>
+    <block wx:elif="{{order.status === '待收货'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><button class="btn btn-primary bottom-action bottom-action-main" bindtap="advance">{{actionLabel}}</button></block>
+    <block wx:elif="{{order.status === '待签到'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><view class="ship-hint">请按预约时间到场签到</view></block>
+    <block wx:elif="{{order.status === '待核销'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><view class="ship-hint">到店出示核销码</view></block>
+    <block wx:elif="{{order.status === '待使用'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><button class="btn btn-primary bottom-action bottom-action-main" bindtap="advance">{{actionLabel}}</button></block>
+    <block wx:elif="{{order.status === '退款中'}}"><view class="ship-hint">退款申请审核中，通过后原路退回</view></block>
+    <block wx:elif="{{order.status === '已核销'}}"><button class="btn btn-primary bottom-action bottom-action-main" bindtap="advance">{{actionLabel}}</button></block>
+    <block wx:elif="{{order.status === '待评价'}}"><button class="btn btn-primary bottom-action bottom-action-main" bindtap="openReview">{{actionLabel}}</button></block>
   </view>
 
-  <view wx:if="{{refundOpen}}" class="mask" bindtap="closeRefund">
-    <view class="sheet" catchtap="noop">
-      <view class="modal-title">申请退款</view>
-      <view class="refund-rule">预计可退 ¥{{refundInfo.amount}}（{{refundInfo.reason}}）</view>
-      <view class="refund-rule">提交后由平台审核，通过后原路退回</view>
-      <view class="field">
-        <text class="field-label">退款原因</text>
-        <picker range="{{reasons}}" value="{{refundIndex}}" bindchange="onReason">
-          <view class="picker-value">{{refundReason}}</view>
-        </picker>
-      </view>
-      <button class="btn btn-primary btn-block" bindtap="submitRefund">确认申请退款</button>
-      <button class="text-btn" bindtap="closeRefund">我再想想</button>
-    </view>
-  </view>
+  <view wx:if="{{refundOpen}}" class="mask" bindtap="closeRefund"><view class="sheet" catchtap="noop"><view class="modal-title">申请退款</view><view class="refund-rule">预计可退 ¥{{refundInfo.amount}}（{{refundInfo.reason}}）</view><view class="refund-rule">提交后由平台审核，通过后原路退回</view><view class="field"><text class="field-label">退款原因</text><picker range="{{reasons}}" value="{{refundIndex}}" bindchange="onReason"><view class="picker-value">{{refundReason}}</view></picker></view><button class="btn btn-primary btn-block" bindtap="submitRefund">确认申请退款</button><button class="text-btn" bindtap="closeRefund">我再想想</button></view></view>
 
-  <view wx:if="{{reviewOpen}}" class="mask" bindtap="closeReview">
-    <view class="sheet" catchtap="noop">
-      <view class="modal-title">评价本次活动</view>
-      <view class="stars">
-        <text
-          wx:for="{{[1,2,3,4,5]}}"
-          wx:key="*this"
-          class="star {{item <= reviewRating ? 'on' : ''}}"
-          data-rating="{{item}}"
-          bindtap="onRating"
-        >★</text>
-      </view>
-      <textarea class="field-input review-input" value="{{reviewContent}}" bindinput="onReviewInput" placeholder="说说您的体验（选填）" />
-      <button class="btn btn-primary btn-block" bindtap="submitReview">提交评价</button>
-    </view>
-  </view>
+  <view wx:if="{{reviewOpen}}" class="mask" bindtap="closeReview"><view class="sheet" catchtap="noop"><view class="modal-title">评价本次活动</view><view class="stars"><text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="star {{item <= reviewRating ? 'on' : ''}}" data-rating="{{item}}" bindtap="onRating">★</text></view><textarea class="field-input review-input" value="{{reviewContent}}" bindinput="onReviewInput" placeholder="说说您的体验（选填）" /><button class="btn btn-primary btn-block" bindtap="submitReview">提交评价</button></view></view>
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

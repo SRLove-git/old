@@ -1,194 +1,75 @@
 import express from 'express'
 import cors from 'cors'
-import crypto from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import * as store from './store.js'
+import { httpError, wrap } from './lib/http.js'
+import { UPLOAD_DIR } from './lib/uploads.js'
+import {
+  kdniaoConfigured,
+  kdniaoPublicConfig,
+  normalizeKdniaoQuery,
+  queryKdniao
+} from './lib/kdniao.js'
+import { paymentConfigured } from './lib/wechat-pay.js'
+import { parseBalanceRechargeAmounts } from './lib/balance-config.js'
+import {
+  adminAuth,
+  isAdminRequest,
+  requestUserId,
+  requireUser
+} from './middleware/auth.js'
+import { registerBodyParsers } from './middleware/body-parsers.js'
+import { refreshLogisticsShipment, startLogisticsRefreshJob, subscribeOrderLogistics } from './services/logistics.js'
+import { refreshWechatPayment, requestManagerApplicationPayment, startWechatPaymentJob } from './services/payments.js'
+import merchantRouter from './routes/merchant.js'
+import providerApplicationsRouter from './routes/provider-applications.js'
+import customersRouter from './routes/customers.js'
+import couponsRouter from './routes/coupons.js'
+import reviewsRouter from './routes/reviews.js'
+import bannersRouter from './routes/banners.js'
+import adminAccountsRouter from './routes/admin-accounts.js'
+import authRouter from './routes/auth.js'
+import ordersRouter from './routes/orders.js'
+import uploadsRouter from './routes/uploads.js'
+import webhooksRouter from './routes/webhooks.js'
+import memberDataRouter from './routes/member-data.js'
+import balanceRouter from './routes/balance.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin-token'
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || (process.env.NODE_ENV === 'production' ? '' : 'admin-token')
 const WECHAT_APPID = process.env.WECHAT_APPID || 'wx5d1ccdf824e45e73'
 const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET || ''
-const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-local-session-secret')
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
-const ADMIN_USER = process.env.ADMIN_USER || 'admin'
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'suiyueli-admin'
-const UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../uploads')
-
-fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 app.use(cors())
-app.use(express.json({ limit: '5mb' }))
+// 原始报文回调必须先于全局 JSON 解析器注册。
+app.use('/api', webhooksRouter)
+registerBodyParsers(app)
 app.use('/api/uploads/files', express.static(UPLOAD_DIR, { maxAge: '7d', fallthrough: false }))
 
-function adminAuth(req, res, next) {
-  if (!isAdminRequest(req)) {
-    return res.status(401).json({ code: 401, message: '需要管理员权限' })
-  }
-  next()
-}
-
-// 公开接口上的可选管理端身份：静态 ADMIN_TOKEN 或登录签发的管理端会话令牌均可。
-function isAdminRequest(req) {
-  const token = String((req.headers && req.headers['x-admin-token']) || '')
-  if (!token) return false
-  if (token === ADMIN_TOKEN) return true
-  const session = decodeSession(token)
-  return !!(session && session.role === 'admin')
-}
-
-function encodeSession(payload) {
-  if (!SESSION_SECRET) throw httpError(503, '服务端未配置 SESSION_SECRET')
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
-  return `${body}.${signature}`
-}
-
-function decodeSession(token) {
-  if (!token || !SESSION_SECRET) return null
-  const [body, signature] = String(token).split('.')
-  if (!body || !signature) return null
-  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url')
-  const left = Buffer.from(signature)
-  const right = Buffer.from(expected)
-  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
-    if (!payload.userId || !payload.exp || Number(payload.exp) <= Math.floor(Date.now() / 1000)) return null
-    return payload
-  } catch (e) {
-    return null
-  }
-}
-
-function sessionFromRequest(req) {
-  const authorization = String((req.headers && req.headers.authorization) || '')
-  if (!authorization.startsWith('Bearer ')) return null
-  return decodeSession(authorization.slice(7).trim())
-}
-
-// 会员身份优先由签名会话解析；x-user-id 仅保留给非生产环境的历史联调。
-function requestUserId(req) {
-  const session = sessionFromRequest(req)
-  if (session) return String(session.userId)
-  const legacyAllowed = process.env.NODE_ENV !== 'production'
-  const raw = legacyAllowed && ((req.headers && req.headers['x-user-id'])
-    || (req.query && req.query.userId)
-    || (req.body && req.body.userId))
-  return String(raw == null ? '' : raw).trim()
-}
-
-function httpError(status, message) {
-  const err = new Error(message)
-  err.status = status
-  return err
-}
-
-// 会员数据只允许本人访问，管理端令牌可绕过
-function requireUser(req, targetUserId) {
-  if (isAdminRequest(req)) return true
-  const caller = requestUserId(req)
-  if (!caller) throw httpError(401, '登录已失效，请重新登录')
-  if (String(targetUserId == null ? '' : targetUserId) !== caller) throw httpError(403, '无权访问其他会员的数据')
-  return true
-}
-
-// 按订单归属校验（订单不存在时交给业务逻辑返回空）
-function requireOrderOwner(req, orderId) {
-  if (isAdminRequest(req)) return
-  const order = store.get().orders.find((o) => String(o.id) === String(orderId))
-  if (!order) return
-  requireUser(req, order.userId)
-}
-
-// 按集合里的资源归属校验（报名人 / 地址）
-function requireRowOwner(req, collection, id) {
-  if (isAdminRequest(req)) return
-  const row = (store.get()[collection] || []).find((r) => String(r.id) === String(id))
-  if (!row) return
-  requireUser(req, row.userId)
-}
-
-const wrap = (fn) => (req, res) => {
-  try {
-    const result = fn(req, res)
-    if (result !== undefined) res.json({ code: 0, data: result })
-  } catch (e) {
-    const status = e && e.status ? e.status : 500
-    res.status(status).json({ code: status, message: e.message })
-  }
-}
-
-// 运营后台登录：账号密码校验通过后签发签名会话令牌。
-app.post('/api/admin/login', wrap((req) => {
-  const username = String((req.body && req.body.username) || '').trim()
-  const password = String((req.body && req.body.password) || '')
-  if (!username || !password) throw httpError(400, '请输入账号和密码')
-  if (username !== ADMIN_USER || password !== ADMIN_PASSWORD) {
-    throw httpError(401, '账号或密码错误')
-  }
-  const token = encodeSession({
-    userId: 'admin',
-    role: 'admin',
-    name: '运营管理员',
-    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS
-  })
-  return { token, username: ADMIN_USER }
-}))
-
-app.post('/api/uploads/image', adminAuth, wrap((req) => {
-  const dataUrl = String((req.body && req.body.dataUrl) || '')
-  const match = dataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/)
-  if (!match) throw httpError(400, '仅支持 PNG、JPG 或 WebP 图片')
-  const buffer = Buffer.from(match[2], 'base64')
-  if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw httpError(400, '图片大小不能超过2MB')
-  const ext = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg')
-  const filename = `image-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.${ext}`
-  fs.writeFileSync(path.join(UPLOAD_DIR, filename), buffer)
-  return { url: `/api/uploads/files/${filename}` }
-}))
-
-// 微信静默登录：小程序只提交 wx.login 得到的临时 code，AppSecret 始终只保留在服务端。
-app.post('/api/auth/wechat', async (req, res) => {
-  try {
-    const code = String((req.body && req.body.code) || '').trim()
-    if (!code) throw httpError(400, '缺少微信登录 code')
-    let openid = ''
-    let unionid = ''
-    if (process.env.WECHAT_LOGIN_MOCK === 'true' && process.env.NODE_ENV !== 'production') {
-      openid = `mock_${crypto.createHash('sha256').update(code).digest('hex').slice(0, 24)}`
-    } else {
-      if (!WECHAT_APP_SECRET) throw httpError(503, '服务端未配置 WECHAT_APP_SECRET')
-      const params = new URLSearchParams({ appid: WECHAT_APPID, secret: WECHAT_APP_SECRET, js_code: code, grant_type: 'authorization_code' })
-      const response = await fetch(`https://api.weixin.qq.com/sns/jscode2session?${params.toString()}`)
-      const result = await response.json()
-      if (!response.ok || result.errcode || !result.openid) {
-        const message = result.errmsg || `微信登录失败(${response.status})`
-        throw httpError(401, message)
-      }
-      openid = result.openid
-      unionid = result.unionid || ''
-    }
-    const user = store.findOrCreateWechatCustomer(openid, unionid)
-    const now = Math.floor(Date.now() / 1000)
-    const token = encodeSession({ userId: user.id, iat: now, exp: now + SESSION_TTL_SECONDS })
-    res.json({ code: 0, data: { token, expiresIn: SESSION_TTL_SECONDS, user } })
-  } catch (e) {
-    const status = e && e.status ? e.status : 500
-    res.status(status).json({ code: status, message: e.message || '登录失败' })
-  }
-})
+app.use('/api', authRouter)
+app.use('/api/merchant', merchantRouter)
+app.use('/api/provider-applications', providerApplicationsRouter)
+app.use('/api/customers', customersRouter)
+app.use('/api/coupons', couponsRouter)
+app.use('/api/reviews', reviewsRouter)
+app.use('/api/banners', bannersRouter)
+app.use('/api/admin', adminAccountsRouter)
+app.use('/api/uploads', uploadsRouter)
+app.use('/api/orders', ordersRouter)
+app.use('/api/balance', balanceRouter)
+app.use('/api', memberDataRouter)
 
 // 首页数据
-app.get('/api/home', wrap(() => {
+app.get('/api/home', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  next()
+}, wrap(() => {
   const db = store.get()
   return {
-    banners: db.banners,
+    banners: store.listBanners(),
     categories: db.categories,
-    activities: db.activities,
-    products: db.products || [],
+    activities: store.listActivitiesForDisplay(),
+    products: store.listProducts(),
     regions: store.listRegions({ enabledOnly: true }),
     contentPosts: store.listContentPosts({ publishedOnly: true }),
     config: db.config
@@ -215,15 +96,10 @@ app.delete('/api/content-posts/:id', adminAuth, wrap((req) => store.deleteConten
 
 // 活动/商品
 app.get('/api/activities', wrap((req) => store.searchActivities(req.query.keyword, req.query.category)))
-app.get('/api/activities/:id', wrap((req) => store.get().activities.find((a) => String(a.id) === String(req.params.id))))
+app.get('/api/activities/:id', wrap((req) => store.listActivitiesForDisplay().find((a) => String(a.id) === String(req.params.id))))
 app.post('/api/activities', adminAuth, wrap((req) => store.createActivity(req.body)))
 app.put('/api/activities/:id', adminAuth, wrap((req) => store.updateActivity(req.params.id, req.body)))
-app.delete('/api/activities/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  db.activities = db.activities.filter((a) => String(a.id) !== String(req.params.id))
-  store.save()
-  return { ok: true }
-}))
+app.delete('/api/activities/:id', adminAuth, wrap((req) => store.deleteActivity(req.params.id)))
 
 // 商品
 app.get('/api/products', wrap(() => store.listProducts()))
@@ -247,208 +123,50 @@ app.post('/api/point-orders', wrap((req) => {
   if (!userId) throw httpError(401, '登录已失效，请重新登录')
   return store.redeemPointProduct(userId, req.body)
 }))
-app.put('/api/point-orders/:id', adminAuth, wrap((req) => store.updatePointOrder(req.params.id, req.body)))
-
-// Banner 管理
-app.get('/api/banners', wrap(() => store.get().banners))
-app.post('/api/banners', adminAuth, wrap((req) => {
-  const db = store.get()
-  const banner = { id: Date.now(), ...req.body }
-  db.banners.push(banner)
-  store.save()
-  return banner
-}))
-app.put('/api/banners/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  const b = db.banners.find((x) => String(x.id) === String(req.params.id))
-  if (b) Object.assign(b, req.body)
-  store.save()
-  return b
-}))
-app.delete('/api/banners/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  db.banners = db.banners.filter((x) => String(x.id) !== String(req.params.id))
-  store.save()
-  return { ok: true }
+app.put('/api/point-orders/:id', adminAuth, wrap(async (req) => {
+  const order = store.updatePointOrder(req.params.id, req.body)
+  if (req.body?.status === '已发货') await subscribeOrderLogistics(order, 'point')
+  return order
 }))
 
-// 优惠券
-// 优惠券含入会赠送券等归属某个会员的券，列表只对管理端开放（小程序走 /users/:id 取自己的券）
-app.get('/api/coupons', adminAuth, wrap(() => store.get().coupons))
-app.post('/api/coupons', adminAuth, wrap((req) => {
-  const db = store.get()
-  const coupon = { id: Date.now(), used: false, ...req.body }
-  db.coupons.push(coupon)
-  store.save()
-  return coupon
-}))
-app.put('/api/coupons/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  const c = db.coupons.find((x) => String(x.id) === String(req.params.id))
-  if (c) Object.assign(c, req.body)
-  store.save()
-  return c
-}))
-app.delete('/api/coupons/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  db.coupons = db.coupons.filter((x) => String(x.id) !== String(req.params.id))
-  store.save()
-  return { ok: true }
-}))
-
-// 报名人
-app.get('/api/participants', wrap((req) => {
-  const db = store.get()
-  if (isAdminRequest(req)) return db.participants
-  const userId = requestUserId(req)
-  requireUser(req, userId)
-  return db.participants.filter((p) => String(p.userId || '') === userId)
-}))
-app.post('/api/participants', wrap((req) => {
-  const db = store.get()
-  const userId = requestUserId(req)
-  requireUser(req, userId)
-  const p = { id: Date.now(), ...req.body, userId }
-  db.participants.push(p)
-  store.save()
-  return p
-}))
-app.put('/api/participants/:id', wrap((req) => {
-  requireRowOwner(req, 'participants', req.params.id)
-  const db = store.get()
-  const p = db.participants.find((x) => String(x.id) === String(req.params.id))
-  if (p) Object.assign(p, req.body, { id: p.id, userId: p.userId })
-  store.save()
-  return p
-}))
-app.delete('/api/participants/:id', wrap((req) => {
-  requireRowOwner(req, 'participants', req.params.id)
-  const db = store.get()
-  db.participants = db.participants.filter((x) => String(x.id) !== String(req.params.id))
-  store.save()
-  return { ok: true }
-}))
-
-// 收货地址
-app.get('/api/addresses', wrap((req) => {
-  const db = store.get()
-  if (isAdminRequest(req)) return db.addresses
-  const userId = requestUserId(req)
-  requireUser(req, userId)
-  return db.addresses.filter((a) => String(a.userId || '') === userId)
-}))
-app.post('/api/addresses', wrap((req) => {
-  const db = store.get()
-  const userId = requestUserId(req)
-  requireUser(req, userId)
-  const { id: ignoredId, userId: ignoredUserId, ...form } = req.body || {}
-  const a = { ...form, id: `addr${Date.now()}`, userId }
-  if (a.isDefault) {
-    db.addresses.forEach((item) => {
-      if (String(item.userId) === String(userId)) item.isDefault = false
-    })
-  }
-  db.addresses.push(a)
-  store.save()
-  return a
-}))
-app.put('/api/addresses/:id', wrap((req) => {
-  requireRowOwner(req, 'addresses', req.params.id)
-  const db = store.get()
-  const a = db.addresses.find((x) => String(x.id) === String(req.params.id))
-  if (!a) return null
-  Object.assign(a, req.body, { id: a.id, userId: a.userId })
-  if (a.isDefault) {
-    db.addresses.forEach((x) => {
-      if (String(x.id) !== String(a.id) && x.userId === a.userId) x.isDefault = false
-    })
-  }
-  store.save()
-  return a
-}))
-app.delete('/api/addresses/:id', wrap((req) => {
-  requireRowOwner(req, 'addresses', req.params.id)
-  const db = store.get()
-  db.addresses = db.addresses.filter((x) => String(x.id) !== String(req.params.id))
-  store.save()
-  return { ok: true }
-}))
-
-// 订单
-app.get('/api/orders', wrap((req) => {
-  store.autoCancelExpired()
-  const db = store.get()
-  if (isAdminRequest(req)) return db.orders
-  const userId = requestUserId(req)
-  requireUser(req, userId)
-  return db.orders.filter((o) => String(o.userId || '') === userId)
-}))
+// 后台全局待办不属于单个订单资源，保留在管理端命名空间。
 app.get('/api/admin/notifications', adminAuth, wrap(() => store.adminNotifications()))
-app.get('/api/orders/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
-app.get('/api/orders/:id', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  store.autoCancelExpired()
-  return store.get().orders.find((o) => o.id === req.params.id)
-}))
-app.post('/api/orders', wrap((req) => {
-  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
-  requireUser(req, userId)
-  return store.createOrder({ ...req.body, userId })
-}))
-app.post('/api/orders/:id/pay', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  return store.payOrder(req.params.id)
-}))
-app.post('/api/orders/:id/cancel', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  return store.cancelOrder(req.params.id)
-}))
-app.post('/api/orders/:id/refund', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  return store.refundOrder(req.params.id, req.body.reason)
-}))
-app.post('/api/orders/:id/refund-audit', adminAuth, wrap((req) => store.auditRefund(req.params.id, req.body.approve, req.body.reason)))
-app.post('/api/orders/:id/verify', adminAuth, wrap((req) => store.verifyOrder(req.params.id)))
-app.post('/api/orders/:id/advance', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  return store.advanceOrder(req.params.id)
-}))
-app.post('/api/orders/:id/ship', adminAuth, wrap((req) => store.shipOrder(req.params.id, req.body || {})))
-app.post('/api/orders/:id/review', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  return store.submitReview(req.params.id, req.body)
-}))
-app.get('/api/orders/:id/refund-calc', wrap((req) => {
-  requireOrderOwner(req, req.params.id)
-  const order = store.get().orders.find((o) => o.id === req.params.id)
-  return order ? store.calcRefund(order) : null
-}))
-
-// 评价
-app.get('/api/reviews', wrap(() => store.get().reviews))
-app.delete('/api/reviews/:id', adminAuth, wrap((req) => {
-  const db = store.get()
-  db.reviews = db.reviews.filter((r) => r.id !== req.params.id)
-  store.save()
-  return { ok: true }
-}))
 
 // 主理人
 app.get('/api/managers', wrap((req) => (isAdminRequest(req) ? store.listManagers() : store.listPublicManagers())))
+app.post('/api/managers', adminAuth, wrap((req) => store.createManager(req.body || {})))
+app.get('/api/managers/:id/finance', adminAuth, wrap((req) => store.getManagerFinanceDetail(req.params.id)))
 app.get('/api/manager-applications', adminAuth, wrap(() => store.get().managerApplications))
 app.post('/api/manager-applications', wrap((req) => {
   const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
   requireUser(req, userId)
   return store.applyManager({ ...req.body, userId })
 }))
-app.post('/api/manager-applications/:id/approve', adminAuth, wrap((req) => store.approveManagerApp(req.params.id)))
+app.get('/api/manager-applications/:id', wrap((req) => {
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  const application = store.get().managerApplications.find((item) => String(item.id) === String(req.params.id))
+  if (application && String(application.userId) !== String(userId)) throw httpError(403, '无权查看其他会员的申请')
+  return application || null
+}))
+app.post('/api/manager-applications/:id/pay', wrap(async (req) => {
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return requestManagerApplicationPayment(req.params.id, userId)
+}))
+app.post('/api/manager-applications/:id/payment-status/refresh', wrap(async (req) => {
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  const application = store.get().managerApplications.find((item) => String(item.id) === String(req.params.id))
+  if (!application || String(application.userId) !== String(userId)) throw httpError(404, '申请不存在')
+  return refreshWechatPayment(req.params.id)
+}))
+app.post('/api/manager-applications/:id/approve', adminAuth, wrap((req) => store.approveManagerApp(req.params.id, req.body || {})))
 app.post('/api/manager-applications/:id/reject', adminAuth, wrap((req) => store.rejectManagerApp(req.params.id, req.body.reason)))
 app.post('/api/managers/:id/status', adminAuth, wrap((req) => store.setManagerStatus(req.params.id, req.body.status)))
 
 // 客户与归属
-app.get('/api/customers', adminAuth, wrap(() => store.get().customers))
-app.put('/api/customers/:id', adminAuth, wrap((req) => store.updateCustomer(req.params.id, req.body)))
-app.get('/api/bindings', adminAuth, wrap(() => store.get().bindings))
+app.get('/api/bindings', adminAuth, wrap(() => store.listBindingsForAdmin()))
 app.post('/api/bindings/unbind', adminAuth, wrap((req) => store.unbindCustomer(req.body.customerId, req.body.reason)))
 app.post('/api/bindings/rebind', adminAuth, wrap((req) => store.rebindCustomer(req.body.customerId, req.body.managerId, req.body.reason)))
 app.get('/api/users/:id', wrap((req) => {
@@ -492,16 +210,6 @@ app.get('/api/unbind-applications', adminAuth, wrap(() => store.get().unbindAppl
 app.post('/api/unbind-applications/:id/approve', adminAuth, wrap((req) => store.auditUnbind(req.params.id, true)))
 app.post('/api/unbind-applications/:id/reject', adminAuth, wrap((req) => store.auditUnbind(req.params.id, false, req.body.reason)))
 
-// 服务商申请
-app.post('/api/provider-applications', wrap((req) => {
-  const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
-  requireUser(req, userId)
-  return store.applyProvider({ ...req.body, userId })
-}))
-app.get('/api/provider-applications', adminAuth, wrap(() => store.get().providerApplications || []))
-app.post('/api/provider-applications/:id/approve', adminAuth, wrap((req) => store.auditProvider(req.params.id, true)))
-app.post('/api/provider-applications/:id/reject', adminAuth, wrap((req) => store.auditProvider(req.params.id, false, req.body.reason)))
-
 // 佣金
 app.get('/api/commissions', adminAuth, wrap(() => store.get().commissions))
 app.get('/api/commission-settlements', adminAuth, wrap((req) => store.getSettlementRecords(req.query.managerId)))
@@ -510,6 +218,7 @@ app.post('/api/commissions/:id/adjust', adminAuth, wrap((req) => store.adjustCom
 
 // 提现
 app.get('/api/withdraws', adminAuth, wrap(() => store.get().withdraws))
+app.get('/api/withdraws/:id', adminAuth, wrap((req) => store.getWithdrawDetail(req.params.id)))
 app.post('/api/withdraws', wrap((req) => {
   const managerId = req.body.managerId
   // 只能为绑定了自己的主理人账号发起提现，避免替别人锁单
@@ -521,14 +230,33 @@ app.post('/api/withdraws', wrap((req) => {
   }
   return store.applyWithdraw(managerId, req.body.amount, { source: req.body.source })
 }))
-app.post('/api/withdraws/:id/approve', adminAuth, wrap((req) => store.approveWithdraw(req.params.id)))
+app.post('/api/withdraws/:id/approve', adminAuth, wrap((req) => store.approveWithdraw(req.params.id, req.body || {})))
 app.post('/api/withdraws/:id/reject', adminAuth, wrap((req) => store.rejectWithdraw(req.params.id, req.body.reason)))
 
 // 配置
-app.get('/api/config', wrap(() => store.get().config))
+app.get('/api/config', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  next()
+}, wrap(() => store.get().config))
 app.put('/api/config', adminAuth, wrap((req) => {
   const db = store.get()
-  db.config = { ...db.config, ...req.body }
+  const next = req.body || {}
+  if (Object.prototype.hasOwnProperty.call(next, 'balanceRechargeAmounts')) {
+    const amounts = parseBalanceRechargeAmounts(next.balanceRechargeAmounts)
+    if (!amounts) throw httpError(400, '充值金额须设置1至8项，每项为1至50000元且不可重复')
+    next.balanceRechargeAmounts = amounts
+  }
+  db.config = {
+    ...db.config,
+    ...next,
+    brand: { ...(db.config.brand || {}), ...(next.brand || {}) },
+    copy: { ...(db.config.copy || {}), ...(next.copy || {}) },
+    assistant: { ...(db.config.assistant || {}), ...(next.assistant || {}) },
+    homeAssistant: { ...(db.config.homeAssistant || {}), ...(next.homeAssistant || {}) },
+    homeDisplay: { ...(db.config.homeDisplay || {}), ...(next.homeDisplay || {}) },
+    socialQrs: { ...(db.config.socialQrs || {}), ...(next.socialQrs || {}) },
+    filing: { ...(db.config.filing || {}), ...(next.filing || {}) }
+  }
   store.save()
   return db.config
 }))
@@ -536,13 +264,23 @@ app.put('/api/config', adminAuth, wrap((req) => {
 // 统计
 app.get('/api/stats/dashboard', adminAuth, wrap(() => store.dashboardStats()))
 app.get('/api/logs', adminAuth, wrap(() => store.getLogs()))
+app.get('/api/logistics/config', adminAuth, wrap(() => kdniaoPublicConfig()))
+app.post('/api/logistics/query', adminAuth, wrap(async (req) => {
+  const trackingNo = String(req.body?.trackingNo || '').trim()
+  if (!/^[A-Za-z0-9-]{6,32}$/.test(trackingNo)) throw httpError(400, '请输入正确的快递单号')
+  if (!kdniaoConfigured()) throw httpError(503, '快递鸟未配置')
+  const result = await queryKdniao({ orderId: '', trackingNo, carrier: '', carrierCode: '' })
+  return normalizeKdniaoQuery(result)
+}))
+app.get('/api/logistics/exceptions', adminAuth, wrap(() => store.listLogisticsExceptions()))
+app.post('/api/logistics/:id/refresh', adminAuth, wrap((req) => refreshLogisticsShipment(store.getLogisticsShipment(req.params.id))))
 
 // 私域直播
-app.get('/api/lives', wrap((req) => store.listLives(isAdminRequest(req) ? req.query.userId : (requestUserId(req) || null))))
+app.get('/api/lives', wrap((req) => store.listLives(isAdminRequest(req) ? req.query.userId : (requestUserId(req) || null), { admin: isAdminRequest(req) })))
 app.post('/api/lives/:id/purchase', wrap((req) => {
   const userId = String((req.body && req.body.userId) || requestUserId(req)).trim()
   requireUser(req, userId)
-  return store.purchaseLive(req.params.id, userId)
+  return store.purchaseLive(req.params.id, userId, { useBalance: Boolean(req.body?.useBalance) })
 }))
 app.post('/api/lives', adminAuth, wrap((req) => store.createLive(req.body)))
 app.put('/api/lives/:id', adminAuth, wrap((req) => store.updateLive(req.params.id, req.body)))
@@ -553,6 +291,11 @@ app.use((req, res) => res.status(404).json({ code: 404, message: '接口不存�
 store.init()
 app.listen(PORT, () => {
   console.log(`岁悦里后端已启动：http://127.0.0.1:${PORT}`)
-  console.log(`管理员 Token：${ADMIN_TOKEN}`)
+  console.log(`管理员认证：${ADMIN_TOKEN ? '已配置' : '未配置'}`)
   console.log(`微信登录 AppID：${WECHAT_APPID}（AppSecret ${WECHAT_APP_SECRET ? '已配置' : '未配置'}）`)
+  console.log(`微信支付：${paymentConfigured() ? '已配置（真实支付）' : '未配置（支付接口将拒绝请求，不会模拟成功）'}`)
+  console.log(`快递鸟物流：${kdniaoConfigured() ? '已配置' : '未配置（发货仍可保存，不会订阅轨迹）'}`)
 })
+
+startLogisticsRefreshJob()
+startWechatPaymentJob()

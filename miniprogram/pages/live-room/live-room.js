@@ -1,22 +1,18 @@
 const store = require('../../utils/store.js')
 
-const COURSE_DEFAULTS = {
-  live1: { memberPrice: 99, originalPrice: 159, lessonCount: 12, duration: '约240分钟', coverImage: '/assets/event-academy.jpg' },
-  live2: { memberPrice: 69, originalPrice: 99, lessonCount: 8, duration: '约160分钟', coverImage: '/assets/event-benefit.jpg' },
-  live3: { memberPrice: 129, originalPrice: 199, lessonCount: 10, duration: '约210分钟', coverImage: '/assets/event-travel.jpg' },
-  live4: { memberPrice: 79, originalPrice: 129, lessonCount: 9, duration: '约180分钟', coverImage: '/assets/home-hero.jpg' }
-}
-
 function decorateCourse(course) {
-  const fallback = COURSE_DEFAULTS[course.id] || COURSE_DEFAULTS.live1
-  const data = { ...fallback, ...course }
+  const data = { ...course }
+  const lessons = (Array.isArray(data.lessons) ? data.lessons : [])
+    .filter((lesson) => Number(lesson.status) === 1)
+    .map((lesson, index) => ({ ...lesson, order: index + 1, duration: lesson.duration || '时长待定' }))
   return {
     ...data,
-    memberPrice: Number(data.memberPrice || fallback.memberPrice),
-    originalPrice: Number(data.originalPrice || fallback.originalPrice),
-    lessonCount: Number(data.lessonCount || fallback.lessonCount),
-    duration: data.duration || fallback.duration,
-    coverImage: data.coverImage || fallback.coverImage,
+    memberPrice: Number(data.memberPrice || 0),
+    originalPrice: Number(data.originalPrice || data.memberPrice || 0),
+    lessonCount: lessons.length || Number(data.lessonCount || 0),
+    lessons,
+    duration: data.duration || '',
+    coverImage: data.coverImage || '',
     courseType: data.status === 'live' ? '直播课' : (data.status === 'scheduled' ? '即将开课' : '视频课')
   }
 }
@@ -29,11 +25,14 @@ Page({
     playableUrl: '',
     purchased: false,
     lessons: [],
-    loading: true
+    selectedLesson: null,
+    loading: true,
+    copy: {}
   },
 
   async onLoad(options) {
     await store.ready()
+    await store.refreshConfig().catch(() => {})
     const source = store.getLive(options.id)
     if (!source) {
       wx.showToast({ title: '课程不存在', icon: 'none' })
@@ -42,22 +41,44 @@ Page({
     }
     const live = decorateCourse(source)
     const activity = live.activityId ? store.getActivity(live.activityId) : null
-    const lessons = [
-      { title: '课程导学：先了解学习方法', duration: '08:30 · 可试看' },
-      { title: '核心技巧：老师分步骤演示', duration: '18:40' },
-      { title: '跟练课堂：常见问题讲解', duration: '22:15' },
-      { title: '进阶练习：把知识用起来', duration: '16:50' }
-    ]
+    const lessons = live.lessons || []
+    const purchased = store.isCoursePurchased(live.id)
+    const selectedLesson = lessons.find((lesson) => (purchased || lesson.isPreview) && lesson.videoUrl) || null
+    const courseUrl = live.status === 'live' ? live.streamUrl : live.replayUrl
     this.setData({
       live,
       activity,
       lessons,
-      playableUrl: live.status === 'live' ? live.streamUrl : live.replayUrl,
-      purchased: store.isCoursePurchased(live.id),
-      loading: false
+      selectedLesson,
+      playableUrl: selectedLesson ? selectedLesson.videoUrl : (purchased ? courseUrl : ''),
+      purchased,
+      loading: false,
+      copy: store.getCopy()
     })
     this.updateCountdown()
     this.timer = setInterval(() => this.updateCountdown(), 1000)
+  },
+
+  async onShow() {
+    if (!this.data.live) return
+    try {
+      await store.refreshConfig()
+      this.setData({ copy: store.getCopy() })
+    } catch (e) {}
+  },
+
+  playLesson(event) {
+    const lesson = this.data.lessons[Number(event.currentTarget.dataset.index)]
+    if (!lesson) return
+    if (!this.data.purchased && !lesson.isPreview) {
+      wx.showToast({ title: '购买课程后可观看本节', icon: 'none' })
+      return
+    }
+    if (!lesson.videoUrl) {
+      wx.showToast({ title: '本节视频暂未上传', icon: 'none' })
+      return
+    }
+    this.setData({ selectedLesson: lesson, playableUrl: lesson.videoUrl })
   },
 
   onUnload() {
@@ -91,18 +112,30 @@ Page({
       content: `${course.title}\n会员价 ¥${course.memberPrice}，购买后可永久回看。`,
       confirmText: '立即支付',
       confirmColor: '#b98555',
-      success: async (res) => {
+      success: (res) => {
         if (!res.confirm) return
-        try {
-          await store.purchaseLive(course.id)
-          this.setData({ purchased: true })
-          wx.showToast({ title: '购买成功，已发放计次卡', icon: 'none' })
-          store.refresh().catch(() => {})
-        } catch (e) {
-          wx.showToast({ title: e.message || '购买失败', icon: 'none' })
+        const balance = Number(store.get().user.balance || 0)
+        if (balance > 0) {
+          wx.showActionSheet({
+            itemList: [`使用余额抵扣（可用 ¥${store.money(balance)}）`, '仅使用微信支付'],
+            success: (choice) => this.payCourse(choice.tapIndex === 0)
+          })
+        } else {
+          this.payCourse(false)
         }
       }
     })
+  },
+
+  async payCourse(useBalance) {
+    try {
+      await store.purchaseLive(this.data.live.id, useBalance)
+      this.setData({ purchased: true })
+      wx.showToast({ title: '购买成功，已发放计次卡', icon: 'none' })
+      store.refresh().catch(() => {})
+    } catch (e) {
+      wx.showToast({ title: e.message || '购买失败', icon: 'none' })
+    }
   },
 
   addCart() {

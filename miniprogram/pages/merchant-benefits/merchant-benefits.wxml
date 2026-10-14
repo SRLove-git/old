@@ -2,7 +2,7 @@
   <view class="benefit-hero">
     <view class="hero-kicker">MERCHANT BENEFITS</view>
     <view class="hero-title">商家福利</view>
-    <view class="hero-sub">为岁悦里会员精选本地商家优惠与专属体验</view>
+    <view class="hero-sub">{{copy.merchantBenefitsSubtitle}}</view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-text">正在加载福利…</view>

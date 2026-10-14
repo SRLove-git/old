@@ -19,6 +19,7 @@ Page({
 
   async onLoad(options) {
     await store.ready()
+    await store.refreshConfig().catch(() => {})
     const manager = store.getManagers().find((item) => String(item.id) === String(options.id))
     if (!manager) {
       wx.showToast({ title: '店铺不存在', icon: 'none' })
@@ -34,7 +35,7 @@ Page({
       ...manager,
       initial: String(manager.name || '店').slice(0, 1),
       shopName: manager.shopName || `${manager.name}的服务小店`,
-      shopIntro: manager.shopIntro || '用心挑选适合岁悦里会员的产品与服务。'
+      shopIntro: manager.shopIntro || store.getCopy().defaultShopIntro || ''
     }
     this.setData({
       manager: decoratedManager,
@@ -47,6 +48,15 @@ Page({
       }
     })
     wx.setNavigationBarTitle({ title: decoratedManager.shopName })
+  },
+
+  async onShow() {
+    if (!this.data.manager) return
+    try {
+      await store.refreshConfig()
+      const source = store.getManagers().find((item) => String(item.id) === String(this.data.manager.id)) || this.data.manager
+      this.setData({ 'manager.shopIntro': source.shopIntro || store.getCopy().defaultShopIntro || '' })
+    } catch (e) {}
   },
 
   setFilter(e) {

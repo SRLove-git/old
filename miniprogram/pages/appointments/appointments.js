@@ -18,6 +18,7 @@ Page({
       this.getTabBar().setData({ selected: 2 })
     }
     await store.ready()
+    try { await store.refreshOrders() } catch (e) {}
     this.refresh()
   },
 

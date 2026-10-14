@@ -14,7 +14,7 @@
       <view class="post-copy">
         <view class="post-title">{{item.title}}</view>
         <view class="post-summary">{{item.summary}}</view>
-        <view class="post-meta"><text>{{item.source || '岁悦里'}}</text><text>{{item.publishedAt}}</text></view>
+        <view class="post-meta"><text>{{item.source || brandName}}</text><text>{{item.publishedAt}}</text></view>
       </view>
     </view>
   </view>

@@ -29,11 +29,11 @@ function makeSchedules(offsetDays, slots, quota, time) {
 }
 
 const categories = {
-  1: { name: '同城活动', short: '同城', emoji: '🥾', color: '#2f7d5c', type: 'activity' },
-  2: { name: '研学旅行', short: '研学', emoji: '🚌', color: '#c96b2a', type: 'activity' },
-  3: { name: '岁悦学堂', short: '学堂', emoji: '📚', color: '#3b6fa0', type: 'activity' },
-  4: { name: '商家福利', short: '福利', emoji: '🎁', color: '#b04a6b', type: 'activity' },
-  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae', type: 'product' }
+  1: { name: '同城活动', short: '同城', emoji: '🥾', color: '#2f7d5c', type: 'activity', homeDisplayLimit: 6 },
+  2: { name: '研学旅行', short: '研学', emoji: '🚌', color: '#c96b2a', type: 'activity', homeDisplayLimit: 6 },
+  3: { name: '岁悦学堂', short: '学堂', emoji: '📚', color: '#3b6fa0', type: 'activity', homeDisplayLimit: 6 },
+  4: { name: '商家福利', short: '福利', emoji: '🎁', color: '#b04a6b', type: 'activity', homeDisplayLimit: 6 },
+  5: { name: '商品文创', short: '文创', emoji: '🛍️', color: '#7a5cae', type: 'product', homeDisplayLimit: 6 }
 }
 
 const activities = [
@@ -370,12 +370,49 @@ const config = {
   withdrawMonthlyLimit: 1,
   withdrawTaxRate: 20,
   managerApplyFee: 199,
+  balanceRechargeAmounts: [50, 100, 200, 500],
   couponRefundReturn: 'auto',
   // 用户申请退款是否需要运营审核（true：先进入「退款中」，false：即时退款）
   refundNeedAudit: true,
+  homeDisplay: {
+    newsLimit: 3,
+    videoLimit: 3
+  },
   brand: {
+    chineseName: '岁悦里',
     englishName: 'SUI YUE LI',
     slogan: '和同龄人一起，玩得开心又省心'
+  },
+  copy: {
+    loginTitle: '欢迎来到{brand}',
+    loginDescription: '登录后可查看活动、线上课堂及会员专属服务',
+    homeWelcomeTitle: '发现美好生活',
+    homeWelcomeSubtitle: '活动、旅行与课程，都在这里',
+    homeHeroKicker: '{brand} · 乐活俱乐部',
+    homeCategoryCountText: '5 类精选',
+    homeMemberTitle: '立即入会，享会员特权',
+    homeMemberSubtitle: '免费加入 · 本单最高省 ¥100',
+    homeHighlightBrand: '{brand}',
+    homeHighlightTitle: '探索无限世界 · 共创有趣人生',
+    homeHighlightSubtitle: '每一次出发，都有熟悉的人和贴心的陪伴',
+    memberBenefitsSummary: '会员价 · 专属优惠 · 活动优先报名',
+    managerReviewPendingText: '申请已提交，预计1-2个工作日审核',
+    socialFollowTip: '长按二维码，关注「{brand}」公众号和视频号',
+    officialAccountName: '{brand}公众号',
+    videoChannelName: '{brand}视频号',
+    detailGalleryBrand: '{brand}俱乐部',
+    detailMemberOffer: '入会得优惠券，本单再减',
+    courseTeacherDescription: '{brand}特邀讲师 · 适老化教学',
+    merchantBenefitsSubtitle: '为{brand}会员精选本地商家优惠与专属体验',
+    defaultShopIntro: '用心挑选适合{brand}会员的产品与服务。',
+    profileEditDescription: '一个亲切的名称，方便在{brand}识别您',
+    memberCardSubtitle: '俱乐部 · 尊享会员卡',
+    memberCardTitle: '尊享会员',
+    memberBenefitLines: '💰|会员价：活动更便宜，长期更省钱\n🎫|入会即送优惠券，下单可抵扣\n👩‍💼|专属主理人一对一贴心服务\n⭐|热门活动优先报名名额\n🎁|积分可兑换好礼',
+    memberJoinText: '还不是会员？免费入会，享专属好礼',
+    memberJoinSuccessText: '入会成功，已发放{count}张券',
+    shareManagerTitle: '和同龄人一起玩，{brand}精选活动',
+    shareActivityTitle: '{brand}线下活动'
   },
   assistant: {
     name: '小助理',

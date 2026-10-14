@@ -7,9 +7,11 @@ Page({
     products: [],
     orders: [],
     addresses: [],
+    detailProduct: null,
     selectedProduct: null,
     selectedAddressId: '',
-    submitting: false
+    submitting: false,
+    defaultDescription: ''
   },
 
   async onShow() {
@@ -25,7 +27,7 @@ Page({
     this.setData({ loading: true })
     try {
       await store.ready()
-      await Promise.all([store.refreshUserProfile(), store.refreshPointMall()])
+      await Promise.all([store.refreshUserProfile(), store.refreshPointMall(), store.refreshConfig().catch(() => {})])
       const state = store.get()
       const addresses = state.addresses || []
       const selectedAddressId = this.data.selectedAddressId || String((addresses.find((item) => item.isDefault) || addresses[0] || {}).id || '')
@@ -34,7 +36,8 @@ Page({
         products: (state.pointProducts || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg' })),
         orders: (state.pointOrders || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg' })),
         addresses,
-        selectedAddressId
+        selectedAddressId,
+        defaultDescription: `${store.getBrand().chineseName}会员积分专享礼品，具体规格以收到的实物为准。`
       })
     } catch (e) {
       wx.showToast({ title: e.message || '积分商城加载失败', icon: 'none' })
@@ -43,9 +46,28 @@ Page({
     }
   },
 
-  openRedeem(e) {
+  openDetail(e) {
     const product = this.data.products.find((item) => String(item.id) === String(e.currentTarget.dataset.id))
     if (!product) return
+    this.setData({ detailProduct: product })
+  },
+
+  closeDetail() {
+    this.setData({ detailProduct: null })
+  },
+
+  openRedeem(e) {
+    const product = this.data.products.find((item) => String(item.id) === String(e.currentTarget.dataset.id))
+    this.startRedeem(product)
+  },
+
+  redeemFromDetail() {
+    this.startRedeem(this.data.detailProduct)
+  },
+
+  startRedeem(product) {
+    if (!product) return
+    if (product.stock <= 0 || Number(this.data.user.points || 0) < Number(product.pointsCost || 0)) return
     if (!this.data.addresses.length) {
       wx.showModal({
         title: '请先添加收货地址',
@@ -55,7 +77,7 @@ Page({
       })
       return
     }
-    this.setData({ selectedProduct: product })
+    this.setData({ detailProduct: null, selectedProduct: product })
   },
 
   closeRedeem() {

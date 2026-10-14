@@ -8,6 +8,7 @@
     "pages/detail/detail",
     "pages/content-detail/content-detail",
     "pages/content-list/content-list",
+    "pages/webview/webview",
     "pages/merchant-benefits/merchant-benefits",
     "pages/merchant-shop/merchant-shop",
     "pages/booking/booking",
@@ -16,6 +17,7 @@
     "pages/card-attendance/card-attendance",
     "pages/order-detail/order-detail",
     "pages/orders/orders",
+    "pages/logistics-query/logistics-query",
     "pages/profile/profile",
     "pages/profile-edit/profile-edit",
     "pages/coupons/coupons",
@@ -30,10 +32,11 @@
     "pages/balance/balance",
     "pages/points-mall/points-mall"
   ],
+  "lazyCodeLoading": "requiredComponents",
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "岁月里",
+    "navigationBarTitleText": "岁悦里",
     "backgroundColor": "#faf9f6",
     "backgroundTextStyle": "light"
   },
@@ -43,7 +46,7 @@
     }
   },
   "requiredPrivateInfos": [
-    "getLocation"
+    "chooseLocation"
   ],
   "tabBar": {
     "custom": true,

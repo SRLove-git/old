@@ -15,6 +15,7 @@ Page({
 
   async onShow() {
     await store.ready()
+    try { await store.refreshOrders() } catch (e) {}
     this.refresh()
   },
 

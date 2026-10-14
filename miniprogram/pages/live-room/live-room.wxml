@@ -8,9 +8,9 @@
       <view class="hero-info"><text class="course-type">{{live.courseType}}</text><view class="course-title">{{live.title}}</view><view class="course-teacher">主讲 · {{live.hostName}}</view></view>
     </view>
 
-    <view wx:if="{{purchased && playableUrl}}" class="player-wrap">
+    <view wx:if="{{playableUrl && (purchased || selectedLesson.isPreview)}}" class="player-wrap">
       <video class="player" src="{{playableUrl}}" controls enable-play-gesture show-center-play-btn></video>
-      <view class="player-tip">{{live.status === 'live' ? '● 直播中' : '已解锁 · 随时回看'}}</view>
+      <view class="player-tip">{{selectedLesson ? (selectedLesson.isPreview && !purchased ? '试看 · ' : '') + selectedLesson.title : (live.status === 'live' ? '● 直播中' : '已解锁 · 随时回看')}}</view>
     </view>
 
     <view wx:elif="{{!purchased}}" class="locked-player">
@@ -35,17 +35,18 @@
 
     <view class="section-card">
       <view class="section-title">课程目录</view>
-      <view wx:for="{{lessons}}" wx:key="index" class="lesson-row">
+      <view wx:if="{{!lessons.length}}" class="lesson-empty">课程章节正在整理中</view>
+      <view wx:for="{{lessons}}" wx:key="id" class="lesson-row {{selectedLesson && selectedLesson.id === item.id ? 'active' : ''}}" data-index="{{index}}" bindtap="playLesson">
         <text class="lesson-number">{{index + 1 < 10 ? '0' + (index + 1) : index + 1}}</text>
-        <view class="lesson-info"><view class="lesson-title">{{item.title}}</view><view class="lesson-duration">{{item.duration}}</view></view>
-        <text class="lesson-state">{{purchased || index === 0 ? '▶' : '锁'}}</text>
+        <view class="lesson-info"><view class="lesson-title">{{item.title}}</view><view class="lesson-duration">{{item.duration}}<text wx:if="{{item.isPreview}}" class="preview-badge">可试看</text></view></view>
+        <text class="lesson-state">{{selectedLesson && selectedLesson.id === item.id ? '播放中' : (purchased || item.isPreview ? '▶' : '锁')}}</text>
       </view>
     </view>
 
     <view class="section-card">
       <view class="section-title">课程介绍</view>
       <view class="info-desc">{{live.description || '跟着老师循序渐进学习，每一节都讲得清楚、练得明白。'}}</view>
-      <view class="teacher-row"><view class="teacher-avatar">师</view><view><view class="teacher-name">{{live.hostName}}</view><view class="teacher-desc">岁悦里特邀讲师 · 适老化教学</view></view></view>
+      <view class="teacher-row"><view class="teacher-avatar">师</view><view><view class="teacher-name">{{live.hostName}}</view><view class="teacher-desc">{{copy.courseTeacherDescription}}</view></view></view>
     </view>
 
     <view wx:if="{{activity}}" class="section-card activity-card" bindtap="goActivity">

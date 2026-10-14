@@ -12,6 +12,9 @@ Page({
     pendingUnbind: null,
     products: [],
     socialQrs: {},
+    brandEnglish: '',
+    slogan: '',
+    copy: {},
     bindOpen: false,
     code: '',
     phoneDisplay: '',
@@ -71,6 +74,7 @@ Page({
 
   loadState() {
     const state = store.get()
+    const brand = store.getBrand()
     const managers = state.managers || []
     const bindLogs = (state.bindLogs || []).map((log) => {
       const manager = managers.find((m) => String(m.id) === String(log.managerId))
@@ -93,13 +97,25 @@ Page({
       cards: state.cards || [],
       couponCount: state.coupons.length,
       pendingUnbind: state.pendingUnbind || null,
-      products: (state.products || []).slice(0, 6),
-      socialQrs: store.getSocialQrs()
+      products: (state.products || []).slice(0, 6).map((item) => ({
+        ...item,
+        coverImage: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg'
+      })),
+      socialQrs: store.getSocialQrs(),
+      brandEnglish: brand.englishName,
+      slogan: brand.slogan,
+      copy: store.getCopy()
     })
   },
 
   goDetail(e) {
     wx.navigateTo({ url: `/pages/detail/detail?id=${e.currentTarget.dataset.id}` })
+  },
+
+  onProductImageError(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.products[index]) return
+    this.setData({ [`products[${index}].coverImage`]: '/assets/product-tumbler-v2.jpg' })
   },
 
   go(e) {

@@ -1,6 +1,11 @@
 // 登录会员身份由 request.js 的微信会话统一管理。
 const { api, publicApi, ensureLogin, isLoggedIn, getCurrentUserId: authUserId } = require('./request.js')
 const { API_BASE } = require('./config.js')
+const {
+  bindSourceLabel, displayStatus, formatPhoneDisplay, isActivityExpired, maskPhone,
+  matchOrderFilter, money, normalizePhone, orderFilterLabels, refundRuleText,
+  resolveOrderFilter, statusClass
+} = require('./store-helpers.js')
 
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
@@ -36,35 +41,14 @@ let cache = {
 }
 
 let loaded = false
+let homeRefreshPromise = null
+let livesRefreshPromise = null
 let profileRefreshPromise = null
+let reviewsRefreshPromise = null
+let ordersRefreshPromise = null
 let pendingBindManagerId = null
 let pendingBindSource = null
 
-const STATUS_CLASS = {
-  '待付款': 'pending',
-  '待发货': 'out',
-  '待收货': 'shipping',
-  '待评价': 'review',
-  '已完成': 'done',
-  '已核销': 'verified',
-  '退款中': 'refunding',
-  '已退款': 'refunded',
-  '已取消': 'cancelled'
-}
-
-const BIND_SOURCE_LABEL = { 1: '扫码', 2: '链接', 3: '邀请码', 4: '手动变更' }
-
-function statusClass(status) {
-  return STATUS_CLASS[status] || 'default'
-}
-
-function bindSourceLabel(source) {
-  return BIND_SOURCE_LABEL[source] || '未知'
-}
-
-function money(n) {
-  return Number(n || 0).toFixed(2)
-}
 
 function getCategory(id) {
   return cache.categories[id] || { name: '全部', short: '全部', emoji: '📦', color: '#555555' }
@@ -73,10 +57,10 @@ function getCategory(id) {
 function getAssistant() {
   const a = (cache.config && cache.config.assistant) || {}
   return {
-    name: a.name || '小助理',
-    wechat: a.wechat || 'suiyueli6070',
-    phone: a.phone || '400-800-6070',
-    avatar: a.avatar || '🧑‍💼',
+    name: a.name || '',
+    wechat: a.wechat || '',
+    phone: a.phone || '',
+    avatar: a.avatar || '',
     intro: a.intro || ''
   }
 }
@@ -93,9 +77,19 @@ function getFiling() {
 function getBrand() {
   const b = (cache.config && cache.config.brand) || {}
   return {
-    englishName: b.englishName || 'SUI YUE LI',
-    slogan: b.slogan || '和同龄人一起，玩得开心又省心'
+    chineseName: b.chineseName || '',
+    englishName: b.englishName || '',
+    slogan: b.slogan || ''
   }
+}
+
+function getCopy() {
+  const brand = getBrand().chineseName
+  const source = (cache.config && cache.config.copy) || {}
+  return Object.keys(source).reduce((result, key) => {
+    result[key] = typeof source[key] === 'string' ? source[key].replace(/\{brand\}/g, brand) : source[key]
+    return result
+  }, {})
 }
 
 function apiAssetUrl(value) {
@@ -116,12 +110,24 @@ function getSocialQrs() {
 function getHomeAssistant() {
   const value = (cache.config && cache.config.homeAssistant) || {}
   const assistant = getAssistant()
-  const note = value.wechatNote || '微信号：{wechat}（长按识别或保存二维码）'
+  const note = value.wechatNote || ''
   return {
-    title: value.title || '小助理服务',
+    title: value.title || '',
     qrImage: value.qrImage ? apiAssetUrl(value.qrImage) : '/assets/assistant-qr.png',
-    tip: value.tip || '长按二维码，添加小助理微信',
+    tip: value.tip || '',
     wechatNote: note.replace(/\{wechat\}/g, assistant.wechat)
+  }
+}
+
+function getHomeDisplay() {
+  const value = (cache.config && cache.config.homeDisplay) || {}
+  const limit = (input, fallback, max) => {
+    const number = Number(input)
+    return Number.isInteger(number) && number >= 0 && number <= max ? number : fallback
+  }
+  return {
+    newsLimit: limit(value.newsLimit, 3, 20),
+    videoLimit: limit(value.videoLimit, 3, 20)
   }
 }
 
@@ -140,12 +146,49 @@ function applyUserProfile(profile) {
   cache.providerApplication = profile.providerApplication || null
 }
 
+function decorateContentPost(post) {
+  const contentBlocks = (Array.isArray(post.contentBlocks) ? post.contentBlocks : []).map((block) => {
+    if (block.type === 'image') return { ...block, src: apiAssetUrl(block.src) }
+    if (block.type === 'video') return { ...block, url: apiAssetUrl(block.url) }
+    return { ...block }
+  })
+  return {
+    ...post,
+    coverImage: apiAssetUrl(post.coverImage),
+    videoUrl: apiAssetUrl(post.videoUrl),
+    contentBlocks
+  }
+}
+
+function decorateLive(live) {
+  const lessons = (Array.isArray(live.lessons) ? live.lessons : []).map((lesson) => ({
+    ...lesson,
+    videoUrl: apiAssetUrl(lesson.videoUrl)
+  }))
+  return {
+    ...live,
+    coverImage: apiAssetUrl(live.coverImage),
+    streamUrl: apiAssetUrl(live.streamUrl),
+    replayUrl: apiAssetUrl(live.replayUrl),
+    lessons
+  }
+}
+
+function applyHome(home) {
+  cache.activities = home.activities || []
+  cache.products = home.products || []
+  cache.regions = home.regions || []
+  cache.contentPosts = (home.contentPosts || []).map(decorateContentPost)
+  cache.banners = home.banners || []
+  cache.categories = home.categories || {}
+  cache.config = home.config || {}
+}
+
 function couponApplicable(coupon, activity, amount, userId) {
-  if (!coupon || coupon.used) return false
-  // 入会赠送券等带 welcomeFor 的券只属于指定会员
-  const owner = coupon.welcomeFor ? String(coupon.welcomeFor) : ''
-  if (owner && owner !== String(userId == null ? authUserId() : userId)) return false
-  if (coupon.expireAt && new Date(coupon.expireAt) < new Date()) return false
+  if (!coupon || coupon.status !== 'unused') return false
+  if (String(coupon.userId || '') !== String(userId == null ? authUserId() : userId)) return false
+  if (coupon.templateStatus === 0) return false
+  if (coupon.expireAt && coupon.expireAt < new Date().toISOString().slice(0, 10)) return false
   if (coupon.minAmount && amount < coupon.minAmount) return false
   if (coupon.type === 3 && coupon.scopeCategory && activity.category !== coupon.scopeCategory) return false
   if (coupon.type === 4 && coupon.scopeProductId && String(activity.id) !== String(coupon.scopeProductId)) return false
@@ -166,6 +209,9 @@ function calcRefund(order) {
   const rule = activity.refundRule || {}
   if (rule.type === 'always') {
     return { can: true, ratio: 1, amount: Number(order.payAmount.toFixed(2)), reason: '未核销前可随时全额退款' }
+  }
+  if (rule.type === 'never') {
+    return { can: false, ratio: 0, amount: 0, reason: '该活动不支持退款' }
   }
   const days = scheduleDaysUntil(order.schedule)
   if (rule.type === 'ladder') {
@@ -194,13 +240,7 @@ async function ready() {
     const currentUserId = memberActive ? authUserId() : ''
     // 首页是游客浏览的核心数据，不能被评价、主理人、直播等可选接口的失败连带阻断。
     const home = await publicApi.get('/home')
-    cache.activities = home.activities
-    cache.products = home.products || []
-    cache.regions = home.regions || []
-    cache.contentPosts = home.contentPosts || []
-    cache.banners = home.banners
-    cache.categories = home.categories
-    cache.config = home.config
+    applyHome(home)
     const [reviews, managers, lives] = await Promise.all([
       publicApi.get('/reviews').catch(() => cache.reviews || []),
       publicApi.get('/managers').catch(() => cache.managers || []),
@@ -208,7 +248,7 @@ async function ready() {
     ])
     cache.reviews = reviews
     cache.managers = managers
-    cache.lives = lives || []
+    cache.lives = (lives || []).map(decorateLive)
     if (memberActive) {
       try {
         const [profile, orders, participants] = await Promise.all([
@@ -233,6 +273,56 @@ async function ready() {
 async function refresh() {
   loaded = false
   return ready()
+}
+
+// 页面每次重新显示时只刷新公开内容，确保后台修改能及时同步到小程序，
+// 同时避免重复拉取会员资料、订单等较重接口。
+async function refreshHome() {
+  if (homeRefreshPromise) return homeRefreshPromise
+  homeRefreshPromise = publicApi.get('/home')
+    .then((home) => {
+      applyHome(home)
+      return cache
+    })
+    .finally(() => { homeRefreshPromise = null })
+  return homeRefreshPromise
+}
+
+async function refreshLives() {
+  if (livesRefreshPromise) return livesRefreshPromise
+  const memberActive = isLoggedIn()
+  const currentUserId = memberActive ? authUserId() : ''
+  livesRefreshPromise = (memberActive ? api.get(`/lives?userId=${currentUserId}`) : publicApi.get('/lives'))
+    .then((lives) => {
+      cache.lives = (Array.isArray(lives) ? lives : []).map(decorateLive)
+      return cache.lives
+    })
+    .finally(() => { livesRefreshPromise = null })
+  return livesRefreshPromise
+}
+
+// 评价与商家回复会在后台独立更新，不能只依赖首次启动时的缓存。
+async function refreshReviews() {
+  if (reviewsRefreshPromise) return reviewsRefreshPromise
+  reviewsRefreshPromise = publicApi.get('/reviews')
+    .then((reviews) => {
+      cache.reviews = Array.isArray(reviews) ? reviews : []
+      return cache.reviews
+    })
+    .finally(() => { reviewsRefreshPromise = null })
+  return reviewsRefreshPromise
+}
+
+async function refreshOrders() {
+  if (ordersRefreshPromise) return ordersRefreshPromise
+  ordersRefreshPromise = ensureLogin()
+    .then(() => api.get('/orders'))
+    .then((orders) => {
+      cache.orders = Array.isArray(orders) ? orders : []
+      return cache.orders
+    })
+    .finally(() => { ordersRefreshPromise = null })
+  return ordersRefreshPromise
 }
 
 // 审核状态只需要刷新会员资料，避免轮询时重复拉取首页、订单等大列表。
@@ -266,6 +356,13 @@ function init() {
 
 function getActivities() {
   return cache.activities
+}
+
+function getCatalogItems() {
+  return [
+    ...(cache.activities || []).map((item) => ({ ...item, offeringType: 'activity' })),
+    ...(cache.products || []).map((item) => ({ ...item, offeringType: 'product' }))
+  ]
 }
 
 function getRegions() {
@@ -401,6 +498,8 @@ function removeCartItems(ids) {
 
 function addActivityToCart(activity, options = {}) {
   if (!activity) throw new Error('活动不存在')
+  if (isActivityExpired(activity)) throw new Error('活动已过期，无法报名')
+  if (Number(activity.status ?? 1) === 0) throw new Error('该活动已下架，无法报名')
   const hasSku = activity.hasSku || activity.sellType === 'sku'
   const sku = hasSku
     ? (activity.skus || []).find((item) => String(item.id) === String(options.skuId)) || (activity.skus || [])[0]
@@ -460,30 +559,6 @@ async function joinMember() {
   return result
 }
 
-// 手机号统一成 11 位数字，容忍空格、短横线、+86 前缀等写法
-function normalizePhone(value) {
-  let digits = String(value == null ? '' : value).replace(/\D/g, '')
-  if (digits.length === 13 && digits.startsWith('86')) digits = digits.slice(2)
-  return digits
-}
-
-function maskPhone(value) {
-  const phone = normalizePhone(value)
-  if (phone.length !== 11) return ''
-  return `${phone.slice(0, 3)}****${phone.slice(7)}`
-}
-
-// 仅用于界面展示，同时兼容完整号码和接口返回的已脱敏号码。
-function formatPhoneDisplay(value) {
-  const compact = String(value == null ? '' : value).trim().replace(/\s/g, '')
-  if (/^1\d{2}\*{4}\d{4}$/.test(compact)) {
-    return `${compact.slice(0, 3)} **** ${compact.slice(-4)}`
-  }
-  const phone = normalizePhone(compact)
-  if (phone.length === 11) return `${phone.slice(0, 3)} **** ${phone.slice(7)}`
-  return compact
-}
-
 function getDefaultAddress() {
   return cache.addresses.find((a) => a.isDefault) || cache.addresses[0] || null
 }
@@ -531,22 +606,115 @@ async function createOrder(payload) {
   cache.orders.unshift(order)
   if (payload.couponId) {
     const coupon = cache.coupons.find((c) => String(c.id) === String(payload.couponId))
-    if (coupon) coupon.used = true
+    if (coupon) {
+      coupon.status = 'locked'
+      coupon.locked = true
+      coupon.orderId = order.id
+      coupon.statusLabel = '使用中'
+    }
   }
+  if (order.balancePaidAmount > 0 || (order.paymentStatus === 'SUCCESS' && order.couponId)) await refreshUserProfile()
   return order
 }
 
+function requestWechatPayment(payment) {
+  return new Promise((resolve, reject) => {
+    wx.requestPayment({
+      timeStamp: String(payment.timeStamp || ''),
+      nonceStr: String(payment.nonceStr || ''),
+      package: String(payment.package || ''),
+      signType: payment.signType || 'RSA',
+      paySign: String(payment.paySign || ''),
+      success: resolve,
+      fail: (error) => {
+        const cancelled = String(error?.errMsg || '').includes('cancel')
+        const next = new Error(cancelled ? '已取消微信支付，订单仍可在30分钟内继续支付' : (error?.errMsg || '微信支付未完成'))
+        next.code = cancelled ? 'PAYMENT_CANCELLED' : 'PAYMENT_FAILED'
+        reject(next)
+      }
+    })
+  })
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function payOrder(id) {
-  const order = await api.post(`/orders/${id}/pay`)
+  const result = await api.post(`/orders/${id}/pay`)
+  if (!result) return null
+  if (result.paid && result.order) {
+    const freeIdx = cache.orders.findIndex((o) => o.id === id)
+    if (freeIdx >= 0) cache.orders[freeIdx] = result.order
+    if (result.order.couponId || result.order.balancePaidAmount > 0) await refreshUserProfile()
+    return result.order
+  }
+  if (!result.payment) throw new Error('微信支付参数获取失败')
+  await requestWechatPayment(result.payment)
+  await api.post(`/orders/${id}/payment-status/refresh`).catch(() => null)
+  let order = null
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await delay(attempt === 0 ? 300 : 700)
+    order = await api.get(`/orders/${id}`)
+    if (order && order.paymentStatus === 'SUCCESS') break
+  }
+  if (!order || order.paymentStatus !== 'SUCCESS') {
+    const error = new Error('微信已受理支付，到账结果确认中，请稍后在订单中查看')
+    error.code = 'PAYMENT_CONFIRMING'
+    throw error
+  }
   const idx = cache.orders.findIndex((o) => o.id === id)
   if (idx >= 0) cache.orders[idx] = order
+  if (order.couponId || order.balancePaidAmount > 0) await refreshUserProfile()
   return order
+}
+
+async function getBalanceTransactions() {
+  await ensureLogin()
+  return api.get('/balance/transactions')
+}
+
+async function rechargeBalance(amount) {
+  await ensureLogin()
+  const recharge = await api.post('/balance/recharges', { amount })
+  const result = await api.post(`/balance/recharges/${recharge.id}/pay`)
+  if (!result?.payment) throw new Error('微信支付参数获取失败')
+  await requestWechatPayment(result.payment)
+  await api.post(`/balance/recharges/${recharge.id}/payment-status/refresh`).catch(() => null)
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await delay(attempt === 0 ? 300 : 700)
+    const transactions = await getBalanceTransactions()
+    if (transactions.some((item) => String(item.rechargeId) === String(recharge.id))) {
+      await refreshUserProfile()
+      return { recharge, transactions }
+    }
+  }
+  const error = new Error('微信已受理充值，到账结果确认中，请稍后查看余额')
+  error.code = 'PAYMENT_CONFIRMING'
+  throw error
+}
+
+async function payManagerApplication(id) {
+  const result = await api.post(`/manager-applications/${id}/pay`)
+  if (!result?.payment) throw new Error('微信支付参数获取失败')
+  await requestWechatPayment(result.payment)
+  await api.post(`/manager-applications/${id}/payment-status/refresh`).catch(() => null)
+  let application = null
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await delay(attempt === 0 ? 300 : 700)
+    application = await api.get(`/manager-applications/${id}`)
+    if (application && application.paymentStatus === '已到账') return application
+  }
+  const error = new Error('微信已受理支付，到账结果确认中，请稍后查看申请状态')
+  error.code = 'PAYMENT_CONFIRMING'
+  throw error
 }
 
 async function cancelOrder(id) {
   const order = await api.post(`/orders/${id}/cancel`)
   const idx = cache.orders.findIndex((o) => o.id === id)
   if (idx >= 0) cache.orders[idx] = order
+  if (order?.couponId || order?.balancePaidAmount > 0) await refreshUserProfile()
   return order
 }
 
@@ -554,6 +722,7 @@ async function refundOrder(id, reason) {
   const result = await api.post(`/orders/${id}/refund`, { reason })
   const idx = cache.orders.findIndex((o) => o.id === id)
   if (idx >= 0 && result.order) cache.orders[idx] = result.order
+  if (result.order?.couponId || result.order?.balancePaidAmount > 0) await refreshUserProfile()
   return result
 }
 
@@ -562,6 +731,14 @@ async function advanceOrder(id) {
   const idx = cache.orders.findIndex((o) => o.id === id)
   if (idx >= 0) cache.orders[idx] = order
   return order
+}
+
+async function getOrderLogistics(id) {
+  return api.get(`/orders/${id}/logistics`)
+}
+
+async function refreshOrderLogistics(id) {
+  return api.post(`/orders/${id}/logistics/refresh`)
 }
 
 async function submitReview(orderId, review) {
@@ -612,85 +789,12 @@ async function unbindApply(reason) {
   return application
 }
 
-async function purchaseLive(liveId) {
-  const card = await api.post(`/lives/${liveId}/purchase`, { userId: authUserId() })
-  if (card && !cache.cards.some((c) => String(c.id) === String(card.id))) cache.cards.push(card)
-  return card
-}
-
-function refundRuleText(rule) {
-  if (!rule || !rule.type) return ''
-  if (rule.type === 'always') return '随时可退，全额退款'
-  if (rule.type === 'day') {
-    const fullDays = Number(rule.fullDays || 0)
-    const partialDays = Number(rule.partialDays || 0)
-    const partialRate = Number(rule.partialRate || 0)
-    if (fullDays <= 0) return '不可退款'
-    if (partialDays > 0 && partialRate > 0) {
-      return `活动开始前${fullDays}天（含）可全额退款，前${partialDays}天退${Math.round(partialRate * 100)}%，之后不可退`
-    }
-    return `活动开始前${fullDays}天（含）可全额退款，之后不可退`
-  }
-  if (rule.type === 'ladder') {
-    const ladder = (rule.ladder || []).slice().sort((a, b) => b.days - a.days)
-    if (!ladder.length) return '不可退款'
-    const parts = ladder.map((rung) => (rung.rate >= 1 ? `提前${rung.days}天全退` : `提前${rung.days}天退${Math.round(rung.rate * 100)}%`))
-    const last = ladder[ladder.length - 1]
-    if (!last.rate || last.rate <= 0) parts.push('之后不可退')
-    return parts.join('；')
-  }
-  return ''
-}
-
-function displayStatus(order) {
-  if (order.status === '待收货' && order.category !== 5 && order.category !== 4) return '待出行/待使用'
-  if (order.status === '已核销') return '待完成'
-  return order.status
-}
-
-// 订单筛选：个人中心入口、筛选 chip 与列表状态文案共用同一套口径
-const GOODS_CATEGORIES = [4, 5]
-const ORDER_FILTERS = [
-  { label: '全部', match: () => true },
-  { label: '待付款', match: (o) => o.status === '待付款' },
-  { label: '待发货', match: (o) => o.status === '待发货' },
-  { label: '待收货', match: (o) => o.status === '待收货' && GOODS_CATEGORIES.includes(Number(o.category)) },
-  { label: '待出行', match: (o) => o.status === '待收货' && !GOODS_CATEGORIES.includes(Number(o.category)) },
-  { label: '待完成', match: (o) => o.status === '已核销' },
-  { label: '待评价', match: (o) => o.status === '待评价' },
-  { label: '已完成', match: (o) => o.status === '已完成' },
-  { label: '退款/售后', match: (o) => ['退款中', '已退款'].includes(o.status) },
-  { label: '已取消', match: (o) => o.status === '已取消' }
-]
-
-function orderFilterLabels() {
-  return ORDER_FILTERS.map((item) => item.label)
-}
-
-// 个人中心入口（含历史写法）→ 筛选 chip
-function resolveOrderFilter(status) {
-  const map = {
-    待付款: '待付款',
-    待出行: '待出行',
-    待收货: '待收货',
-    待发货: '待发货',
-    待完成: '待完成',
-    待评价: '待评价',
-    已完成: '已完成',
-    已取消: '已取消',
-    退款售后: '退款/售后',
-    '退款/售后': '退款/售后',
-    退款中: '退款/售后',
-    已退款: '退款/售后',
-    已核销: '待完成'
-  }
-  const key = String(status == null ? '' : status).trim()
-  return map[key] || ''
-}
-
-function matchOrderFilter(order, label) {
-  const target = ORDER_FILTERS.find((item) => item.label === label) || ORDER_FILTERS[0]
-  return target.match(order)
+async function purchaseLive(liveId, useBalance = false) {
+  const order = await api.post(`/lives/${liveId}/purchase`, { userId: authUserId(), useBalance })
+  if (!order) return null
+  if (order.status === '待付款') await payOrder(order.id)
+  await refresh()
+  return cache.cards.find((card) => String(card.orderId) === String(order.id)) || order
 }
 
 async function submitManagerApply(form) {
@@ -720,6 +824,10 @@ module.exports = {
   init,
   ready,
   refresh,
+  refreshHome,
+  refreshLives,
+  refreshReviews,
+  refreshOrders,
   refreshUserProfile,
   updateUserName,
   requireLogin: ensureLogin,
@@ -728,10 +836,13 @@ module.exports = {
   getAssistant,
   getFiling,
   getBrand,
+  getCopy,
   getSocialQrs,
   getHomeAssistant,
+  getHomeDisplay,
   assetUrl: apiAssetUrl,
   getActivities,
+  getCatalogItems,
   getRegions,
   refreshRegions,
   refreshConfig,
@@ -778,9 +889,14 @@ module.exports = {
   unbindManager,
   createOrder,
   payOrder,
+  getBalanceTransactions,
+  rechargeBalance,
+  payManagerApplication,
   cancelOrder,
   refundOrder,
   advanceOrder,
+  getOrderLogistics,
+  refreshOrderLogistics,
   submitReview,
   saveParticipant,
   deleteParticipant,
@@ -789,6 +905,7 @@ module.exports = {
   deleteAddress,
   unbindApply,
   purchaseLive,
+  isActivityExpired,
   refundRuleText,
   displayStatus,
   submitManagerApply,

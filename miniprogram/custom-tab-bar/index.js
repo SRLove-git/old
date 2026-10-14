@@ -11,11 +11,19 @@ Component({
   },
   methods: {
     switchTab(e) {
+      if (this.switching) return
       const index = Number(e.currentTarget.dataset.index)
       const item = this.data.list[index]
       if (item) {
+        const pages = getCurrentPages()
+        const currentRoute = pages.length ? `/${pages[pages.length - 1].route}` : ''
+        if (currentRoute === item.pagePath) return
         if (index === 1) wx.setStorageSync('pendingCat', 'all')
-        wx.switchTab({ url: item.pagePath })
+        this.switching = true
+        wx.switchTab({
+          url: item.pagePath,
+          complete: () => { this.switching = false }
+        })
       }
     }
   }

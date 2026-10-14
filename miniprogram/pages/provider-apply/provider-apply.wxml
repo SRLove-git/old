@@ -17,7 +17,7 @@
   <block wx:else>
   <view class="apply-head">
     <view class="head-mark">合作申请</view>
-    <view class="head-title">申请成为岁悦里服务商</view>
+    <view class="head-title">申请成为{{brandName}}服务商</view>
     <view class="head-sub">请填写以下资料，我们会尽快与您联系</view>
   </view>
 

@@ -11,15 +11,16 @@
   </view>
 
   <view wx:if="{{products.length}}" class="product-grid">
-    <view wx:for="{{products}}" wx:key="id" class="product-card">
+    <view wx:for="{{products}}" wx:key="id" class="product-card" data-id="{{item.id}}" bindtap="openDetail">
       <image class="product-cover" src="{{item.coverUrl}}" mode="aspectFill" />
       <view class="product-body">
         <view class="product-title">{{item.title}}</view>
         <view class="product-desc">{{item.description || '会员积分专享好礼'}}</view>
         <view class="product-stock">剩余 {{item.stock}} 件 · 每人限兑 {{item.limitPerUser}} 件</view>
+        <view class="detail-link">查看礼品详情 <text>›</text></view>
         <view class="product-foot">
           <view><text class="cost">{{item.pointsCost}}</text><text class="cost-unit"> 积分</text></view>
-          <button class="redeem-btn" disabled="{{item.stock <= 0 || user.points < item.pointsCost}}" data-id="{{item.id}}" bindtap="openRedeem">{{item.stock <= 0 ? '已兑完' : (user.points < item.pointsCost ? '积分不足' : '立即兑换')}}</button>
+          <button class="redeem-btn" disabled="{{item.stock <= 0 || user.points < item.pointsCost}}" data-id="{{item.id}}" catchtap="openRedeem">{{item.stock <= 0 ? '已兑完' : (user.points < item.pointsCost ? '积分不足' : '立即兑换')}}</button>
         </view>
       </view>
     </view>
@@ -36,6 +37,43 @@
         <view wx:if="{{item.trackingNo}}" class="order-meta">{{item.carrier}} {{item.trackingNo}}</view>
       </view>
       <view class="order-status">{{item.status}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{detailProduct}}" class="mask detail-mask" bindtap="closeDetail">
+    <view class="detail-sheet" catchtap="noop">
+      <view class="sheet-bar"></view>
+      <scroll-view scroll-y class="detail-scroll">
+        <image class="detail-cover" src="{{detailProduct.coverUrl}}" mode="aspectFill" />
+        <view class="detail-title-row">
+          <view class="detail-product-title">{{detailProduct.title}}</view>
+          <view class="detail-cost"><text>{{detailProduct.pointsCost}}</text> 积分</view>
+        </view>
+        <view class="detail-badges"><text>积分专享</text><text>全国配送</text><text>库存 {{detailProduct.stock}}</text></view>
+
+        <view class="detail-section">
+          <view class="detail-section-title">礼品详情</view>
+          <view class="detail-description">{{detailProduct.description || defaultDescription}}</view>
+        </view>
+
+        <view class="detail-info-grid">
+          <view class="detail-info-item"><text>兑换积分</text><view>{{detailProduct.pointsCost}} 积分</view></view>
+          <view class="detail-info-item"><text>剩余库存</text><view>{{detailProduct.stock}} 件</view></view>
+          <view class="detail-info-item"><text>已兑数量</text><view>{{detailProduct.soldCount || 0}} 件</view></view>
+          <view class="detail-info-item"><text>每人限兑</text><view>{{detailProduct.limitPerUser}} 件</view></view>
+        </view>
+
+        <view class="detail-section rules-section">
+          <view class="detail-section-title">兑换须知</view>
+          <view class="rule-line"><text>1</text><view>确认兑换后将立即扣除相应积分。</view></view>
+          <view class="rule-line"><text>2</text><view>积分礼品不支持折现，非质量问题不退换。</view></view>
+          <view class="rule-line"><text>3</text><view>兑换成功后将按填写的收货地址安排配送。</view></view>
+        </view>
+      </scroll-view>
+      <view class="detail-actions">
+        <view class="detail-points"><text>{{user.points || 0}}</text><view>我的积分</view></view>
+        <button class="detail-redeem-btn" disabled="{{detailProduct.stock <= 0 || user.points < detailProduct.pointsCost}}" bindtap="redeemFromDetail">{{detailProduct.stock <= 0 ? '已兑完' : (user.points < detailProduct.pointsCost ? '积分不足' : '立即兑换')}}</button>
+      </view>
     </view>
   </view>
 

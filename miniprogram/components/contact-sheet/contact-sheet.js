@@ -6,7 +6,7 @@ Component({
       type: Boolean,
       value: false,
       observer(value) {
-        if (value) this.setData({ assistant: store.getAssistant() })
+        if (value) this.syncAssistant()
       }
     }
   },
@@ -22,6 +22,16 @@ Component({
   },
 
   methods: {
+    async syncAssistant() {
+      this.setData({ assistant: store.getAssistant() })
+      try {
+        await store.refreshConfig()
+        if (this.data.visible) this.setData({ assistant: store.getAssistant() })
+      } catch (e) {
+        // 网络异常时保留上一次成功同步的客服信息。
+      }
+    },
+
     noop() {},
 
     close() {

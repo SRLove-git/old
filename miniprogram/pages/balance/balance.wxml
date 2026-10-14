@@ -1,13 +1,90 @@
-<view class="page balance-page">
-  <view class="balance-hero card">
-    <view class="balance-label">我的余额（元）</view>
+<view class="balance-page">
+  <view class="balance-hero">
+    <view class="hero-orbit hero-orbit-large"></view>
+    <view class="hero-orbit hero-orbit-small"></view>
+    <view class="hero-head">
+      <view>
+        <view class="balance-label">账户可用余额</view>
+        <view class="balance-caption">消费时可直接抵扣</view>
+      </view>
+      <view class="security-badge"><text class="security-dot"></text>资金安全</view>
+    </view>
     <view class="balance-value"><text class="balance-symbol">¥</text>{{balanceText}}</view>
-    <view class="balance-points">当前积分：{{points}}</view>
+    <view class="hero-meta">
+      <view class="meta-item">
+        <view class="meta-label">当前积分</view>
+        <view class="meta-value">{{points}}</view>
+      </view>
+      <view class="meta-divider"></view>
+      <view class="meta-item">
+        <view class="meta-label">余额用途</view>
+        <view class="meta-value meta-value-small">订单抵扣</view>
+      </view>
+    </view>
   </view>
 
-  <view class="balance-tip card">
-    <view class="tip-text">余额可用于报名活动、购买课程；充值请联系客服</view>
-    <button class="btn btn-primary btn-block" bindtap="showService">联系客服</button>
+  <view class="recharge-card surface-card">
+    <view class="section-head">
+      <view>
+        <view class="section-title">充值余额</view>
+        <view class="section-subtitle">选择充值金额，微信支付后自动到账</view>
+      </view>
+      <view class="section-mark">充</view>
+    </view>
+    <view class="amount-grid">
+      <view wx:for="{{amounts}}" wx:key="*this" class="amount-item {{selectedAmount === item ? 'selected' : ''}}" data-amount="{{item}}" bindtap="selectAmount">
+        <text class="amount-symbol">¥</text><text class="amount-number">{{item}}</text>
+        <text wx:if="{{selectedAmount === item}}" class="amount-check">✓</text>
+      </view>
+    </view>
+    <view class="custom-field {{customAmount ? 'custom-field-active' : ''}}">
+      <text class="custom-currency">¥</text>
+      <input class="custom-amount" type="digit" value="{{customAmount}}" bindinput="inputAmount" placeholder="输入其他金额" placeholder-class="custom-placeholder" />
+      <text class="custom-hint">1–50000 元</text>
+    </view>
+    <button class="recharge-button" loading="{{charging}}" disabled="{{charging}}" bindtap="recharge">
+      {{charging ? '正在唤起支付…' : '微信充值 ¥' + rechargeAmountText}}
+    </button>
+    <view class="trust-list">
+      <view class="trust-item"><text class="trust-icon">✓</text>微信安全支付</view>
+      <view class="trust-item"><text class="trust-icon">✓</text>支付后自动到账</view>
+      <view class="trust-item"><text class="trust-icon">✓</text>退款按原来源退回</view>
+    </view>
+  </view>
+
+  <view class="transactions surface-card">
+    <view class="section-head transaction-head">
+      <view>
+        <view class="section-title">余额明细</view>
+        <view class="section-subtitle">每笔资金变动都有记录</view>
+      </view>
+      <view class="record-count">{{transactions.length}} 笔</view>
+    </view>
+    <view wx:if="{{transactions.length === 0}}" class="empty-state">
+      <view class="empty-icon">账</view>
+      <view class="empty-title">暂无余额变动</view>
+      <view class="empty-subtitle">充值或使用余额后，记录会显示在这里</view>
+    </view>
+    <view wx:for="{{transactions}}" wx:key="id" class="transaction-row">
+      <view class="transaction-icon transaction-icon-{{item.tone}}">{{item.icon}}</view>
+      <view class="transaction-main">
+        <view class="transaction-title">{{item.displayTitle}}</view>
+        <view class="transaction-meta">{{item.displayType}} · {{item.createdAt}}</view>
+      </view>
+      <view class="transaction-side">
+        <view class="transaction-amount {{item.amount > 0 ? 'income' : 'expense'}}">{{item.amountText}}</view>
+        <view class="transaction-balance">余额 ¥{{item.balanceAfterText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="support-card">
+    <view class="support-icon">?</view>
+    <view class="support-copy">
+      <view class="support-title">充值未到账？</view>
+      <view class="support-text">请保留微信支付单号，我们会协助核查</view>
+    </view>
+    <button class="support-button" bindtap="showService">联系客服</button>
   </view>
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

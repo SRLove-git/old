@@ -1,52 +1,79 @@
 <view class="attendance-page">
-  <view class="page-intro">
-    <view class="eyebrow">COURSE CHECK-IN</view>
-    <view class="page-title">课程签到</view>
-    <view class="page-subtitle">确认信息与到场位置后，一键完成本次签到</view>
+  <view class="page-hero">
+    <view>
+      <view class="eyebrow">COURSE CHECK-IN</view>
+      <view class="page-title">课程签到</view>
+      <view class="page-subtitle">确认信息和到场位置，即可完成签到</view>
+    </view>
+    <view class="hero-clock"><view class="hero-time">{{clock}}</view><view class="hero-date">{{today}}</view></view>
   </view>
 
   <scroll-view wx:if="{{cards.length > 1}}" scroll-x class="card-tabs" enhanced show-scrollbar="{{false}}">
     <view class="card-tab-row"><view wx:for="{{cards}}" wx:key="id" class="card-tab {{activeCardId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectCard">{{item.courseName || item.title}}</view></view>
   </scroll-view>
 
-  <view wx:if="{{currentCard}}" class="checkin-card">
-    <view class="course-strip">
-      <view class="course-copy"><view class="course-label">本次签到课程</view><view class="course-title">{{currentCard.courseName || currentCard.title}}</view></view>
-      <view class="remain-pill">剩余 {{currentCard.remainText}}</view>
+  <block wx:if="{{currentCard}}">
+    <view class="course-card">
+      <view class="course-badge">本次签到</view>
+      <view class="course-row">
+        <view class="course-copy">
+          <view class="course-title">{{currentCard.courseName || currentCard.title}}</view>
+          <view wx:if="{{currentCard.teacher}}" class="course-teacher">授课老师 · {{currentCard.teacher}}</view>
+          <view wx:if="{{currentCard.validUntil}}" class="course-valid">有效期至 {{currentCard.validUntil}}</view>
+        </view>
+        <view class="remain-box"><text class="remain-number">{{currentCard.remain}}</text><text class="remain-unit">/{{currentCard.total}}次</text><view class="remain-label">剩余次数</view></view>
+      </view>
     </view>
 
-    <view class="info-section">
-      <view class="section-title"><text class="required">*</text>签到人信息</view>
-      <view class="info-row">
-        <view class="line-icon person-icon"><view class="person-head"></view><view class="person-body"></view></view>
-        <view class="info-content"><view class="info-label">姓名</view><input wx:if="{{needsName}}" class="info-input" value="{{memberName}}" placeholder="请输入姓名" maxlength="20" bindinput="onNameInput" /><view wx:else class="info-value">{{memberName}}</view></view>
-        <view wx:if="{{!needsName}}" class="auto-tag">自动读取</view>
+    <view class="steps-card">
+      <view class="step-heading">
+        <view><view class="section-kicker">CHECK-IN STEPS</view><view class="section-title">完成签到</view></view>
+        <view class="step-progress">{{location && infoReady ? '2' : (infoReady ? '1' : '0')}} / 2 已完成</view>
       </view>
-      <view class="info-row">
-        <view class="line-icon phone-icon"><view class="phone-speaker"></view><view class="phone-home"></view></view>
-        <view class="info-content"><view class="info-label">手机号</view><input wx:if="{{needsPhone}}" class="info-input" type="number" value="{{memberPhone}}" placeholder="请输入手机号" maxlength="11" bindinput="onPhoneInput" /><view wx:else class="info-value">{{phoneDisplay}}</view></view>
-        <view wx:if="{{!needsPhone}}" class="auto-tag">自动读取</view>
+
+      <view class="step-block">
+        <view class="step-index {{infoReady ? 'done' : ''}}">{{infoReady ? '✓' : '1'}}</view>
+        <view class="step-main">
+          <view class="step-title-row"><text class="step-title">确认签到人</text><text class="step-state {{infoReady ? 'complete' : ''}}">{{infoReady ? '已完成' : '待完善'}}</text></view>
+          <view class="identity-grid">
+            <view class="identity-item"><view class="identity-label">姓名</view><input wx:if="{{needsName}}" class="identity-input" value="{{memberName}}" placeholder="请输入姓名" maxlength="20" bindinput="onNameInput" /><view wx:else class="identity-value">{{memberName}}</view></view>
+            <view class="identity-item"><view class="identity-label">手机号</view><input wx:if="{{needsPhone}}" class="identity-input" type="number" value="{{memberPhone}}" placeholder="请输入手机号" maxlength="11" bindinput="onPhoneInput" /><view wx:else class="identity-value">{{phoneDisplay}}</view></view>
+          </view>
+        </view>
       </view>
-      <view class="info-row location-row" bindtap="requestLocation">
-        <view class="line-icon pin-icon"><view class="pin-dot"></view></view>
-        <view class="info-content"><view class="info-label">打卡位置</view><view class="info-value {{location ? 'located' : 'muted'}}">{{locationText}}</view></view>
-        <view class="refresh-location">{{locating ? '定位中' : '重定位'}}</view>
+
+      <view class="step-divider"></view>
+
+      <view class="step-block">
+        <view class="step-index {{location ? 'done' : ''}}">{{location ? '✓' : '2'}}</view>
+        <view class="step-main">
+          <view class="step-title-row"><text class="step-title">选择到场位置</text><text class="step-state {{location ? 'complete' : ''}}">{{location ? '已定位' : '待定位'}}</text></view>
+          <view class="location-picker {{location ? 'selected' : ''}}" bindtap="requestLocation">
+            <view class="location-icon"><view class="location-dot"></view></view>
+            <view class="location-copy"><view class="location-label">{{location ? '当前签到地址' : '使用微信地图选择位置'}}</view><view class="location-value">{{locationText}}</view></view>
+            <view class="location-action">{{locating ? '打开中' : (location ? '更换' : '去选择')}}<text wx:if="{{!locating}}">›</text></view>
+          </view>
+          <view class="privacy-note"><text class="shield-icon">✓</text> 位置仅用于本次课程签到核验</view>
+        </view>
       </view>
-      <view class="privacy-note">位置信息仅用于本次课程签到核验</view>
+
+      <view wx:if="{{successMessage}}" class="success-banner"><text class="success-mark">✓</text><view><view class="success-title">{{successMessage}}</view><view class="success-sub">本次课程已核销 1 次</view></view></view>
+
+      <view class="action-area">
+        <button class="checkin-button {{canCheckIn ? '' : 'disabled'}}" disabled="{{!canCheckIn}}" loading="{{submitting}}" bindtap="submitCheckIn">{{submitting ? '正在签到…' : '确认签到'}}</button>
+        <view class="button-hint {{canCheckIn ? 'ready' : ''}}"><text class="hint-dot"></text>{{actionHint}}</view>
+      </view>
     </view>
 
-    <button class="checkin-button {{canCheckIn ? '' : 'disabled'}}" disabled="{{!canCheckIn}}" loading="{{submitting}}" bindtap="submitCheckIn">
-      <text class="button-title">{{submitting ? '签到中' : '一键签到'}}</text><text class="button-time">{{clock}}</text>
-    </button>
-    <view class="button-hint">签到成功后将自动核销 1 次课程</view>
-  </view>
-
-  <view wx:if="{{currentCard && records.length}}" class="records-card">
-    <view class="records-title">最近签到</view>
-    <view wx:for="{{records}}" wx:key="id" class="record-item">
-      <view class="record-date">{{item.displayDate}}</view><view class="record-copy"><view class="record-name">{{item.lesson}}</view><view class="record-meta">{{item.checkedAt || item.time}} · {{item.typeLabel}}</view></view><view class="record-status {{item.statusCls}}">{{item.statusLabel}}</view>
+    <view wx:if="{{records.length}}" class="records-card">
+      <view class="records-head"><view><view class="section-kicker">RECENT RECORDS</view><view class="records-title">最近签到</view></view><view class="records-count">{{records.length}} 条</view></view>
+      <view wx:for="{{records}}" wx:key="id" class="record-item">
+        <view class="record-date">{{item.displayDate}}</view><view class="record-line"><view class="record-dot {{item.statusCls}}"></view><view class="record-tail"></view></view>
+        <view class="record-copy"><view class="record-name">{{item.lesson}}</view><view class="record-meta">{{item.checkedAt || item.time}} · {{item.typeLabel}}</view><view wx:if="{{item.location}}" class="record-location">📍 {{item.location}}</view></view>
+        <view class="record-status {{item.statusCls}}">{{item.statusLabel}}</view>
+      </view>
     </view>
-  </view>
+  </block>
 
-  <view wx:if="{{!currentCard}}" class="empty-card"><view class="empty-mark">课</view><view class="empty-title">暂无可签到课程</view><view class="empty-sub">购买培训课程后，可在这里一键签到</view></view>
+  <view wx:else class="empty-card"><view class="empty-mark">课</view><view class="empty-title">暂无可签到课程</view><view class="empty-sub">购买培训课程后，可在这里一键签到</view></view>
 </view>

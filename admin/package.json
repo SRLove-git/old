@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write src/views src/utils/presentation.js src/api.js vite.config.js",
+    "format:check": "prettier --check src/views src/utils/presentation.js src/api.js vite.config.js"
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.58.0",
@@ -15,6 +17,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.2",
+    "prettier": "^3.9.10",
+    "unplugin-vue-components": "^32.1.0",
     "vite": "^6.0.7"
   }
 }

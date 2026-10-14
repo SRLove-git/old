@@ -16,13 +16,16 @@ Page({
     },
     errors: {},
     submitting: false,
-    application: null
+    application: null,
+    brandName: ''
   },
 
   async onShow() {
     this.pageVisible = true
     try {
       await store.ready()
+      await store.refreshConfig().catch(() => {})
+      this.setData({ brandName: store.getBrand().chineseName })
       await this.refreshApplication()
       if (this.pageVisible) this.startStatusPolling()
     } catch (e) {
@@ -96,7 +99,7 @@ Page({
     try {
       const form = this.data.form
       const record = await api.post('/provider-applications', {
-        userId: 'u1',
+        userId: store.getCurrentUserId(),
         name: form.name.trim(),
         phone: form.phone,
         type: form.type,

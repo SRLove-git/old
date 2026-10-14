@@ -21,7 +21,8 @@ function decorate(item) {
 Page({
   data: {
     list: [],
-    loading: true
+    loading: true,
+    copy: {}
   },
 
   async onShow() {
@@ -35,7 +36,7 @@ Page({
     const list = store.getActivities()
       .filter((item) => String(item.category) === '4' && item.status !== 0)
       .map(decorate)
-    this.setData({ list, loading: false })
+    this.setData({ list, loading: false, copy: store.getCopy() })
   },
 
   goDetail(e) {

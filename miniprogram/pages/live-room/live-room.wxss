@@ -23,9 +23,12 @@
 .summary-stats text { padding-right: 15rpx; border-right: 1rpx solid #ddd; } .summary-stats text:last-child { border-right: 0; }
 .section-card { margin-top: 20rpx; padding: 28rpx; border-radius: 24rpx; background: #fff; box-shadow: 0 8rpx 25rpx rgba(51,43,33,.08); }
 .lesson-row { display: flex; align-items: center; min-height: 94rpx; border-bottom: 1rpx solid #eeebe6; }
+.lesson-row.active { margin: 0 -12rpx; padding: 0 12rpx; border-radius: 12rpx; background: #f8f2ea; }
 .lesson-row:last-child { border-bottom: 0; } .lesson-number { width: 58rpx; color: var(--color-primary-text); font-size: 24rpx; font-weight: 700; }
 .lesson-info { flex: 1; } .lesson-title { color: #353b39; font-size: 26rpx; } .lesson-duration { margin-top: 4rpx; color: #a0a4a2; font-size: 20rpx; }
-.lesson-state { width: 44rpx; color: var(--color-primary); text-align: center; font-size: 22rpx; }
+.lesson-state { min-width: 70rpx; color: var(--color-primary); text-align: right; font-size: 20rpx; }
+.preview-badge { margin-left: 10rpx; padding: 2rpx 8rpx; border-radius: 999rpx; background: #f5e8d8; color: #a46c31; font-size: 18rpx; }
+.lesson-empty { padding: 30rpx 0 12rpx; color: #9da19f; text-align: center; font-size: 23rpx; }
 .info-desc { color: #5d6562; font-size: 26rpx; line-height: 1.8; }
 .teacher-row { display: flex; align-items: center; margin-top: 24rpx; padding-top: 22rpx; border-top: 1rpx solid #eeebe6; }
 .teacher-avatar { width: 72rpx; height: 72rpx; margin-right: 15rpx; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary-text); text-align: center; line-height: 72rpx; font-weight: 700; }

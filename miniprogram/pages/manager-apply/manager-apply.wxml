@@ -85,7 +85,7 @@
       <view class="pay-title">支付主理人申请费用</view>
       <view class="pay-amount">¥{{fee}}</view>
       <view class="pay-tip">支付后提交申请，审核通过即成为主理人</view>
-      <button class="btn btn-wechat btn-block" bindtap="confirmPay">微信支付</button>
+      <button class="btn btn-wechat btn-block" loading="{{submittingPayment}}" disabled="{{submittingPayment}}" bindtap="confirmPay">微信支付</button>
     </view>
   </view>
   </block>

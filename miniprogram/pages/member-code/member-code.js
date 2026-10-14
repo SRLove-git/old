@@ -1,36 +1,45 @@
 const store = require('../../utils/store.js')
 const qrcode = require('../../utils/qrcode.js')
 
-const LEVEL_NAMES = {
-  1: '普通会员',
-  2: '银卡会员',
-  3: '金卡会员',
-  4: '铂金会员',
-  5: '钻石会员'
-}
-
 Page({
   data: {
     user: {},
     memberId: '',
     memberIdDisplay: '',
     memberLevel: 2,
-    memberLevelName: '银卡会员',
+    memberLevelName: '',
     levelClass: 'level-2',
     memberSince: '',
     memberExpireAt: '',
-    benefits: [
-      { emoji: '💰', text: '会员价：活动更便宜，长期更省钱' },
-      { emoji: '🎟️', text: '入会即送优惠券，下单可抵扣' },
-      { emoji: '👩‍💼', text: '专属主理人一对一贴心服务' },
-      { emoji: '⭐', text: '热门活动优先报名名额' },
-      { emoji: '🎁', text: '积分可兑换好礼' }
-    ]
+    brandName: '',
+    copy: {},
+    benefits: [],
+    joinText: ''
   },
 
   async onLoad() {
     await store.ready()
-    this.setData(this.buildCard(store.get().user))
+    await store.refreshConfig().catch(() => {})
+    this.pageLoaded = true
+    this.applyBranding()
+  },
+
+  async onShow() {
+    if (!this.pageLoaded) return
+    try {
+      await store.refreshConfig()
+      this.applyBranding()
+    } catch (e) {}
+  },
+
+  applyBranding() {
+    const brand = store.getBrand()
+    const copy = store.getCopy()
+    const benefits = String(copy.memberBenefitLines || '').split('\n').map((line) => {
+      const separator = line.indexOf('|')
+      return separator >= 0 ? { emoji: line.slice(0, separator).trim(), text: line.slice(separator + 1).trim() } : { emoji: '', text: line.trim() }
+    }).filter((item) => item.text)
+    this.setData({ ...this.buildCard(store.get().user), brandName: brand.chineseName, copy, benefits, joinText: this.formatCount(copy.memberJoinText, 2) })
   },
 
   onReady() {
@@ -41,7 +50,7 @@ Page({
     const seq = String(user.id || '').replace(/\D/g, '') || '1'
     const memberId = user.memberId || `8808${new Date().getFullYear()}${seq.padStart(4, '0')}`
     const level = Number(user.memberLevel || 2)
-    const memberLevelName = user.memberLevelName || LEVEL_NAMES[level] || '会员'
+    const memberLevelName = user.memberLevelName || user.memberType || '会员'
     const memberIdDisplay = memberId.replace(/(.{4})/g, '$1 ').trim()
     return {
       user,
@@ -51,9 +60,13 @@ Page({
       memberLevel: level,
       memberLevelName,
       levelClass: `level-${level}`,
-      memberSince: user.memberSince || '2026年9月',
+      memberSince: user.memberSince || `${new Date().getFullYear()}年${new Date().getMonth() + 1}月`,
       memberExpireAt: user.memberExpireAt || '长期有效'
     }
+  },
+
+  formatCount(text, count) {
+    return String(text || '').replace(/\{count\}/g, String(count))
   },
 
   drawQr() {
@@ -74,7 +87,7 @@ Page({
       const result = await store.joinMember()
       this.setData(this.buildCard(result.user))
       wx.showToast({
-        title: result.alreadyMember ? '您已是会员' : '入会成功，已发放2张券',
+        title: result.alreadyMember ? '您已是会员' : this.formatCount(this.data.copy.memberJoinSuccessText, result.issuedCount || 0),
         icon: 'none'
       })
     } catch (e) {

@@ -1,0 +1,60 @@
+<view class="logistics-page">
+  <view class="query-hero">
+    <image class="station-image" src="/assets/profile-icons/station.png" mode="aspectFit" />
+    <view class="hero-copy">
+      <view class="hero-kicker">PACKAGE TRACKING</view>
+      <view class="hero-title">包裹到哪了？</view>
+      <view class="hero-sub">输入订单号，快速查看最新物流动态</view>
+    </view>
+  </view>
+
+  <view class="query-card">
+    <view class="field-label">订单号或快递单号</view>
+    <view class="query-field">
+      <input class="query-input" value="{{query}}" bindinput="onInput" bindconfirm="queryLogistics" confirm-type="search" maxlength="40" placeholder="请输入或粘贴号码" placeholder-class="query-placeholder" />
+      <view wx:if="{{query}}" class="clear-button" bindtap="clearQuery">×</view>
+      <view class="paste-button" bindtap="pasteQuery">粘贴</view>
+    </view>
+    <button class="query-button" loading="{{loading}}" disabled="{{loading}}" bindtap="queryLogistics">{{loading ? '正在查询' : '查询物流'}}</button>
+    <view class="privacy-tip"><view class="shield-mark">✓</view><text>仅查询当前账号下的订单，物流信息更安全</text></view>
+  </view>
+
+  <view wx:if="{{searched && order}}" class="result-card">
+    <view class="result-head">
+      <view>
+        <view class="result-label">查询结果</view>
+        <view class="result-title">{{order.title || '订单物流'}}</view>
+      </view>
+      <view class="status-pill">{{logistics.status || order.logisticsStatus || order.status}}</view>
+    </view>
+    <view class="result-row"><text>订单号</text><text class="result-value">{{order.id}}</text></view>
+    <view wx:if="{{order.trackingNo}}" class="result-row"><text>快递信息</text><text class="result-value">{{order.carrier || '自动识别中'}} · {{order.trackingNo}}</text></view>
+    <view wx:if="{{logistics && logistics.latestDescription}}" class="latest-box">
+      <view class="latest-dot"></view>
+      <view class="latest-copy"><view class="latest-label">最新动态</view><view class="latest-text">{{logistics.latestDescription}}</view><view wx:if="{{logistics.lastSyncedAt}}" class="latest-time">更新于 {{logistics.lastSyncedAt}}</view></view>
+    </view>
+
+    <view wx:if="{{events.length}}" class="timeline">
+      <view wx:for="{{events}}" wx:key="id" class="timeline-item {{index === 0 ? 'timeline-latest' : ''}}">
+        <view class="timeline-axis"><view class="timeline-dot"></view><view wx:if="{{index < events.length - 1}}" class="timeline-line"></view></view>
+        <view class="timeline-copy"><view class="timeline-desc">{{item.description}}</view><view class="timeline-time">{{item.time}}{{item.location ? ' · ' + item.location : ''}}</view></view>
+      </view>
+    </view>
+
+    <view wx:if="{{errorText}}" class="inline-tip">{{errorText}}</view>
+    <button class="detail-button" bindtap="goOrderDetail">查看订单详情 <text>›</text></button>
+  </view>
+
+  <view wx:elif="{{searched && errorText}}" class="empty-card">
+    <view class="empty-icon">?</view>
+    <view class="empty-title">暂未查到物流</view>
+    <view class="empty-sub">{{errorText}}</view>
+  </view>
+
+  <view class="help-card">
+    <view class="help-title">查询提示</view>
+    <view class="help-item"><text class="help-index">1</text><text>可输入{{brandName}}订单号，例如 SYL 开头的号码</text></view>
+    <view class="help-item"><text class="help-index">2</text><text>也可以直接粘贴商家提供的快递单号</text></view>
+    <view class="help-item"><text class="help-index">3</text><text>订单发货后，物流轨迹可能需要几分钟同步</text></view>
+  </view>
+</view>

@@ -1,57 +1,67 @@
-.coupon-card {
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  margin-bottom: 22rpx;
-}
+.coupon-page { min-height: 100vh; padding: 24rpx 24rpx 150rpx; background: #f8f7f3; }
+.coupon-hero { position: relative; overflow: hidden; min-height: 236rpx; padding: 34rpx 38rpx; border-radius: 30rpx; background: linear-gradient(135deg, #c29366 0%, #a87448 100%); box-shadow: 0 14rpx 34rpx rgba(121,80,47,.18); color: #fff; }
+.hero-watermark { position: absolute; right: -20rpx; bottom: -76rpx; color: rgba(255,255,255,.09); font-family: serif; font-size: 250rpx; line-height: 1; transform: rotate(-8deg); }
+.hero-kicker { position: relative; font-size: 20rpx; letter-spacing: 5rpx; opacity: .72; }
+.hero-main { position: relative; display: flex; align-items: baseline; margin-top: 10rpx; }
+.hero-count { font-size: 76rpx; font-weight: 700; line-height: 1.15; }
+.hero-unit { margin-left: 12rpx; font-size: 28rpx; font-weight: 600; }
+.hero-copy { position: relative; margin-top: 8rpx; font-size: 24rpx; opacity: .82; }
 
-.coupon-card.used {
-  opacity: 0.55;
-}
+.coupon-tabs { position: sticky; top: 0; z-index: 10; display: flex; margin: 24rpx 0 28rpx; padding: 8rpx; border: 1rpx solid #ece6dd; border-radius: 22rpx; background: rgba(255,255,255,.96); box-shadow: 0 6rpx 20rpx rgba(51,43,33,.04); }
+.coupon-tab { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; height: 74rpx; border-radius: 17rpx; color: #7b7f7d; font-size: 26rpx; }
+.coupon-tab.active { background: #f5eadf; color: #835b37; font-weight: 700; }
+.tab-count { min-width: 32rpx; height: 32rpx; margin-left: 8rpx; padding: 0 8rpx; border-radius: 999rpx; background: #f1efeb; color: #8a8e8c; font-size: 20rpx; line-height: 32rpx; text-align: center; }
+.coupon-tab.active .tab-count { background: #b98555; color: #fff; }
 
-.coupon-left {
-  width: 170rpx;
-  min-height: 160rpx;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: 46rpx;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.coupon-list { display: flex; flex-direction: column; gap: 22rpx; }
+.ticket { position: relative; display: flex; min-height: 236rpx; overflow: hidden; border: 1rpx solid #ebe4db; border-radius: 26rpx; background: #fff; box-shadow: 0 10rpx 28rpx rgba(57,47,36,.055); }
+.ticket-value { flex-shrink: 0; width: 206rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24rpx 14rpx; background: linear-gradient(150deg,#fbefe2,#f5dfc8); color: #a56834; }
+.amount-line { display: flex; align-items: baseline; justify-content: center; }
+.currency { margin-right: 2rpx; font-size: 26rpx; font-weight: 700; }
+.amount { max-width: 145rpx; overflow: hidden; font-size: 58rpx; font-weight: 750; line-height: 1.1; text-overflow: ellipsis; }
+.threshold { margin-top: 12rpx; font-size: 22rpx; text-align: center; }
+.ticket-cut { position: relative; flex-shrink: 0; width: 2rpx; }
+.cut-line { position: absolute; top: 24rpx; bottom: 24rpx; border-left: 2rpx dashed #ded5ca; }
+.ticket-cut::before, .ticket-cut::after { content: ''; position: absolute; z-index: 2; left: -13rpx; width: 26rpx; height: 26rpx; border: 1rpx solid #ebe4db; border-radius: 50%; background: #f8f7f3; }
+.ticket-cut::before { top: -14rpx; }
+.ticket-cut::after { bottom: -14rpx; }
+.ticket-content { flex: 1; min-width: 0; padding: 24rpx 24rpx 22rpx; }
+.ticket-head { display: flex; align-items: flex-start; }
+.ticket-title { flex: 1; min-width: 0; color: #303735; font-size: 30rpx; font-weight: 700; line-height: 1.35; }
+.status-pill { flex-shrink: 0; margin-left: 10rpx; padding: 5rpx 12rpx; border-radius: 999rpx; background: #f7eadc; color: #9b6538; font-size: 20rpx; }
+.ticket-desc { display: block; margin-top: 8rpx; overflow: hidden; color: #858a87; font-size: 22rpx; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.coupon-meta { display: flex; align-items: center; margin-top: 10rpx; color: #6f7672; font-size: 22rpx; }
+.scope-dot { width: 8rpx; height: 8rpx; margin-right: 12rpx; border-radius: 50%; background: #91a794; }
+.clock-ring { position: relative; width: 15rpx; height: 15rpx; margin-right: 10rpx; border: 2rpx solid #a6aaa8; border-radius: 50%; }
+.clock-ring::before { content: ''; position: absolute; left: 5rpx; top: 2rpx; width: 2rpx; height: 5rpx; background: #a6aaa8; transform: rotate(-25deg); transform-origin: bottom; }
+.ticket-foot { display: flex; align-items: center; justify-content: space-between; min-height: 48rpx; margin-top: 14rpx; padding-top: 13rpx; border-top: 1rpx solid #f0ede8; }
+.claim-date, .record-date { color: #a0a4a2; font-size: 20rpx; }
+.use-button { min-width: 104rpx; padding: 9rpx 20rpx; border-radius: 999rpx; background: #b98555; color: #fff; font-size: 22rpx; font-weight: 700; }
+.use-button-hover { background: #94683f; }
 
-.coupon-mid {
-  flex: 1;
-  padding: 24rpx;
-}
+.ticket.is-locked, .ticket.is-used, .ticket.is-invalid { box-shadow: none; }
+.ticket.is-locked .ticket-value { background: #fff3e8; color: #b56a22; }
+.ticket.is-locked .status-pill { background: #fff3e8; color: #b56a22; }
+.ticket.is-used, .ticket.is-invalid { opacity: .76; }
+.ticket.is-used .ticket-value, .ticket.is-invalid .ticket-value { background: #efefec; color: #858a87; }
+.ticket.is-used .status-pill, .ticket.is-invalid .status-pill { background: #f1f1ee; color: #858a87; }
 
-.coupon-title {
-  font-size: 34rpx;
-  font-weight: 700;
-}
+.loading-wrap { display: flex; flex-direction: column; gap: 22rpx; }
+.loading-card { height: 236rpx; border-radius: 26rpx; background: linear-gradient(90deg,#efede9 25%,#f8f7f4 37%,#efede9 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
-.coupon-desc {
-  color: var(--color-text-3);
-  font-size: 26rpx;
-  margin-top: 8rpx;
-}
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 76rpx 34rpx 68rpx; text-align: center; }
+.empty-ticket { position: relative; width: 148rpx; height: 92rpx; border: 3rpx solid #d4cec5; border-radius: 15rpx; transform: rotate(-5deg); }
+.empty-ticket::before, .empty-ticket::after { content: ''; position: absolute; top: 33rpx; width: 23rpx; height: 23rpx; border-radius: 50%; background: #f8f7f3; }
+.empty-ticket::before { left: -14rpx; border-right: 3rpx solid #d4cec5; }
+.empty-ticket::after { right: -14rpx; border-left: 3rpx solid #d4cec5; }
+.empty-dash { position: absolute; left: 52rpx; top: 12rpx; bottom: 12rpx; border-left: 3rpx dashed #d4cec5; }
+.empty-title { margin-top: 34rpx; color: #4d5552; font-size: 30rpx; font-weight: 700; }
+.empty-copy { max-width: 520rpx; margin-top: 12rpx; color: #929795; font-size: 24rpx; line-height: 1.65; }
+.empty-action { margin-top: 28rpx; padding: 15rpx 34rpx; border: 2rpx solid #b98555; border-radius: 999rpx; color: #9b683c; font-size: 25rpx; font-weight: 700; }
 
-.use {
-  margin-right: 20rpx;
-  background: var(--color-primary);
-  color: #ffffff;
-  border-radius: 999rpx;
-  padding: 16rpx 22rpx;
-  font-weight: 700;
-  font-size: 26rpx;
-}
-
-.coupon-note {
-  margin-bottom: 22rpx;
-  padding: 18rpx 24rpx;
-  border-radius: 16rpx;
-  background: var(--color-primary-light);
-  color: var(--color-primary-text);
-  font-size: 24rpx;
-}
+.rules-card { margin-top: 34rpx; padding: 26rpx 28rpx; border: 1rpx solid #ebe6de; border-radius: 24rpx; background: #fff; }
+.rules-title { display: flex; align-items: center; margin-bottom: 15rpx; color: #4d5552; font-size: 26rpx; font-weight: 700; }
+.rules-icon { width: 30rpx; height: 30rpx; margin-right: 10rpx; border: 2rpx solid #9a8068; border-radius: 50%; color: #9a8068; font-family: serif; font-size: 21rpx; font-weight: 700; line-height: 27rpx; text-align: center; }
+.rule-item { position: relative; margin-top: 10rpx; padding-left: 21rpx; color: #858a87; font-size: 22rpx; line-height: 1.55; }
+.rule-item::before { content: ''; position: absolute; left: 2rpx; top: 14rpx; width: 6rpx; height: 6rpx; border-radius: 50%; background: #c3aa91; }

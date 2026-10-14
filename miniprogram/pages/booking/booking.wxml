@@ -1,15 +1,19 @@
 <view class="booking-page">
   <view class="steps">
-    <view class="step {{step >= 1 ? 'active' : ''}}">1 {{isSkuOnly ? '选规格' : '选时间'}}</view>
-    <view class="step {{step >= 2 ? 'active' : ''}}">2 填信息</view>
-    <view class="step {{step >= 3 ? 'active' : ''}}">3 确认支付</view>
+    <view class="step {{step >= 1 ? 'active' : ''}} {{step > 1 ? 'done' : ''}}"><view class="step-dot">{{step > 1 ? '✓' : '1'}}</view><text>{{isSkuOnly ? '选择规格' : '选择场次'}}</text></view>
+    <view class="step-line {{step >= 2 ? 'active' : ''}}"></view>
+    <view class="step {{step >= 2 ? 'active' : ''}} {{step > 2 ? 'done' : ''}}"><view class="step-dot">{{step > 2 ? '✓' : '2'}}</view><text>填写信息</text></view>
+    <view class="step-line {{step >= 3 ? 'active' : ''}}"></view>
+    <view class="step {{step >= 3 ? 'active' : ''}}"><view class="step-dot">3</view><text>确认支付</text></view>
   </view>
 
   <view class="booking-summary">
-    <view class="booking-cover" style="background: {{activity.coverTone}}">{{activity.cover}}</view>
-    <view>
-      <view class="booking-title">{{activity.title}}</view>
-      <view wx:if="{{skuName}}" class="booking-sku">已选：{{skuName}} · 会员价¥{{memberPrice}}</view>
+    <image class="booking-cover" src="{{coverImageUrl}}" mode="aspectFill" />
+    <view class="booking-summary-body">
+      <view class="booking-eyebrow">{{categoryName}}<text wx:if="{{isGoods}}"> · 支持配送</text></view>
+      <view class="booking-title">{{bookingTitle}}</view>
+      <view class="booking-meta"><text class="booking-price">¥{{memberPrice}}</text><text class="booking-price-note">会员价</text><text wx:if="{{!isGoods && skuAddress}}" class="booking-address">{{skuAddress}}</text></view>
+      <view wx:if="{{skuName}}" class="booking-sku">已选 {{skuName}}</view>
     </view>
   </view>
 
@@ -37,7 +41,7 @@
     </block>
 
     <block wx:if="{{!isSkuOnly}}">
-      <view class="panel-title">请选择报名时间</view>
+      <view class="section-head"><view><view class="panel-title">请选择报名时间</view><view class="panel-subtitle">选择适合您的场次，余量实时更新</view></view><view class="section-count">{{visibleSchedules.length}} 个场次</view></view>
       <view
         wx:for="{{visibleSchedules}}"
         wx:key="id"
@@ -46,7 +50,7 @@
         bindtap="selectSchedule"
       >
         <view>
-          <view class="schedule-date">{{item.date}} {{item.weekday}}</view>
+          <view class="schedule-date">{{item.date}} <text class="schedule-weekday">{{item.weekday}}</text></view>
           <view class="schedule-time">{{item.time}}</view>
           <view class="schedule-avatars">
             <text wx:for="{{item.avatars}}" wx:for-item="avatar" wx:key="*this" class="schedule-avatar">{{avatar}}</text>
@@ -128,13 +132,13 @@
 
   <view wx:if="{{step === 3}}" class="panel page-pad">
     <view class="panel-title">确认订单</view>
-    <view wx:if="{{skuName}}" class="confirm-row"><text>{{activity.skuLabel || '规格'}}</text><text>{{skuName}}</text></view>
-    <view wx:if="{{!isSkuOnly}}" class="confirm-row"><text>活动时间</text><text>{{activity.schedules[0].date}} {{activity.schedules[0].weekday}} {{activity.schedules[0].time}}</text></view>
-    <view wx:if="{{skuAddress}}" class="confirm-row"><text>活动地址</text><text class="venue-strong">{{skuAddress}}</text></view>
-    <view class="confirm-row"><text>{{isGoods ? '购买数量' : '报名人数'}}</text><text>{{count}}{{isGoods ? '件' : '人'}}</text></view>
-    <view class="confirm-row"><text>{{isGoods ? '收货人' : '报名人'}}</text><text>{{isGoods ? address.name : info.name}}</text></view>
-    <view wx:if="{{isGoods}}" class="confirm-row"><text>收货地址</text><text>{{address.district}} {{address.detail}}</text></view>
-    <view class="confirm-row"><text>会员价</text><text>¥{{memberPrice}} × {{count}}</text></view>
+    <view wx:if="{{skuName}}" class="confirm-row"><text>{{activity.skuLabel || '规格'}}</text><text class="confirm-value">{{skuName}}</text></view>
+    <view wx:if="{{!isSkuOnly && selectedSchedule}}" class="confirm-row"><text>活动时间</text><text class="confirm-value">{{selectedSchedule.date}} {{selectedSchedule.weekday}} {{selectedSchedule.time}}</text></view>
+    <view wx:if="{{skuAddress}}" class="confirm-row"><text>活动地址</text><text class="confirm-value venue-strong">{{skuAddress}}</text></view>
+    <view class="confirm-row"><text>{{isGoods ? '购买数量' : '报名人数'}}</text><text class="confirm-value">{{count}}{{isGoods ? '件' : '人'}}</text></view>
+    <view class="confirm-row"><text>{{isGoods ? '收货人' : '报名人'}}</text><text class="confirm-value">{{isGoods ? address.name : info.name}}</text></view>
+    <view wx:if="{{isGoods}}" class="confirm-row"><text>收货地址</text><text class="confirm-value">{{address.district}} {{address.detail}}</text></view>
+    <view class="confirm-row"><text>会员价</text><text class="confirm-value">¥{{memberPrice}} × {{count}}</text></view>
     <view class="panel-title">优惠券</view>
     <view wx:for="{{couponList}}" wx:key="id" class="coupon-chip {{couponId === item.id ? 'selected' : ''}} {{item.used || !item.usable ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="selectCoupon">
       <text class="coupon-value">¥{{item.value}}</text>
@@ -148,22 +152,33 @@
       <text class="coupon-value">不用</text>
       <view class="coupon-info"><text class="coupon-title">不使用优惠券</text></view>
     </view>
-    <view class="confirm-row"><text>优惠</text><text class="red">-¥{{discount}}</text></view>
-    <view class="confirm-row total"><text>合计</text><text class="detail-price">¥{{total}}</text></view>
+    <view class="confirm-row"><text>优惠</text><text class="confirm-value red">-¥{{discount}}</text></view>
+    <view class="balance-pay-row">
+      <view><view class="balance-pay-title">使用账户余额</view><view class="balance-pay-tip">可用 ¥{{balance}}，本单最多抵扣 ¥{{balance > total ? total : balance}}</view></view>
+      <switch checked="{{useBalance}}" color="#b98555" bindchange="toggleBalance" />
+    </view>
+    <view wx:if="{{useBalance}}" class="confirm-row"><text>余额抵扣</text><text class="confirm-value red">-¥{{balanceDeduction}}</text></view>
+    <view class="confirm-row total"><text>合计</text><text class="confirm-value detail-price">¥{{total}}</text></view>
+    <view wx:if="{{useBalance}}" class="confirm-row total"><text>还需微信支付</text><text class="confirm-value detail-price">¥{{wechatAmount}}</text></view>
   </view>
 
   <view class="fixed-bottom booking-bottom">
-    <button wx:if="{{step > 1}}" class="prev" bindtap="prevStep">上一步</button>
-    <button class="btn btn-primary main-btn" bindtap="nextStep">{{step === 3 ? '确认支付 ¥' + total : '下一步'}}</button>
+    <view class="bottom-content">
+      <view wx:if="{{step === 1}}" class="bottom-selection"><text class="bottom-label">当前选择</text><text class="bottom-value">{{isSkuOnly ? (skuName || '请选择规格') : (selectedSchedule ? selectedSchedule.date + ' ' + selectedSchedule.time : '请选择活动场次')}}</text></view>
+      <view wx:elif="{{step === 2}}" class="bottom-selection"><text class="bottom-label">报名人数</text><text class="bottom-value">{{count}}人 · ¥{{memberPrice * count}}</text></view>
+      <view wx:else class="bottom-selection"><text class="bottom-label">应付金额</text><text class="bottom-total">¥{{total}}</text></view>
+      <view class="bottom-actions"><button wx:if="{{step > 1}}" class="prev" bindtap="prevStep">上一步</button><button class="btn btn-primary main-btn" bindtap="nextStep">{{step === 3 ? '确认支付' : '下一步'}}</button></view>
+    </view>
   </view>
 
   <view wx:if="{{payOpen}}" class="mask" bindtap="closePay">
     <view class="sheet" catchtap="noop">
       <view class="pay-title">确认支付</view>
-      <view class="pay-amount">¥{{total}}</view>
-      <view class="pay-tip">支付后名额立即锁定，30分钟内有效</view>
-      <button class="btn btn-wechat btn-block" bindtap="confirmPay">微信支付</button>
-      <button class="defer-btn" bindtap="deferPay">稍后支付（30分钟内有效）</button>
+      <view class="pay-amount">¥{{useBalance ? wechatAmount : total}}</view>
+      <view wx:if="{{useBalance}}" class="pay-tip">余额抵扣 ¥{{balanceDeduction}}，{{wechatAmount > 0 ? '剩余部分使用微信支付' : '无需微信支付'}}</view>
+      <view wx:else class="pay-tip">支付后名额立即锁定，30分钟内有效</view>
+      <button class="btn btn-wechat btn-block" loading="{{submittingPayment}}" disabled="{{submittingPayment}}" bindtap="confirmPay">{{wechatAmount === 0 && useBalance ? '余额支付' : '确认支付'}}</button>
+      <button class="defer-btn" disabled="{{submittingPayment}}" bindtap="deferPay">稍后支付（30分钟内有效）</button>
     </view>
   </view>
 

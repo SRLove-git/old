@@ -4,6 +4,17 @@
 .content-meta { display: flex; gap: 22rpx; margin-top: 18rpx; color: #909692; font-size: 23rpx; }
 .content-cover, .content-video { width: 100%; height: 390rpx; margin-top: 28rpx; border-radius: 24rpx; overflow: hidden; background: #eee; }
 .content-summary { margin-top: 28rpx; padding: 24rpx; border-left: 7rpx solid var(--color-info); border-radius: 0 18rpx 18rpx 0; background: var(--color-info-light); color: #53605c; font-size: 27rpx; line-height: 1.75; }
-.content-body { display: block; margin-top: 30rpx; color: #303835; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
+.article-body { margin-top: 30rpx; }
+.content-body { display: block; margin-top: 26rpx; color: #303835; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
+.content-body:first-child { margin-top: 0; }
+.article-media-block { margin-top: 30rpx; }
+.article-image { display: block; width: 100%; border-radius: 22rpx; background: #eee; }
+.article-video { width: 100%; height: 390rpx; border-radius: 22rpx; overflow: hidden; background: #111; }
+.article-caption { margin-top: 12rpx; color: #8b928f; font-size: 23rpx; line-height: 1.55; text-align: center; }
+.article-link { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 28rpx; padding: 24rpx; border: 1rpx solid #e2e8e4; border-radius: 20rpx; background: #f7faf8; }
+.article-link-copy { min-width: 0; }
+.article-link-title { color: #365e53; font-size: 28rpx; font-weight: 700; }
+.article-link-description { margin-top: 7rpx; color: #818a87; font-size: 23rpx; line-height: 1.5; }
+.article-link-arrow { flex: none; color: #6f8b82; font-size: 42rpx; }
 .source-note { margin-top: 38rpx; padding: 22rpx; border-radius: 18rpx; background: var(--color-warning-light); color: var(--color-warning); font-size: 23rpx; line-height: 1.65; }
 .original-button { margin-top: 28rpx; border-radius: 999rpx; background: var(--color-ink); color: #fff; font-size: 28rpx; font-weight: 700; }

@@ -1,6 +1,6 @@
 const store = require('../../utils/store.js')
 
-const STATUS_LABEL = { open: '即将开始', grouped: '报名中', full: '已满', ended: '已结束' }
+const STATUS_LABEL = { open: '即将开始', grouped: '报名中', full: '已满', ended: '已过期' }
 const TIME_FILTERS = [
   { key: 'all', name: '全部时间', shortName: '时间' },
   { key: 'today', name: '今天', shortName: '今天' },
@@ -12,7 +12,7 @@ const STATUS_FILTERS = [
   { key: 'open', name: '即将开始', shortName: '即将开始' },
   { key: 'grouped', name: '报名中', shortName: '报名中' },
   { key: 'full', name: '已满' },
-  { key: 'ended', name: '已结束' }
+  { key: 'ended', name: '已过期' }
 ]
 
 function todayStr() {
@@ -24,6 +24,8 @@ function todayStr() {
 }
 
 function activityStatus(a) {
+  if (a.offeringType === 'product') return Number(a.stock || 0) > 0 ? 'open' : 'full'
+  if (store.isActivityExpired(a)) return 'ended'
   const today = todayStr()
   const schedules = a.schedules || []
   if (schedules.length === 0) return 'open'
@@ -39,6 +41,7 @@ function activityStatus(a) {
 }
 
 function matchTime(a, tf) {
+  if (a.offeringType === 'product') return tf === 'all'
   if (tf === 'all') return true
   const today = todayStr()
   return (a.schedules || []).some((s) => {
@@ -61,7 +64,7 @@ function matchTime(a, tf) {
 
 function nextSchedule(activity) {
   const schedules = (activity.schedules || []).slice().sort((a, b) => String(a.full || '').localeCompare(String(b.full || '')))
-  return schedules.find((schedule) => (schedule.full || '') >= todayStr()) || schedules[0] || {}
+  return schedules.find((schedule) => (schedule.full || '') >= todayStr()) || schedules[schedules.length - 1] || {}
 }
 
 function dateGroupLabel(schedule) {
@@ -103,7 +106,7 @@ Page({
     this.refresh()
   },
 
-  onShow() {
+  async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
     }
@@ -112,7 +115,16 @@ Page({
       this.setData({ cat: String(pendingCat) })
       wx.removeStorageSync('pendingCat')
     }
-    this.setData({ cities: this.buildCities() })
+    try {
+      await store.refreshHome()
+    } catch (e) {
+      await store.ready()
+    }
+    const cats = store.get().categories
+    this.setData({
+      categories: Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id] })),
+      cities: this.buildCities()
+    })
     this.refresh()
   },
 
@@ -122,7 +134,7 @@ Page({
 
   refresh() {
     const { keyword, cat, region, timeFilter, statusFilter } = this.data
-    const all = store.getActivities()
+    const all = store.getCatalogItems().filter((item) => Number(item.status ?? 1) === 1)
     const terms = String(keyword || '').trim().toLowerCase().split(/\s+/).filter(Boolean)
     const list = all
       .filter((a) => {
@@ -146,23 +158,32 @@ Page({
         const s0 = nextSchedule(a)
         return {
           ...a,
+          isProduct: a.offeringType === 'product',
           city: store.getActivityRegionNames(a).join('、') || a.city || '线上/全国',
           art: store.assetUrl(a.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/event-benefit.jpg' })[a.category] || '/assets/event-local.jpg',
           status,
-          statusLabel: STATUS_LABEL[status],
+          statusLabel: a.offeringType === 'product' ? (status === 'full' ? '售罄' : '在售') : STATUS_LABEL[status],
           scheduleFull: s0.full || '',
           scheduleDate: s0.date || '',
           scheduleWeekday: s0.weekday || '',
           scheduleTime: s0.time || '',
-          scheduleLine: s0.full ? `${s0.date}(${s0.weekday || ''}) ${s0.time || ''}` : (a.time || '长期有效'),
+          scheduleLine: a.offeringType === 'product' ? '商品文创 · 支持配送' : (s0.full ? `${s0.date}(${s0.weekday || ''}) ${s0.time || ''}` : (a.time || '长期有效')),
+          soldText: a.offeringType === 'product' ? `${a.soldCount || 0}人已购买` : `${a.soldCount || 0}人已报名`,
+          actionText: a.offeringType === 'product' ? '立即购买' : '立即报名',
           buyerAvatars: (a.buyers || []).slice(0, 3)
         }
       })
-      .sort((a, b) => String(a.scheduleFull || '9999').localeCompare(String(b.scheduleFull || '9999')))
+      .sort((a, b) => Number(a.status === 'ended') - Number(b.status === 'ended')
+        || String(a.scheduleFull || '9999').localeCompare(String(b.scheduleFull || '9999')))
     const grouped = new Map()
     list.forEach((item) => {
-      const key = item.scheduleFull || 'ongoing'
-      if (!grouped.has(key)) grouped.set(key, { key, label: dateGroupLabel({ full: item.scheduleFull, weekday: item.scheduleWeekday }), items: [] })
+      const key = item.isProduct ? 'products' : (item.scheduleFull || 'ongoing')
+      if (!grouped.has(key)) grouped.set(key, {
+        key,
+        label: item.isProduct ? '品质好物' : dateGroupLabel({ full: item.scheduleFull, weekday: item.scheduleWeekday }),
+        countUnit: item.isProduct ? '件商品' : '场活动',
+        items: []
+      })
       grouped.get(key).items.push(item)
     })
     this.setData({ list, groups: [...grouped.values()], total: list.length })
@@ -209,6 +230,11 @@ Page({
   },
 
   async goBooking(e) {
+    const activity = store.getActivity(e.currentTarget.dataset.id)
+    if (store.isActivityExpired(activity)) {
+      wx.showToast({ title: '活动已过期，无法报名', icon: 'none' })
+      return
+    }
     try {
       await store.requireLogin()
     } catch (error) {
@@ -228,6 +254,6 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '岁悦里线下活动', path: '/pages/list/list' }
+    return { title: store.getCopy().shareActivityTitle || '', path: '/pages/list/list' }
   }
 })

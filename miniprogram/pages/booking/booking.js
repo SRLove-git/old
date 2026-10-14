@@ -20,6 +20,7 @@ Page({
   data: {
     id: null,
     activity: null,
+    submittingPayment: false,
     step: 1,
     scheduleId: '',
     count: 1,
@@ -41,6 +42,10 @@ Page({
     memberPrice: 0,
     discount: 0,
     total: 0,
+    balance: 0,
+    useBalance: false,
+    balanceDeduction: 0,
+    wechatAmount: 0,
     needIdCard: false,
     needDiscount: false,
     isGoods: false,
@@ -53,6 +58,10 @@ Page({
     showAll: false,
     visibleSchedules: [],
     hasMore: false,
+    selectedSchedule: null,
+    coverImageUrl: '',
+    categoryName: '',
+    bookingTitle: '',
     refundText: '',
     memberList: [],
     payOpen: false,
@@ -69,6 +78,15 @@ Page({
       wx.showToast({ title: '活动不存在', icon: 'none' })
       return
     }
+    if (store.isActivityExpired(activity)) {
+      wx.showModal({
+        title: '活动已过期',
+        content: '该活动已结束，无法继续报名或付款。',
+        showCancel: false,
+        success: () => wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/index/index' }) })
+      })
+      return
+    }
 
     const isSkuOnly = activity.sellType === 'sku'
     const hasSku = activity.hasSku || isSkuOnly
@@ -79,12 +97,19 @@ Page({
 
     const regionOptions = store.getRegions()
     const picker = regionPicker.buildRegionPicker(regionOptions)
+    const schedules = activity.schedules || []
+    const firstAvailableSchedule = schedules.find((item) => Number(item.remaining) > 0) || schedules[0] || null
+    const categoryName = store.getCategory(activity.category).name
     this.setData({
       id,
       activity,
       isSkuOnly,
       skuId: skuId || '',
-      scheduleId: !isSkuOnly && activity.schedules && activity.schedules.length ? activity.schedules[0].id : '',
+      scheduleId: !isSkuOnly && firstAvailableSchedule ? firstAvailableSchedule.id : '',
+      selectedSchedule: !isSkuOnly ? firstAvailableSchedule : null,
+      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/product-tumbler-v2.jpg' })[activity.category] || '/assets/event-local.jpg',
+      categoryName,
+      bookingTitle: activity.title || activity.name || (sku && sku.name) || `${categoryName}报名`,
       participants: decorateParticipants(state.participants, { participantId: firstParticipant.id }, []),
       coupons: state.coupons,
       skuName: sku ? sku.name : '',
@@ -120,6 +145,7 @@ Page({
     this.setData({
       participants: decorateParticipants(state.participants, this.data.info, this.data.memberList),
       coupons: state.coupons,
+      balance: Number(state.user.balance || 0),
       regionOptions,
       regionPickerColumns: picker.columns,
       regionPickerIndexes: picker.indexes
@@ -127,23 +153,34 @@ Page({
   },
 
   recalc() {
-    const { count, memberPrice, couponId, coupons, activity } = this.data
-    let discount = 0
+    const { count, memberPrice, couponId, coupons, activity, balance, useBalance } = this.data
+    const subtotal = Number((Number(memberPrice || 0) * Number(count || 1)).toFixed(2))
+    let couponValue = 0
     if (couponId) {
       const coupon = coupons.find((c) => c.id === couponId)
       if (coupon && store.couponApplicable(coupon, activity, memberPrice * count)) {
-        discount = coupon.value
+        couponValue = Number(coupon.value || 0)
       }
     }
+    const total = Number(Math.max(0.01, subtotal - couponValue).toFixed(2))
+    const discount = Number(Math.max(0, subtotal - total).toFixed(2))
+    const balanceDeduction = useBalance ? Number(Math.min(Number(balance || 0), total).toFixed(2)) : 0
+    const wechatAmount = Number(Math.max(0, total - balanceDeduction).toFixed(2))
     const couponList = coupons.map((c) => ({
       ...c,
       usable: store.couponApplicable(c, activity, memberPrice * count)
     }))
     this.setData({
       discount,
-      total: Math.max(0, memberPrice * count - discount),
+      total,
+      balanceDeduction,
+      wechatAmount,
       couponList
     })
+  },
+
+  toggleBalance(e) {
+    this.setData({ useBalance: Boolean(e.detail.value) }, () => this.recalc())
   },
 
   selectSchedule(e) {
@@ -153,7 +190,7 @@ Page({
       wx.showToast({ title: '该时间段已满', icon: 'none' })
       return
     }
-    this.setData({ scheduleId })
+    this.setData({ scheduleId, selectedSchedule: schedule })
   },
 
   selectSku(e) {
@@ -429,7 +466,9 @@ Page({
   },
 
   async confirmPay() {
-    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList } = this.data
+    if (this.data.submittingPayment) return
+    this.setData({ submittingPayment: true })
+    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList, useBalance } = this.data
     wx.showLoading({ title: '提交中', mask: true })
     try {
       const order = await store.createOrder({
@@ -438,7 +477,8 @@ Page({
         scheduleId,
         count,
         couponId,
-        deferred: false,
+        useBalance,
+        deferred: true,
         address: isGoods ? address : null,
         participants: isGoods ? `${address.name} ${address.phone}` : [info.name, ...memberList.map((m) => m.name)].join('、')
       })
@@ -447,15 +487,20 @@ Page({
         wx.showToast({ title: '下单失败，请重试', icon: 'none' })
         return
       }
+      if (order.status === '待付款') await store.payOrder(order.id)
       wx.redirectTo({ url: `/pages/booking-success/booking-success?orderId=${order.id}&deferred=0` })
     } catch (e) {
       wx.hideLoading()
       wx.showToast({ title: e.message || '下单失败', icon: 'none' })
+    } finally {
+      this.setData({ submittingPayment: false })
     }
   },
 
   async deferPay() {
-    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList } = this.data
+    if (this.data.submittingPayment) return
+    this.setData({ submittingPayment: true })
+    const { activity, scheduleId, count, info, couponId, isGoods, address, memberList, useBalance } = this.data
     wx.showLoading({ title: '提交中', mask: true })
     try {
       const order = await store.createOrder({
@@ -464,6 +509,7 @@ Page({
         scheduleId,
         count,
         couponId,
+        useBalance,
         deferred: true,
         address: isGoods ? address : null,
         participants: isGoods ? `${address.name} ${address.phone}` : [info.name, ...memberList.map((m) => m.name)].join('、')
@@ -477,6 +523,8 @@ Page({
     } catch (e) {
       wx.hideLoading()
       wx.showToast({ title: e.message || '下单失败', icon: 'none' })
+    } finally {
+      this.setData({ submittingPayment: false })
     }
   },
 

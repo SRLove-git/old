@@ -35,6 +35,7 @@ Page({
 
   async load() {
     await store.ready()
+    await store.refreshConfig().catch(() => {})
     const own = store.getOwnManager()
     const isManager = store.get().isManager
     // 工作台只对主理人本人开放，非主理人看不到任何人的钱包与客户数据
@@ -231,7 +232,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '和同龄人一起玩，岁悦里精选活动',
+      title: store.getCopy().shareManagerTitle || '',
       path: `/pages/index/index?ref=${this.data.manager.id}`
     }
   }

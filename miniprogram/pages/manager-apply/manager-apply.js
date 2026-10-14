@@ -13,6 +13,7 @@ Page({
     agree: false,
     fee: 0,
     payOpen: false,
+    submittingPayment: false,
     errors: {},
     nameEditable: false,
     phoneEditable: true,
@@ -33,16 +34,25 @@ Page({
 
   async onLoad() {
     await store.ready()
+    await store.refreshConfig().catch(() => {})
     const state = store.get()
     const config = state.config || {}
     const statusView = state.isManager
       ? '您已经是主理人，可在个人中心进入主理人工作台'
-      : (state.application && state.application.status === '待审核' ? '申请已提交，预计1-2个工作日审核' : '')
+      : (state.application && state.application.status === '待审核' ? (store.getCopy().managerReviewPendingText || '') : '')
     this.setData({
       fee: Number(config.managerApplyFee ?? 0),
       statusView,
       ...this.profileFields(state.user || {})
     })
+  },
+
+  async onShow() {
+    try {
+      await store.refreshConfig()
+      const application = store.get().application
+      if (application && application.status === '待审核') this.setData({ statusView: store.getCopy().managerReviewPendingText || this.data.statusView })
+    } catch (e) {}
   },
 
   // 姓名继续用于账号身份核对；申请联系电话可与登录账号不同。
@@ -120,16 +130,22 @@ Page({
   noop() {},
 
   async confirmPay() {
+    if (this.data.submittingPayment) return
+    this.setData({ submittingPayment: true })
     this.setData({ payOpen: false })
-    await this.doSubmit()
+    try {
+      await this.doSubmit(true)
+    } finally {
+      this.setData({ submittingPayment: false })
+    }
   },
 
-  async doSubmit() {
+  async doSubmit(payAfterSubmit = false) {
     const { form } = this.data
     const groupCount = Number(form.groupCount)
     const memberCount = Number(form.memberCount)
     try {
-      await store.submitManagerApply({
+      const application = await store.submitManagerApply({
         // 用当前登录会员的 id 申请，审核通过后工作台才会绑定到本人
         userId: store.getCurrentUserId(),
         name: String(form.name || '').trim(),
@@ -138,9 +154,11 @@ Page({
         memberCount,
         scale: `${groupCount}个群，约${memberCount}人`,
         fields: form.fields,
-        intro: form.intro,
-        paid: true
+        intro: form.intro
       })
+      if (payAfterSubmit && application?.status === '待付款') {
+        await store.payManagerApplication(application.id)
+      }
       wx.showToast({ title: '申请已提交，请等待审核', icon: 'none' })
       setTimeout(() => {
         wx.navigateBack()

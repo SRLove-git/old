@@ -20,13 +20,31 @@ function decorateOffering(item) {
   return { ...item, art, regionText: store.getActivityRegionNames(item).join('、') || item.city || '线上/全国' }
 }
 
+function serviceTextOf(activity) {
+  if (activity.serviceDescription) return activity.serviceDescription
+  const labels = {
+    checkin: '线下服务 · 凭订单签到核销',
+    verify_code: '到店服务 · 凭核销码核销',
+    online: '线上服务 · 无需现场核销',
+    delivery: '支持配送 · 收货后可申请售后'
+  }
+  if (activity.serviceMode && labels[activity.serviceMode]) return labels[activity.serviceMode]
+  if (activity.category === 5) return labels.delivery
+  if (activity.city === '线上' || activity.address === '线上直播') return labels.online
+  return activity.sellType === 'sku' ? '规格可选 · 下单后客服确认' : labels.checkin
+}
+
 Page({
   data: {
     id: null,
     activity: null,
+    isGoods: false,
+    contentName: '活动',
+    detailTitle: '活动详情',
     category: {},
     merchant: null,
     assistant: {},
+    copy: {},
     tab: 'product',
     reviews: [],
     recommend: [],
@@ -46,19 +64,21 @@ Page({
     reviewRating: 5,
     reviewContent: '',
     reviewableOrderId: '',
-    reviewSubmitting: false
+    reviewSubmitting: false,
+    buyersOpen: false,
+    cartCount: 0
   },
 
   async onLoad(options) {
     await store.ready()
     const id = options.id
     this.setData({ id })
-    wx.setNavigationBarTitle({ title: '商品详情' })
     this.loadActivity(id)
   },
 
   async onShow() {
     await store.ready()
+    try { await Promise.all([store.refreshHome(), store.refreshReviews()]) } catch (e) {}
     if (this.data.id) this.loadActivity(this.data.id)
   },
 
@@ -69,22 +89,38 @@ Page({
       return
     }
     const activity = decorateOffering({ ...source, skus: source.skus || [], schedules: source.schedules || [] })
+    const isGoods = Number(activity.category) === 5
+    const contentName = isGoods ? '商品' : '活动'
+    const detailTitle = `${contentName}详情`
+    wx.setNavigationBarTitle({ title: detailTitle })
+    activity.expired = store.isActivityExpired(activity)
     if (!activity.images || !activity.images.length) {
       activity.images = [{ id: `img-${activity.id}-1`, src: activity.art, tone: activity.coverTone, emoji: activity.cover, label: '活动图片' }]
     }
     const galleryFallbacks = GALLERY_BY_CATEGORY[activity.category] || [activity.art]
-    activity.images = activity.images.map((image, index) => ({ ...image, src: image.src || galleryFallbacks[index % galleryFallbacks.length], id: image.id || `gallery-${activity.id}-${index}` }))
+    activity.images = activity.images.map((image, index) => ({
+      ...image,
+      src: store.assetUrl(image.src || galleryFallbacks[index % galleryFallbacks.length]),
+      id: image.id || `gallery-${activity.id}-${index}`
+    }))
     if (!activity.buyers) activity.buyers = []
     activity.detailBlocks = (activity.detailBlocks && activity.detailBlocks.length
       ? activity.detailBlocks
       : [{ type: 'text', text: activity.detail || '' }]
-    ).map((b, i) => ({ ...b, _key: `${activity.id}-${i}` }))
+    ).map((b, i) => ({
+      ...b,
+      src: b.type === 'image' ? store.assetUrl(b.src) : b.src,
+      url: b.type === 'video' ? store.assetUrl(b.url) : b.url,
+      _key: `${activity.id}-${i}`
+    }))
     const merchant = store.getManagers().find((m) => String(m.id) === String(activity.managerId)) || null
     const reviews = store.getReviews(id)
     const reviewableOrder = (store.get().orders || []).find((order) => String(order.activityId) === String(id) && order.status === '待评价') || null
     const allOfferings = [...store.getActivities(), ...(store.get().products || [])].filter((item) => String(item.id) !== String(id))
     const recommend = allOfferings
-      .sort((a, b) => Number(b.category === activity.category) - Number(a.category === activity.category) || (b.soldCount || 0) - (a.soldCount || 0))
+      .sort((a, b) => Number(store.isActivityExpired(a)) - Number(store.isActivityExpired(b))
+        || Number(b.category === activity.category) - Number(a.category === activity.category)
+        || (b.soldCount || 0) - (a.soldCount || 0))
       .slice(0, 6)
       .map((a, index) => ({ ...decorateOffering(a), rankLabel: index === 0 ? '本店销量榜第1' : '' }))
     const rank = [activity, ...allOfferings]
@@ -97,9 +133,13 @@ Page({
       .map((s) => ({ id: s.id, name: s.name, district: s.district || '', address: s.address }))
     this.setData({
       activity,
+      isGoods,
+      contentName,
+      detailTitle,
       category: store.getCategory(activity.category),
       merchant,
       assistant: store.getAssistant(),
+      copy: store.getCopy(),
       reviews,
       reviewableOrderId: reviewableOrder ? reviewableOrder.id : '',
       recommend,
@@ -107,9 +147,10 @@ Page({
       venues,
       hasVenue: venues.length > 0,
       memberSaving: Math.max(0, Number(activity.price || activity.originalPrice || 0) - Number(activity.memberPrice || 0)),
-      serviceText: activity.category === 5 ? '支持配送 · 收货后可申请售后' : (activity.sellType === 'sku' ? '规格可选 · 下单后客服确认' : '线下服务 · 凭订单签到核销'),
+      serviceText: serviceTextOf(activity),
       refundText: store.refundRuleText(activity.refundRule),
-      buyNowText: '立即购买',
+      buyNowText: activity.expired ? (isGoods ? '商品已下架' : '活动已结束') : (isGoods ? '立即购买' : '立即报名'),
+      cartCount: store.getCart().reduce((total, item) => total + Number(item.count || 1), 0),
       selectedSkuId: hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
       selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
     })
@@ -117,7 +158,7 @@ Page({
 
   openReview() {
     if (!this.data.reviewableOrderId) {
-      wx.showToast({ title: '购买并完成后可评价', icon: 'none' })
+      wx.showToast({ title: this.data.isGoods ? '购买并完成后可评价' : '参加并完成后可评价', icon: 'none' })
       return
     }
     this.setData({ reviewOpen: true, reviewRating: 5, reviewContent: '' })
@@ -125,6 +166,14 @@ Page({
 
   closeReview() {
     if (!this.data.reviewSubmitting) this.setData({ reviewOpen: false })
+  },
+
+  openBuyers() {
+    this.setData({ buyersOpen: true })
+  },
+
+  closeBuyers() {
+    this.setData({ buyersOpen: false })
   },
 
   onReviewRating(e) {
@@ -163,11 +212,23 @@ Page({
     wx.navigateTo({ url: `/pages/detail/detail?id=${id}` })
   },
 
-  toggleTab(e) {
-    this.setData({ tab: e.currentTarget.dataset.tab })
+  async toggleTab(e) {
+    const tab = e.currentTarget.dataset.tab
+    this.setData({ tab })
+    if (tab !== 'review') return
+    try {
+      await store.refreshReviews()
+      if (this.data.id) this.loadActivity(this.data.id)
+    } catch (error) {
+      // 网络异常时保留当前缓存，不影响用户继续浏览。
+    }
   },
 
   async openSku() {
+    if (this.data.activity?.expired) {
+      wx.showToast({ title: '活动已过期，无法报名', icon: 'none' })
+      return
+    }
     try {
       await store.requireLogin()
     } catch (error) {
@@ -183,6 +244,10 @@ Page({
   addToCart() {
     const activity = this.data.activity
     if (!activity) return
+    if (activity.expired) {
+      wx.showToast({ title: '活动已过期，无法报名', icon: 'none' })
+      return
+    }
     if (activity.hasSku || activity.sellType === 'sku') {
       this.setData({ skuOpen: true, cartIntent: true })
       return
@@ -193,7 +258,11 @@ Page({
   saveToCart() {
     try {
       store.addActivityToCart(this.data.activity, { skuId: this.data.selectedSkuId })
-      this.setData({ skuOpen: false, cartIntent: false })
+      this.setData({
+        skuOpen: false,
+        cartIntent: false,
+        cartCount: store.getCart().reduce((total, item) => total + Number(item.count || 1), 0)
+      })
       wx.showToast({ title: '已加入购物车', icon: 'success' })
     } catch (e) {
       wx.showToast({ title: e.message || '加入失败', icon: 'none' })
@@ -234,6 +303,10 @@ Page({
   },
 
   async goBooking() {
+    if (this.data.activity?.expired) {
+      wx.showToast({ title: '活动已过期，无法报名', icon: 'none' })
+      return
+    }
     try {
       await store.requireLogin()
     } catch (error) {
@@ -269,7 +342,7 @@ Page({
     const activity = this.data.activity
     const ref = activity && activity.managerId ? `&ref=${activity.managerId}` : ''
     return {
-      title: activity ? activity.title : '岁悦里',
+      title: activity ? activity.title : store.getBrand().chineseName,
       path: `/pages/detail/detail?id=${this.data.id}${ref}`
     }
   }

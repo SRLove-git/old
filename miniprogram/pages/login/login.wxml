@@ -1,15 +1,16 @@
 <view class="login-page">
   <view class="brand-mark">
     <view class="brand-ring"></view>
-    <text>岁</text>
+    <text>{{brandMark}}</text>
   </view>
 
-  <view class="brand-name">岁悦里</view>
-  <view class="brand-slogan">和同龄人一起，玩得开心又省心</view>
+  <view class="brand-name">{{brandName}}</view>
+  <view wx:if="{{brandEnglish}}" class="brand-english">{{brandEnglish}}</view>
+  <view class="brand-slogan">{{slogan}}</view>
 
   <view class="login-card">
-    <view class="login-title">欢迎来到岁悦里</view>
-    <view class="login-desc">登录后可查看活动、线上课堂及会员专属服务</view>
+    <view class="login-title">{{copy.loginTitle}}</view>
+    <view class="login-desc">{{copy.loginDescription}}</view>
     <button
       class="login-button"
       loading="{{loading}}"

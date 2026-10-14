@@ -67,6 +67,16 @@
   letter-spacing: 10rpx;
 }
 
+.brand-english {
+  position: relative;
+  z-index: 1;
+  margin-top: 8rpx;
+  color: #a27b57;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 5rpx;
+}
+
 .brand-slogan {
   position: relative;
   z-index: 1;

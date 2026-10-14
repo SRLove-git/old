@@ -2,8 +2,8 @@
   <view class="member-card {{levelClass}}">
     <view class="card-top">
       <view class="brand">
-        <view class="brand-logo">岁悦里</view>
-        <view class="brand-sub">俱乐部 · 尊享会员卡</view>
+        <view class="brand-logo">{{brandName}}</view>
+        <view class="brand-sub">{{copy.memberCardSubtitle}}</view>
       </view>
       <view class="level-badge">{{memberLevelName}}</view>
     </view>
@@ -11,7 +11,7 @@
     <view class="card-main">
       <view class="card-user">
         <view class="card-name">{{user.name}}</view>
-        <view class="card-title">尊享会员</view>
+        <view class="card-title">{{copy.memberCardTitle}}</view>
         <view class="card-phone">{{phoneDisplay}}</view>
       </view>
       <view class="qr-box">
@@ -39,7 +39,7 @@
   </view>
 
   <view wx:if="{{!user.member}}" class="join-card card">
-    <view class="join-text">还不是会员？免费入会，领2张券</view>
+    <view class="join-text">{{joinText}}</view>
     <button class="btn btn-primary btn-block" bindtap="joinMember">立即入会</button>
   </view>
 </view>

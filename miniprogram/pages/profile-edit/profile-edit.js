@@ -5,15 +5,17 @@ Page({
     name: '',
     originalName: '',
     saving: false,
-    loading: true
+    loading: true,
+    copy: {}
   },
 
   async onLoad() {
     try {
       await store.ready()
+      await store.refreshConfig().catch(() => {})
       await store.refreshUserProfile()
       const name = String(store.get().user.name || '')
-      this.setData({ name, originalName: name, loading: false })
+      this.setData({ name, originalName: name, loading: false, copy: store.getCopy() })
     } catch (error) {
       this.setData({ loading: false })
       if (error && error.code === 'AUTH_REQUIRED') {
@@ -22,6 +24,14 @@ Page({
       }
       wx.showToast({ title: error.message || '加载失败', icon: 'none' })
     }
+  },
+
+  async onShow() {
+    if (this.data.loading) return
+    try {
+      await store.refreshConfig()
+      this.setData({ copy: store.getCopy() })
+    } catch (e) {}
   },
 
   onUnload() {

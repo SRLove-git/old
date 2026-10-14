@@ -17,7 +17,9 @@ Page({
     statusIcon: '✓',
     actionLabel: '',
     payRemain: '',
-    serviceOpen: false
+    serviceOpen: false,
+    logistics: null,
+    logisticsLoading: false
   },
 
   onLoad(options) {
@@ -26,14 +28,22 @@ Page({
 
   async onShow() {
     await store.ready()
-    if (this.data.id) this.loadOrder()
+    try { await store.refreshOrders() } catch (e) {}
+    if (this.data.id) await this.loadOrder()
   },
 
-  loadOrder() {
+  async loadOrder() {
     const order = store.get().orders.find((o) => o.id === this.data.id)
     if (!order) return
     const refundInfo = store.calcRefund(order)
     const timeText = order.schedule && order.schedule.date ? `${order.schedule.date} ${order.schedule.weekday || ''} ${order.schedule.time || ''}` : (order.skuName || '无需预约')
+    const payAmount = Math.max(0, Number(order.payAmount || 0))
+    const memberPrice = Number(order.memberPrice)
+    const count = Number(order.count)
+    const fallbackAmount = Number.isFinite(memberPrice) && Number.isFinite(count) ? memberPrice * count : payAmount
+    const sourceAmount = Number(order.discountedAmount ?? fallbackAmount)
+    const goodsAmount = Math.max(payAmount, Number.isFinite(sourceAmount) ? sourceAmount : payAmount)
+    const couponDiscount = Math.max(0, Math.min(goodsAmount, Number(order.couponDiscountAmount ?? (goodsAmount - payAmount)) || 0))
     this.setData({
       order,
       timeText,
@@ -44,14 +54,41 @@ Page({
       statusTone: this.statusTone(order),
       actionLabel: this.actionLabel(order),
       payRemain: order.payDeadline ? this.payRemainText(order.payDeadline) : '',
-      payAmountText: store.money(order.payAmount),
+      goodsAmountText: store.money(goodsAmount),
+      couponDiscountText: store.money(couponDiscount),
+      hasCouponDiscount: couponDiscount > 0,
+      payAmountText: store.money(payAmount),
+      balancePaidText: store.money(order.balancePaidAmount || 0),
+      wechatPayText: store.money(order.wechatPayAmount ?? payAmount),
       refundAmountText: store.money(order.refundAmount || 0)
     })
+    if (order.trackingNo || order.logisticsShipmentId) await this.loadLogistics()
+  },
+
+  async loadLogistics(refresh = false) {
+    if (this.data.logisticsLoading) return
+    this.setData({ logisticsLoading: true })
+    try {
+      const result = refresh
+        ? await store.refreshOrderLogistics(this.data.id)
+        : await store.getOrderLogistics(this.data.id)
+      if (result) result.events = [...(result.events || [])].reverse()
+      this.setData({ logistics: result || null })
+      if (refresh) wx.showToast({ title: '物流已更新', icon: 'success' })
+    } catch (error) {
+      if (refresh) wx.showToast({ title: error.message || '物流刷新失败', icon: 'none' })
+    } finally {
+      this.setData({ logisticsLoading: false })
+    }
+  },
+
+  refreshLogistics() {
+    return this.loadLogistics(true)
   },
 
   statusTone(order) {
     if (order.status === '待付款') return 'pay'
-    if (order.status === '待发货' || order.status === '待收货') return 'ship'
+    if (['待发货', '待收货', '待签到', '待核销', '待使用'].includes(order.status)) return 'ship'
     if (order.status === '退款中' || order.status === '已退款') return 'refund'
     if (order.status === '已取消') return 'cancel'
     return 'done'
@@ -62,6 +99,9 @@ Page({
     if (order.status === '已退款') return `已退款 ¥${store.money(order.refundAmount || 0)}`
     if (order.refundRejected) return `退款申请未通过：${order.refundRejected}`
     if (order.trackingNo) return `${order.carrier} ${order.trackingNo}`
+    if (order.status === '待签到') return '报名成功，请按预约时间到场签到'
+    if (order.status === '待核销') return '到店后请向工作人员出示核销码'
+    if (order.status === '待使用') return '服务完成后可确认使用并进行评价'
     return (refundInfo && refundInfo.reason) || '请按时参加活动'
   },
 
@@ -70,6 +110,9 @@ Page({
       待付款: '⏰',
       待发货: '📦',
       待收货: '🚚',
+      待签到: '✓',
+      待核销: '✓',
+      待使用: '✓',
       已核销: '✅',
       待评价: '⭐',
       已完成: '🏅',
@@ -91,6 +134,7 @@ Page({
     if (order.status === '待付款') return '去支付'
     if (order.status === '待发货') return ''
     if (order.status === '待收货') return '确认收货'
+    if (order.status === '待使用') return '确认使用'
     if (order.status === '已核销') return '确认完成'
     if (order.status === '待评价') return '去评价'
     return ''
@@ -140,13 +184,22 @@ Page({
   },
 
   async payNow() {
-    const order = await store.payOrder(this.data.id)
-    if (!order) {
-      wx.showToast({ title: '订单已超时，请重新下单', icon: 'none' })
-      return
+    if (this.data.paying) return
+    this.setData({ paying: true })
+    try {
+      const order = await store.payOrder(this.data.id)
+      if (!order) {
+        wx.showToast({ title: '订单已超时，请重新下单', icon: 'none' })
+        return
+      }
+      await this.loadOrder()
+      wx.showToast({ title: '支付成功', icon: 'success' })
+    } catch (error) {
+      wx.showToast({ title: error.message || '微信支付未完成', icon: 'none' })
+      await this.loadOrder()
+    } finally {
+      this.setData({ paying: false })
     }
-    this.loadOrder()
-    wx.showToast({ title: '支付成功', icon: 'success' })
   },
 
   cancelNow() {

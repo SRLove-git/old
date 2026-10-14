@@ -12,6 +12,11 @@ function clockText() {
   const now = new Date()
   return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
 }
+function dateText() {
+  const now = new Date()
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+  return `${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`
+}
 function maskPhone(value) {
   return store.formatPhoneDisplay(value)
 }
@@ -20,21 +25,22 @@ Page({
   data: {
     cards: [], activeCardId: '', currentCard: null,
     memberName: '', memberPhone: '', phoneDisplay: '', needsName: false, needsPhone: false,
-    location: null, locationText: '正在获取当前位置…', locating: false,
-    submitting: false, canCheckIn: false, clock: '--:--:--', records: []
+    location: null, locationText: '点击选择签到地址', locating: false,
+    submitting: false, canCheckIn: false, infoReady: false,
+    actionHint: '请先完善签到信息', successMessage: '',
+    clock: '--:--:--', today: '', records: []
   },
 
   async onShow() {
     this.startClock()
     try { await store.refresh() } catch (e) { await store.ready() }
     this.loadPage()
-    if (!this.data.location && !this.data.locating) this.requestLocation()
   },
   onHide() { this.stopClock() },
   onUnload() { this.stopClock() },
   startClock() {
     this.stopClock()
-    this.setData({ clock: clockText() })
+    this.setData({ clock: clockText(), today: dateText() })
     this.clockTimer = setInterval(() => this.setData({ clock: clockText() }), 1000)
   },
   stopClock() {
@@ -54,7 +60,7 @@ Page({
       needsName: !memberName, needsPhone: !/^1\d{10}$/.test(memberPhone)
     }, () => this.buildCurrent())
   },
-  selectCard(e) { this.setData({ activeCardId: e.currentTarget.dataset.id }, () => this.buildCurrent()) },
+  selectCard(e) { this.setData({ activeCardId: e.currentTarget.dataset.id, successMessage: '' }, () => this.buildCurrent()) },
   buildCurrent() {
     const currentCard = this.data.cards.find((item) => String(item.id) === String(this.data.activeCardId)) || null
     const records = currentCard ? (currentCard.attendanceRecords || []).map((item) => ({
@@ -73,26 +79,33 @@ Page({
   },
   updateCanCheckIn() {
     const { currentCard, memberName, memberPhone, location, submitting } = this.data
-    this.setData({ canCheckIn: Boolean(currentCard && Number(currentCard.remain || 0) > 0 && memberName && /^1\d{10}$/.test(memberPhone) && location && !submitting) })
+    const hasRemain = Boolean(currentCard && Number(currentCard.remain || 0) > 0)
+    const infoReady = Boolean(memberName && /^1\d{10}$/.test(memberPhone))
+    const canCheckIn = Boolean(hasRemain && infoReady && location && !submitting)
+    let actionHint = '信息已完成，可以签到'
+    if (!hasRemain) actionHint = '本课程剩余签到次数不足'
+    else if (!infoReady) actionHint = '请先完善姓名和手机号'
+    else if (!location) actionHint = '请先选择本次签到地址'
+    else if (submitting) actionHint = '正在提交签到…'
+    this.setData({ canCheckIn, infoReady, actionHint })
   },
 
   requestLocation() {
     if (this.data.locating) return
-    this.setData({ locating: true, locationText: '正在获取当前位置…' })
-    wx.getLocation({
-      type: 'gcj02', isHighAccuracy: true, highAccuracyExpireTime: 5000,
+    this.setData({ locating: true, locationText: '正在打开微信地图…', successMessage: '' })
+    wx.chooseLocation({
       success: (result) => {
         const latitude = Number(result.latitude)
         const longitude = Number(result.longitude)
-        const accuracy = Math.round(Number(result.accuracy || 0))
-        this.setData({
-          locating: false,
-          location: { latitude, longitude, accuracy },
-          locationText: `定位成功 · ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${accuracy ? ` · 约 ${accuracy} 米` : ''}`
-        }, () => this.updateCanCheckIn())
+        const name = String(result.name || '').trim()
+        const address = String(result.address || '').trim()
+        const locationText = [address, name && !address.includes(name) ? name : ''].filter(Boolean).join(' · ')
+        this.setData({ locating: false, location: { latitude, longitude, address: locationText }, locationText: locationText || '已选择签到地址' }, () => this.updateCanCheckIn())
       },
-      fail: () => {
-        this.setData({ locating: false, location: null, locationText: '定位失败，点击重新定位' }, () => this.updateCanCheckIn())
+      fail: (error) => {
+        const cancelled = String(error && error.errMsg || '').includes('cancel')
+        this.setData({ locating: false, location: null, locationText: cancelled ? '未选择地址，点击重新选择' : '定位失败，点击重新定位' }, () => this.updateCanCheckIn())
+        if (cancelled) return
         wx.getSetting({
           success: (setting) => {
             if (setting.authSetting['scope.userLocation'] !== false) return
@@ -124,8 +137,10 @@ Page({
     try {
       await api.post(`/cards/${this.data.currentCard.id}/checkin`, {
         memberName: this.data.memberName, memberPhone: this.data.memberPhone,
-        latitude: this.data.location.latitude, longitude: this.data.location.longitude, accuracy: this.data.location.accuracy
+        latitude: this.data.location.latitude, longitude: this.data.location.longitude,
+        location: this.data.location.address
       })
+      this.setData({ successMessage: `签到成功 · ${clockText()}` })
       wx.showToast({ title: '签到成功', icon: 'success' })
       await store.refresh()
       this.loadPage()

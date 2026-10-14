@@ -1,12 +1,56 @@
-<view class="page">
-  <view class="coupon-note">每单限用1张，不可叠加；请在有效期内使用</view>
-  <view wx:for="{{coupons}}" wx:key="id" class="coupon-card card {{item.used ? 'used' : ''}}">
-    <view class="coupon-left">¥{{item.value}}</view>
-    <view class="coupon-mid">
-      <view class="coupon-title">{{item.title}}</view>
-      <view class="coupon-desc">{{item.desc}}</view>
-      <view class="coupon-desc">{{item.expireAt ? '有效期至 ' + item.expireAt : '长期有效'}}</view>
+<view class="coupon-page">
+  <view class="coupon-hero">
+    <view class="hero-watermark">券</view>
+    <view class="hero-kicker">MY COUPONS</view>
+    <view class="hero-main"><text class="hero-count">{{availableCount}}</text><text class="hero-unit">张可用</text></view>
+    <view class="hero-copy">每次下单可使用一张优惠券</view>
+  </view>
+
+  <view class="coupon-tabs">
+    <view wx:for="{{tabs}}" wx:key="key" class="coupon-tab {{activeTab === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="switchTab">
+      <text>{{item.label}}</text><text class="tab-count">{{item.count}}</text>
     </view>
-    <button class="use" bindtap="goList">{{item.used ? '已使用' : '去使用'}}</button>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-card"></view><view class="loading-card"></view>
+  </view>
+
+  <view wx:elif="{{visibleCoupons.length}}" class="coupon-list">
+    <view wx:for="{{visibleCoupons}}" wx:key="id" class="ticket {{item.stateClass}}">
+      <view class="ticket-value">
+        <view class="amount-line"><text class="currency">¥</text><text class="amount">{{item.valueText}}</text></view>
+        <text class="threshold">{{item.thresholdText}}</text>
+      </view>
+      <view class="ticket-cut"><view class="cut-line"></view></view>
+      <view class="ticket-content">
+        <view class="ticket-head">
+          <text class="ticket-title">{{item.title}}</text>
+          <text class="status-pill">{{item.statusLabel}}</text>
+        </view>
+        <text wx:if="{{item.desc}}" class="ticket-desc">{{item.desc}}</text>
+        <view class="coupon-meta"><text class="scope-dot"></text><text>{{item.scopeLabel}}</text></view>
+        <view class="coupon-meta"><text class="clock-ring"></text><text>{{item.validText}}</text></view>
+        <view class="ticket-foot">
+          <text class="claim-date">领取于 {{item.claimedText}}</text>
+          <button wx:if="{{item.available}}" class="use-button" hover-class="use-button-hover" bindtap="goList">去使用</button>
+          <text wx:elif="{{item.usedText}}" class="record-date">{{item.usedText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="empty-state">
+    <view class="empty-ticket"><view class="empty-dash"></view></view>
+    <view class="empty-title">{{activeTab === 'available' ? '暂无可用优惠券' : (activeTab === 'history' ? '还没有使用记录' : '暂无失效优惠券')}}</view>
+    <view class="empty-copy">{{activeTab === 'available' ? '参加活动或关注会员福利，优惠会自动放入这里' : '优惠券状态会在这里为你妥善记录'}}</view>
+    <button wx:if="{{activeTab === 'available'}}" class="empty-action" bindtap="goList">去看看活动</button>
+  </view>
+
+  <view class="rules-card">
+    <view class="rules-title"><text class="rules-icon">i</text><text>使用说明</text></view>
+    <view class="rule-item">每笔订单限用一张优惠券，不可叠加使用</view>
+    <view class="rule-item">优惠券须在有效期内使用，过期后自动失效</view>
+    <view class="rule-item">取消未支付订单后，已占用的优惠券将自动退回</view>
   </view>
 </view>

@@ -18,8 +18,28 @@ function decorateActivity(activity) {
     4: '/assets/event-benefit.jpg',
     5: '/assets/event-benefit.jpg'
   }
+  const isProduct = activity.offeringType === 'product'
   const regionText = store.getActivityRegionNames(activity).join('、') || activity.city || '线上/全国'
-  return { ...activity, city: regionText, regionText, art: store.assetUrl(activity.coverImage) || artByCategory[activity.category] || artByCategory[1] }
+  const firstSchedule = (activity.schedules || [])[0] || {}
+  return {
+    ...activity,
+    isProduct,
+    expired: isProduct ? false : store.isActivityExpired(activity),
+    city: regionText,
+    regionText,
+    displayDate: isProduct ? '品质好物' : (firstSchedule.date || '长期有效'),
+    displayTime: isProduct ? (activity.stock > 0 ? `库存${activity.stock}件` : '现货销售') : (firstSchedule.time || ''),
+    art: store.assetUrl(activity.coverImage) || artByCategory[activity.category] || artByCategory[1]
+  }
+}
+
+function decorateBanner(banner) {
+  return {
+    ...banner,
+    mediaType: banner.mediaType === 'video' ? 'video' : 'image',
+    mediaUrl: store.assetUrl(banner.mediaUrl || banner.imageUrl),
+    linkUrl: String(banner.linkUrl || '')
+  }
 }
 
 Page({
@@ -42,6 +62,7 @@ Page({
     viewMode: 'recommend',
     brandEnglish: '',
     slogan: '',
+    copy: {},
     filing: {},
     newsPosts: [],
     videoPosts: []
@@ -53,13 +74,15 @@ Page({
     const defaultRegion = regionOptions[0] || null
     const picker = regionPicker.buildRegionPicker(regionOptions, defaultRegion)
     const brand = store.getBrand()
+    if (brand.chineseName) wx.setNavigationBarTitle({ title: brand.chineseName })
     this.setData({
       categories: this.buildCategories(),
-      banners: store.get().banners,
+      banners: (store.get().banners || []).map(decorateBanner),
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
       brandEnglish: brand.englishName,
       slogan: brand.slogan,
+      copy: store.getCopy(),
       filing: store.getFiling(),
       assistant: store.getAssistant(),
       homeAssistant: store.getHomeAssistant(),
@@ -79,17 +102,21 @@ Page({
     }
     await store.ready()
     try {
-      await Promise.all([store.refreshConfig(), store.refreshRegions()])
+      await store.refreshHome()
     } catch (e) {}
     const regionOptions = store.getRegions()
     const currentRegion = regionOptions.find((region) => String(region.id) === String(this.data.city)) || null
     const picker = regionPicker.buildRegionPicker(regionOptions, currentRegion)
     const brand = store.getBrand()
+    if (brand.chineseName) wx.setNavigationBarTitle({ title: brand.chineseName })
     this.setData({
+      categories: this.buildCategories(),
+      banners: (store.get().banners || []).map(decorateBanner),
       coupons: store.get().coupons,
       boundManager: store.get().boundManager,
       brandEnglish: brand.englishName,
       slogan: brand.slogan,
+      copy: store.getCopy(),
       filing: store.getFiling(),
       assistant: store.getAssistant(),
       homeAssistant: store.getHomeAssistant(),
@@ -113,7 +140,14 @@ Page({
 
   buildCategories() {
     const cats = store.get().categories
-    return Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id] }))
+    const icons = {
+      1: '/assets/profile-icons/appointment.png',
+      2: '/assets/profile-icons/trip.png',
+      3: '/assets/profile-icons/courses.png',
+      4: '/assets/profile-icons/coupon.png',
+      5: '/assets/profile-icons/points.png'
+    }
+    return Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id], icon: icons[id] || icons[1] }))
   },
 
   buildGroups() {
@@ -121,15 +155,21 @@ Page({
     const viewMode = this.data.viewMode
     const cats = store.get().categories
     const allActivities = store.getActivities()
+      .filter((item) => Number(item.status ?? 1) === 1)
+      .map((item) => ({ ...item, offeringType: 'activity' }))
+    const allOfferings = store.getCatalogItems().filter((item) => Number(item.status ?? 1) === 1)
     const visibleActivities = allActivities.filter((a) => store.activityInRegion(a, city))
-    const featured = decorateActivity(visibleActivities.slice().sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))[0])
+    const featured = decorateActivity(visibleActivities.filter((activity) => !store.isActivityExpired(activity)).sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))[0])
     const groups = Object.keys(cats)
       .map((id) => {
         const catId = Number(id)
-        const list = allActivities
+        const configuredLimit = Number(cats[id].homeDisplayLimit)
+        const homeDisplayLimit = Number.isInteger(configuredLimit) && configuredLimit >= 0 && configuredLimit <= 50 ? configuredLimit : 6
+        const list = allOfferings
           .filter((a) => store.activityInRegion(a, city) && a.category === catId)
-          .sort((a, b) => (viewMode === 'latest' ? Number(b.id) - Number(a.id) : (b.soldCount || 0) - (a.soldCount || 0)))
-          .slice(0, 6)
+          .sort((a, b) => Number(store.isActivityExpired(a)) - Number(store.isActivityExpired(b))
+            || (viewMode === 'latest' ? Number(b.id) - Number(a.id) : (b.soldCount || 0) - (a.soldCount || 0)))
+          .slice(0, homeDisplayLimit)
           .map(decorateActivity)
         return { id: catId, name: cats[id].name, english: CATEGORY_ENGLISH[catId], activities: list }
       })
@@ -144,9 +184,10 @@ Page({
       const ids = Array.isArray(item.regionIds) ? item.regionIds.map(String) : []
       return city === '全部' || ids.length === 0 || (currentRegion && ids.includes(String(currentRegion.id)))
     })
+    const display = store.getHomeDisplay()
     this.setData({
-      newsPosts: visible.filter((item) => item.type === 'news' && item.featured).slice(0, 3),
-      videoPosts: visible.filter((item) => item.type === 'video' && item.featured).slice(0, 3)
+      newsPosts: visible.filter((item) => item.type === 'news' && item.featured).slice(0, display.newsLimit),
+      videoPosts: visible.filter((item) => item.type === 'video' && item.featured).slice(0, display.videoLimit)
     })
   },
 
@@ -277,6 +318,22 @@ Page({
   },
 
   goBanner(e) {
+    const linkUrl = String(e.currentTarget.dataset.link || '')
+    if (linkUrl.startsWith('https://')) {
+      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(linkUrl)}` })
+      return
+    }
+    if (linkUrl.startsWith('/pages/')) {
+      const path = linkUrl.split('?')[0]
+      const tabPages = ['/pages/index/index', '/pages/list/list', '/pages/lives/lives', '/pages/profile/profile']
+      if (path === '/pages/list/list') {
+        const category = linkUrl.match(/[?&](?:category|cat)=([^&]+)/)
+        if (category) wx.setStorageSync('pendingCat', Number(decodeURIComponent(category[1])))
+      }
+      if (tabPages.includes(path)) wx.switchTab({ url: path })
+      else wx.navigateTo({ url: linkUrl })
+      return
+    }
     const cat = Number(e.currentTarget.dataset.cat)
     if (!cat) {
       wx.switchTab({ url: '/pages/profile/profile' })
@@ -293,6 +350,11 @@ Page({
 
   async goBooking(e) {
     const id = e.currentTarget.dataset.id
+    const activity = store.getActivity(id)
+    if (store.isActivityExpired(activity)) {
+      wx.showToast({ title: '活动已过期，无法报名', icon: 'none' })
+      return
+    }
     try {
       await store.requireLogin()
     } catch (error) {

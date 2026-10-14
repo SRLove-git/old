@@ -1,7 +1,7 @@
 const { API_BASE, DEV_USER_ID } = require('./config.js')
 
-// 按需登录门控升级后换用新缓存键，避免旧版静默登录 Token 绕过登录页面。
-const AUTH_STORAGE_KEY = 'suiyueli_wechat_auth_v4'
+// 登录态按后端环境隔离，避免在本地与远程服务之间切换时复用错误的会员身份。
+const AUTH_STORAGE_KEY = `suiyueli_wechat_auth_v5:${API_BASE}`
 const LOGIN_CONSENT_KEY = 'suiyueli_login_consent_v1'
 let authState = DEV_USER_ID ? { token: 'local-dev', user: { id: String(DEV_USER_ID) }, expiresAt: Number.MAX_SAFE_INTEGER } : (wx.getStorageSync(AUTH_STORAGE_KEY) || null)
 let loginPromise = null
@@ -155,9 +155,12 @@ function send(path, options, auth) {
 
 function sendPublic(path, options = {}) {
   return new Promise((resolve, reject) => {
+    const method = options.method || 'GET'
+    const separator = path.includes('?') ? '&' : '?'
+    const requestPath = method === 'GET' ? `${path}${separator}_t=${Date.now()}` : path
     wx.request({
-      url: API_BASE + '/api' + path,
-      method: options.method || 'GET',
+      url: API_BASE + '/api' + requestPath,
+      method,
       data: options.data || {},
       header: { 'Content-Type': 'application/json', ...(options.header || {}) },
       success: (res) => {
@@ -179,9 +182,13 @@ async function request(path, options = {}, retried = false) {
   try {
     return await send(path, options, auth)
   } catch (error) {
-    if (!retried && error.statusCode === 401) {
+    const identityMismatch = error.statusCode === 403 && error.message.includes('无权访问其他会员的数据')
+    if (!retried && (error.statusCode === 401 || identityMismatch)) {
       const refreshed = await ensureLogin(true)
-      return send(path, options, refreshed)
+      const retryPath = identityMismatch && /^\/users\/[^/]+$/.test(path)
+        ? `/users/${refreshed.user.id}`
+        : path
+      return send(retryPath, options, refreshed)
     }
     throw error
   }

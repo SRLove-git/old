@@ -1,12 +1,12 @@
 <view wx:if="{{activity}}" class="detail-page">
   <swiper class="product-gallery" indicator-dots="{{true}}" circular="{{true}}" indicator-color="rgba(255,255,255,.55)" indicator-active-color="#ffffff">
     <swiper-item wx:for="{{activity.images}}" wx:key="id" wx:for-item="img">
-      <view class="gallery-slide"><image class="gallery-image" src="{{img.src}}" mode="aspectFill" /><view class="gallery-shade"></view><view class="gallery-brand">岁悦里俱乐部</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
+      <view class="gallery-slide"><image class="gallery-image" src="{{img.src}}" mode="aspectFit" /><view class="gallery-shade"></view><view class="gallery-brand">{{copy.detailGalleryBrand}}</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
     </swiper-item>
   </swiper>
 
   <view class="detail-tabs">
-    <view class="detail-tab {{tab === 'product' ? 'active' : ''}}" data-tab="product" bindtap="toggleTab">商品</view>
+    <view class="detail-tab {{tab === 'product' ? 'active' : ''}}" data-tab="product" bindtap="toggleTab">{{contentName}}</view>
     <view class="detail-tab {{tab === 'review' ? 'active' : ''}}" data-tab="review" bindtap="toggleTab">评价</view>
     <view class="detail-tab {{tab === 'detail' ? 'active' : ''}}" data-tab="detail" bindtap="toggleTab">详情</view>
     <view class="detail-tab {{tab === 'recommend' ? 'active' : ''}}" data-tab="recommend" bindtap="toggleTab">推荐</view>
@@ -14,14 +14,14 @@
 
   <view wx:if="{{tab === 'product'}}" class="tab-panel product-panel">
     <view class="price-line"><text class="currency">¥</text><text class="price">{{activity.memberPrice}}</text><text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text></view>
-    <view class="member-banner" bindtap="goProfile"><view><text class="member-mark">会员</text><text>入会得优惠券，本单再减</text><text class="member-save">¥{{memberSaving}}</text></view><text class="member-link">立即入会 ›</text></view>
-    <view class="title-share-row"><view class="product-title">{{activity.title}}</view><button class="share-button" open-type="share" aria-label="分享商品"><view class="detail-share-circle"><view class="detail-share-mark"><text class="detail-share-node detail-node-top"></text><text class="detail-share-node detail-node-left"></text><text class="detail-share-node detail-node-right"></text></view></view></button></view>
+    <view class="member-banner" bindtap="goProfile"><view><text class="member-mark">会员</text><text>{{copy.detailMemberOffer}}</text><text class="member-save">¥{{memberSaving}}</text></view><text class="member-link">立即入会 ›</text></view>
+    <view class="title-share-row"><view class="product-title">{{activity.title}}</view><view class="share-slot"><button class="share-button" open-type="share" aria-label="分享{{contentName}}"><view class="detail-share-circle"><view class="detail-share-mark"><text class="detail-share-node detail-node-top"></text><text class="detail-share-node detail-node-left"></text><text class="detail-share-node detail-node-right"></text></view></view></button></view></view>
     <view class="product-sub"><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
     <view wx:if="{{refundText}}" class="info-row"><text class="info-label">退改</text><text class="info-value">{{refundText}}</text></view>
     <view wx:if="{{venues.length}}" class="section-card venue-card">
-      <view class="section-title-row"><text>活动场地（{{venues.length}}个可选）</text><text class="muted-link">下单时选择</text></view>
+      <view class="section-title-row"><text>活动场地（{{venues.length}}个可选）</text><text class="muted-link">报名时选择</text></view>
       <view wx:for="{{venues}}" wx:key="id" class="venue-row {{selectedSkuId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectSku">
         <text class="venue-pin">📍</text>
         <view class="venue-info"><view class="venue-name">{{item.district ? item.district + ' · ' : ''}}{{item.name}}</view><view class="venue-address">{{item.address}}</view></view>
@@ -35,13 +35,13 @@
     </view>
 
     <view class="section-card buyers-card">
-      <view class="section-title-row"><text>{{activity.soldCount || activity.buyers.length}}人已购买</text><text class="muted-link">查看全部 ›</text></view>
-      <view wx:for="{{activity.buyers}}" wx:key="time" class="buyer-row"><text class="buyer-avatar">{{item.avatar}}</text><text class="buyer-name">{{item.name}}</text><text class="buyer-time">{{item.time}} 买了1件</text><button class="buyer-go btn btn-secondary btn-pill" catchtap="openSku">去下单</button></view>
+      <view class="section-title-row"><text>{{activity.soldCount || 0}}人{{isGoods ? '已购买' : '已报名'}}</text><text class="muted-link" bindtap="openBuyers">查看全部 ›</text></view>
+      <view wx:for="{{activity.buyers}}" wx:key="time" class="buyer-row"><text class="buyer-avatar">{{item.avatar}}</text><text class="buyer-name">{{item.name}}</text><text class="buyer-time">{{item.time}} {{isGoods ? '买了1件' : '报名成功'}}</text><button class="buyer-go btn btn-secondary btn-pill" catchtap="openSku">{{isGoods ? '去下单' : '去报名'}}</button></view>
     </view>
 
     <view class="section-card review-preview">
-      <view class="section-title-row"><text>商品评价</text><view class="review-head-actions"><text class="muted-link">{{reviews.length ? reviews.length + '条评价' : '暂无评价'}}</text><button class="write-review-button" bindtap="openReview">写评价</button></view></view>
-      <view wx:if="{{reviews.length}}" class="review first-review"><text class="review-avatar">👵</text><view><view class="review-name">{{reviews[0].name}}</view><view class="review-text">{{reviews[0].content}}</view><view class="review-time">{{reviews[0].time}}</view></view></view>
+      <view class="section-title-row"><text>{{contentName}}评价</text><view class="review-head-actions"><text class="muted-link">{{reviews.length ? reviews.length + '条评价' : '暂无评价'}}</text><button class="write-review-button" bindtap="openReview">写评价</button></view></view>
+    <view wx:if="{{reviews.length}}" class="review first-review"><text class="review-avatar">👵</text><view class="review-body"><view class="review-name">{{reviews[0].name}}</view><view class="review-text">{{reviews[0].content}}</view><view wx:if="{{reviews[0].reply}}" class="review-reply"><view class="review-reply-head"><text>商家回复</text><text wx:if="{{reviews[0].repliedAt}}" class="review-reply-time">{{reviews[0].repliedAt}}</text></view><view class="review-reply-content">{{reviews[0].reply}}</view></view><view class="review-time">{{reviews[0].time}}</view></view></view>
     </view>
 
     <view wx:if="{{merchant}}" class="merchant-card" bindtap="goShop"><view class="merchant-logo">岁</view><view class="merchant-copy"><view class="merchant-name">{{merchant.shopName || merchant.name}}</view><view class="merchant-cert">企业认证</view></view><button class="merchant-enter btn btn-secondary btn-pill">进店逛逛</button></view>
@@ -50,36 +50,36 @@
   </view>
 
   <view wx:elif="{{tab === 'review'}}" class="tab-panel review-panel">
-    <view class="section-heading"><text class="heading-cn">商品评价</text><button class="write-review-button" bindtap="openReview">写评价</button></view>
-    <view wx:for="{{reviews}}" wx:key="id" class="review"><text class="review-avatar">👵</text><view><view class="review-name">{{item.name}}</view><view class="review-text">{{item.content}}</view><view class="review-time">{{item.time}}</view></view></view>
-    <view wx:if="{{reviews.length === 0}}" class="empty-review">暂无评价，购买后欢迎分享体验</view>
+    <view class="section-heading"><text class="heading-cn">{{contentName}}评价</text><button class="write-review-button" bindtap="openReview">写评价</button></view>
+    <view wx:for="{{reviews}}" wx:key="id" class="review"><text class="review-avatar">👵</text><view class="review-body"><view class="review-name">{{item.name}}</view><view class="review-text">{{item.content}}</view><view wx:if="{{item.reply}}" class="review-reply"><view class="review-reply-head"><text>商家回复</text><text wx:if="{{item.repliedAt}}" class="review-reply-time">{{item.repliedAt}}</text></view><view class="review-reply-content">{{item.reply}}</view></view><view class="review-time">{{item.time}}</view></view></view>
+    <view wx:if="{{reviews.length === 0}}" class="empty-review">暂无评价，{{isGoods ? '购买' : '参加'}}后欢迎分享体验</view>
   </view>
 
   <view wx:elif="{{tab === 'detail'}}" class="tab-panel detail-rich">
-    <view class="section-heading"><text class="heading-cn">商品详情</text></view>
+    <view class="section-heading"><text class="heading-cn">{{detailTitle}}</text></view>
     <view wx:if="{{merchant}}" class="merchant-card" bindtap="goShop"><view class="merchant-logo">岁</view><view class="merchant-copy"><view class="merchant-name">{{merchant.shopName || merchant.name}}</view><view class="merchant-cert">企业认证</view></view><button class="merchant-enter btn btn-secondary btn-pill">进店逛逛</button></view>
     <block wx:for="{{activity.detailBlocks}}" wx:key="_key" wx:for-item="block">
       <text wx:if="{{block.type === 'text'}}" class="detail-text">{{block.text}}</text>
-      <view wx:elif="{{block.type === 'image'}}" class="detail-media"><image src="{{block.src || activity.art}}" mode="aspectFill" /><text>{{block.caption}}</text></view>
+      <view wx:elif="{{block.type === 'image'}}" class="detail-media detail-image-media"><image class="detail-rich-image" src="{{block.src || activity.art}}" mode="widthFix" /><text wx:if="{{block.caption}}" class="detail-media-caption">{{block.caption}}</text></view>
       <view wx:elif="{{block.type === 'video'}}" class="detail-media detail-video"><video wx:if="{{block.url}}" src="{{block.url}}" class="detail-video-player" controls></video><view wx:else class="video-placeholder"><text class="video-play">▶</text><text>{{block.caption}}</text></view></view>
     </block>
   </view>
 
   <view wx:else class="tab-panel recommend-panel">
-    <view class="section-heading"><text class="heading-cn">推荐商品</text></view>
+    <view class="section-heading"><text class="heading-cn">推荐{{contentName}}</text></view>
     <view class="recommend-grid"><view wx:for="{{recommend}}" wx:key="id" class="recommend-card" data-id="{{item.id}}" bindtap="goDetailFromRec"><image class="recommend-cover" src="{{item.art}}" mode="aspectFill" /><view class="recommend-title">{{item.title}}</view><view wx:if="{{item.rankLabel}}" class="recommend-rank">{{item.rankLabel}}</view><view class="recommend-price">¥{{item.memberPrice}}</view></view></view>
     <view wx:if="{{recommend.length === 0}}" class="empty-review">暂无相关推荐</view>
   </view>
 
   <view class="fixed-bottom product-bottom">
     <view class="quick-actions">
-      <button class="bottom-icon" bindtap="showService"><view class="bi-icon bi-icon-service"></view><text>客服</text></button>
-      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><view class="bi-icon bi-icon-shop"></view><text>店铺</text></button>
-      <button class="bottom-icon" bindtap="goCart"><view class="bi-icon bi-icon-cart"></view><text>购物车</text></button>
+      <button class="bottom-icon" bindtap="showService"><image class="bi-image" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>客服</text></button>
+      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
+      <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image class="bi-image" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
     </view>
     <view class="purchase-actions">
-      <button class="action-button add-cart-button" bindtap="addToCart">加入购物车</button>
-      <button class="action-button buy-now-button" bindtap="openSku">立即购买</button>
+      <button class="action-button add-cart-button {{activity.expired ? 'disabled' : ''}}" bindtap="addToCart" disabled="{{activity.expired}}"><text>{{activity.expired ? (isGoods ? '不可购买' : '不可报名') : '加入购物车'}}</text></button>
+      <button class="action-button buy-now-button {{activity.expired ? 'disabled' : ''}}" bindtap="openSku" disabled="{{activity.expired}}"><text>{{buyNowText}}</text></button>
     </view>
   </view>
 
@@ -95,8 +95,19 @@
       <button class="btn btn-ink btn-block review-submit" loading="{{reviewSubmitting}}" disabled="{{reviewSubmitting}}" bindtap="submitDetailReview">提交评价</button>
     </view>
   </view>
+  <view wx:if="{{buyersOpen}}" class="sheet-mask mask" bindtap="closeBuyers">
+    <view class="sheet buyers-sheet" catchtap="noop">
+      <view class="sheet-head"><text class="sheet-title">{{isGoods ? '购买记录' : '报名记录'}}</text><button class="close" bindtap="closeBuyers">×</button></view>
+      <scroll-view scroll-y class="buyers-scroll">
+        <view wx:for="{{activity.buyers}}" wx:key="time" class="buyer-row buyer-row-all">
+          <text class="buyer-avatar">👤</text><text class="buyer-name">{{item.name}}</text><text class="buyer-time">{{item.time}} · {{item.count}}份</text>
+        </view>
+        <view wx:if="{{!activity.buyers.length}}" class="empty-review">暂无有效订单记录</view>
+      </scroll-view>
+    </view>
+  </view>
   <view wx:if="{{skuOpen}}" class="sheet-mask mask" bindtap="closeSku">
-    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.skus.length ? '请选择' + (activity.skuLabel || '规格') : '确认购买'}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options {{hasVenue ? 'stacked' : ''}}"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><view wx:if="{{selectedSku && selectedSku.address}}" class="sheet-venue"><text class="sheet-venue-pin">📍</text><view class="sheet-venue-body"><view class="sheet-venue-label">本次活动场地</view><view class="sheet-venue-text">{{selectedSku.address}}</view></view></view><button class="sheet-confirm btn btn-primary btn-block" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
+    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.skus.length ? '请选择' + (activity.skuLabel || '规格') : (isGoods ? '确认购买' : '确认报名')}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options {{hasVenue ? 'stacked' : ''}}"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><view wx:if="{{selectedSku && selectedSku.address}}" class="sheet-venue"><text class="sheet-venue-pin">📍</text><view class="sheet-venue-body"><view class="sheet-venue-label">本次活动场地</view><view class="sheet-venue-text">{{selectedSku.address}}</view></view></view><button class="sheet-confirm btn btn-primary btn-block" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
   </view>
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

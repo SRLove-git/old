@@ -1,0 +1,350 @@
+/* 与运营后台共享的岁悦里 Arco Design 主题 */
+body {
+  --arcoblue-1: 253, 233, 223;
+  --arcoblue-2: 248, 214, 200;
+  --arcoblue-3: 240, 187, 166;
+  --arcoblue-4: 222, 149, 123;
+  --arcoblue-5: 208, 112, 82;
+  --arcoblue-6: 194, 94, 61;
+  --arcoblue-7: 166, 76, 47;
+  --arcoblue-8: 138, 62, 39;
+  --arcoblue-9: 110, 49, 31;
+  --arcoblue-10: 82, 37, 23;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-text-3); font-size: 13px; }
+
+.login-page {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-fill-1);
+}
+
+.login-card {
+  width: 360px;
+  padding: 36px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 36px rgba(96, 54, 35, 0.1);
+}
+
+.login-logo {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c25e3d, #e19a6d);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.login-title { text-align: center; font-size: 22px; font-weight: 700; color: #26312f; }
+.login-sub { margin: 8px 0 24px; text-align: center; color: #7a817f; font-size: 13px; }
+.login-tip { margin-bottom: 14px; }
+.login-error { margin-bottom: 14px; padding: 9px 12px; border-radius: 8px; background: #ffece8; color: #f53f3f; font-size: 13px; }
+
+.layout { height: 100vh; }
+.sider { background: #fff; box-shadow: 1px 0 0 rgba(29, 27, 22, 0.06); }
+.logo { height: 56px; display: flex; align-items: center; justify-content: center; padding: 0 12px; overflow: hidden; color: var(--color-text-1); font-size: 16px; font-weight: 700; white-space: nowrap; }
+.sider-trigger { height: 40px; display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--color-fill-3); color: var(--color-text-3); cursor: pointer; }
+
+.topbar { position: sticky; top: 0; z-index: 10; height: 56px; padding: 0; border-bottom: 1px solid var(--color-fill-3); background: #fff; }
+.topbar-inner { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.topbar-title { color: var(--color-text-1); font-size: 16px; font-weight: 600; }
+.topbar-spacer { flex: 1; }
+.avatar { background: var(--primary-6); }
+.merchant-identity { display: grid; line-height: 1.25; }
+.merchant-identity strong { max-width: 180px; overflow: hidden; color: var(--color-text-1); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.merchant-identity span { color: var(--color-text-3); font-size: 11px; }
+
+.content { padding: 16px; overflow: auto; }
+.error { margin-bottom: 16px; }
+.spin { width: 100%; min-height: 240px; }
+.page-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.page-intro h1 { margin: 0; color: var(--color-text-1); font-size: 24px; }
+.page-intro p { margin: 6px 0 0; color: var(--color-text-3); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+
+.table-cover { display: block; width: 72px; height: 48px; border-radius: 6px; object-fit: cover; }
+.table-cover-empty { display: flex; align-items: center; justify-content: center; background: var(--color-fill-2); color: rgb(var(--primary-6)); font-weight: 700; }
+
+.cover-uploader { width: 100%; padding: 14px; border: 1px solid var(--color-border-2); border-radius: 10px; background: var(--color-fill-1); }
+.cover-preview { display: block; width: 280px; height: 158px; margin-bottom: 12px; border-radius: 8px; object-fit: cover; }
+.cover-empty { display: flex; align-items: center; justify-content: center; background: var(--color-fill-2); color: var(--color-text-3); }
+.cover-uploader .muted { margin-top: 10px; }
+
+.lesson-editor { width: 100%; padding: 14px; border: 1px solid var(--color-border-2); border-radius: 10px; background: var(--color-fill-1); }
+.lesson-editor-head,
+.lesson-row-head,
+.lesson-options { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lesson-editor-head { margin-bottom: 12px; }
+.lesson-row { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--color-border-2); border-radius: 8px; background: var(--color-bg-2); }
+.lesson-video-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.listing-editor-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  padding: 20px;
+  background: #f5f6f8;
+}
+
+.listing-editor-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.editor-progress-card,
+.editor-help-card {
+  padding: 16px;
+  border: 1px solid #e7e9ed;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.editor-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #2d3339;
+}
+
+.editor-progress-head span {
+  color: #ee4d2d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.editor-progress-tip,
+.editor-help-card span {
+  display: block;
+  margin-top: 8px;
+  color: #8a9099;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.editor-step {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #4e5560;
+  text-align: left;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.editor-step:hover {
+  border-color: #f0d6cf;
+  background: #fff8f6;
+  color: #d84326;
+}
+
+.editor-step-index {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #d8dce2;
+  border-radius: 50%;
+  background: #fff;
+  color: #8a9099;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.editor-step-index.done {
+  border-color: #9cc9ad;
+  background: #edf8f1;
+  color: #328653;
+}
+
+.editor-step strong,
+.editor-step small { display: block; }
+.editor-step strong { font-size: 14px; }
+.editor-step small { margin-top: 2px; color: #9ba1aa; font-size: 11px; font-weight: 400; }
+
+.listing-editor-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.listing-section {
+  scroll-margin-top: 16px;
+  padding: 22px 24px 8px;
+  border: 1px solid #e7e9ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(30, 36, 43, .035);
+}
+
+.listing-section-head {
+  margin: -2px 0 22px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.listing-section-head > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #252b31;
+  font-size: 18px;
+}
+
+.listing-section-index {
+  color: #ee4d2d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.listing-section-head p {
+  margin: 5px 0 0 30px;
+  color: #9298a1;
+  font-size: 12px;
+}
+
+.listing-editor-modal .arco-modal-body {
+  max-height: 72vh;
+  padding: 0;
+  background: #f5f6f8;
+}
+
+.listing-editor-modal .arco-modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid #e7e9ed;
+  background: #fff;
+}
+
+.listing-editor-modal .cover-uploader {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 18px;
+}
+
+.listing-editor-modal .cover-preview {
+  grid-row: span 2;
+  margin: 0;
+}
+
+.schedule-editor,
+.detail-block-editor,
+.product-sku-editor {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 10px;
+  background: var(--color-fill-1);
+}
+
+.schedule-empty {
+  padding: 20px 12px;
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.35fr) minmax(105px, 1fr) minmax(105px, 1fr) 88px 52px;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-2);
+}
+
+.schedule-field { min-width: 0; }
+.schedule-field > span { display: block; margin-bottom: 6px; color: var(--color-text-2); font-size: 12px; }
+.schedule-remove { margin-bottom: 1px; }
+.schedule-sold { grid-column: 1 / -1; color: var(--color-text-3); font-size: 12px; }
+
+.editor-table-head {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(90px, 1fr)) auto 48px;
+  gap: 10px;
+  padding: 0 12px 8px;
+  color: #8d939c;
+  font-size: 12px;
+}
+
+.product-sku-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) repeat(3, minmax(90px, 1fr)) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-2);
+}
+
+.activity-sku-row .product-sku-address { grid-column: span 5; }
+
+.detail-block-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-2);
+}
+
+.detail-block-head { display: flex; align-items: center; justify-content: space-between; }
+.detail-block-image { display: block; width: 280px; max-height: 180px; border-radius: 8px; object-fit: cover; }
+.detail-block-video { display: block; width: min(100%, 480px); max-height: 280px; border-radius: 8px; background: #17191c; }
+.detail-upload-button { width: max-content; }
+.refund-ladder-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
+@media (max-width: 768px) {
+  .login-card { width: min(360px, 100%); padding: 28px 22px; }
+  .content { padding: 12px; }
+  .page-intro { align-items: flex-start; }
+  .page-intro h1 { font-size: 20px; }
+  .page-intro p { max-width: 220px; font-size: 12px; }
+  .merchant-identity { display: none; }
+  .cover-preview { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .listing-editor-layout { grid-template-columns: 1fr; padding: 12px; }
+  .listing-editor-sidebar { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .editor-progress-card, .editor-help-card { grid-column: 1 / -1; }
+  .listing-editor-modal .cover-uploader { grid-template-columns: 1fr; row-gap: 12px; }
+  .listing-editor-modal .cover-preview { grid-row: auto; }
+}
