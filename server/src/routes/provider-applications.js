@@ -20,7 +20,7 @@ router.post('/:id/approve', adminAuth, wrap((req) => {
   const shopName = String(req.body?.shopName || '').trim()
   if (!/^[a-z0-9_]{4,24}$/.test(username)) throw httpError(400, '账号需为4-24位字母、数字或下划线')
   if (password.length < 8) throw httpError(400, '临时密码至少8位')
-  const { password: ignoredPassword, ...approval } = req.body || {}
+  const { password: _ignoredPassword, ...approval } = req.body || {}
   return store.auditProvider(req.params.id, true, '', {
     ...approval,
     username,

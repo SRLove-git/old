@@ -11,7 +11,7 @@ import { calculateRefund } from './lib/refund-policy.js'
 import { pendingStatusForMode, serviceModeOfOffering } from './lib/order-fulfillment.js'
 import { COMMISSION_STATUS, commissionAmountOf, sumCommissions } from './lib/commission-values.js'
 import { normalizePaidOfferingPrices, requiredPaidPrice } from './lib/offering-prices.js'
-import { normalizeContentPost } from './lib/content-posts.js'
+import { contentMediaUrl, normalizeContentPost } from './lib/content-posts.js'
 import { normalizeBalanceRechargeAmounts } from './lib/balance-config.js'
 import { fenToYuan, multiplyFen, yuanToFen } from './lib/money.js'
 
@@ -372,7 +372,7 @@ function normalizeCommissionAmounts(database) {
     const count = Math.max(1, Number(order.count || 1))
     const discountedAmount = round2(order.discountedAmount ?? (Number(order.memberPrice || 0) * count))
     const originalUnitPrice = Number(order.originalUnitPrice ?? offering.originalPrice ?? offering.price ?? order.memberPrice ?? 0)
-    const originalAmount = round2(order.originalAmount ?? (originalUnitPrice * count) ?? discountedAmount)
+    const originalAmount = round2(order.originalAmount ?? originalUnitPrice * count)
     const actualPaidAmount = round2(order.actualPaidAmount ?? order.payAmount ?? 0)
     order.originalUnitPrice = round2(originalUnitPrice)
     order.originalAmount = Math.max(originalAmount, discountedAmount, actualPaidAmount)
@@ -641,7 +641,7 @@ export function listParticipants(userId = null) {
 }
 
 export function createParticipant(userId, data = {}) {
-  const { id: ignoredId, userId: ignoredUserId, ...form } = data || {}
+  const { id: _id, userId: _userId, ...form } = data || {}
   const participant = { id: Date.now(), ...form, userId: String(userId) }
   db.participants.push(participant)
   save()
@@ -668,7 +668,7 @@ export function listAddresses(userId = null) {
 }
 
 export function createAddress(userId, data = {}) {
-  const { id: ignoredId, userId: ignoredUserId, ...form } = data || {}
+  const { id: _id, userId: _userId, ...form } = data || {}
   const address = { ...form, id: `addr${Date.now()}`, userId: String(userId) }
   if (address.isDefault) {
     db.addresses.forEach((item) => {
@@ -701,7 +701,7 @@ export function deleteAddress(id) {
 
 function publicAdminAccount(account) {
   if (!account) return null
-  const { salt, passwordHash, ...safe } = account
+  const { salt: _salt, passwordHash: _passwordHash, ...safe } = account
   return safe
 }
 
@@ -783,7 +783,7 @@ export function changeAdminPassword(id, oldPassword, newPassword, options = {}) 
 }
 
 export function listMerchantAccounts() {
-  return (db.merchantAccounts || []).map(({ salt, passwordHash, ...account }) => account)
+  return (db.merchantAccounts || []).map(({ salt: _salt, passwordHash: _passwordHash, ...account }) => account)
 }
 
 export function updateMerchantAccount(id, data = {}) {

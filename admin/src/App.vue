@@ -14,7 +14,7 @@ import {
   replaceText, wechatNoteForEditor, wechatNoteForStorage
 } from './config-model.js'
 import {
-  CATEGORY_TYPES as categoryTypes, CONTENT_TYPE_OPTIONS as contentTypeOptions,
+  CONTENT_TYPE_OPTIONS as contentTypeOptions,
   COUPON_TYPES as couponTypes, MANAGER_FINANCE_STATUS_OPTIONS as managerFinanceStatusOptions,
   MANAGER_PAYMENT_STATUS_OPTIONS as managerPaymentStatusOptions, ORDER_STATUSES as orderStatuses,
   POST_TYPE_OPTIONS as postTypeOptions, PROVIDER_TYPE_OPTIONS as providerTypeOptions,
@@ -22,7 +22,7 @@ import {
   SELL_TYPE_OPTIONS as sellTypeOptions, SERVICE_MODE_OPTIONS as serviceModeOptions,
   WITHDRAW_PAY_CHANNEL_OPTIONS as withdrawPayChannelOptions, WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
 } from './options.js'
-import { areaChildrenByParent, provinceOptions, regionArea } from './utils/regions.js'
+import { areaChildrenByParent, areaName, provinceOptions, regionArea } from './utils/regions.js'
 import {
   fmtMoney, fuzzyMatch, isPaidPrice, notificationColor,
   notificationLabel, orderAddressText, orderChip, statusChip
@@ -2628,7 +2628,7 @@ function exportCsv(filename, rows) {
 
           <OrdersView v-if="view === 'orders'" v-model:keyword="kw" v-model:status="orderStatusFilter" :orders="filteredOrders" :export-rows="orderExportRows" :status-options="orderStatusOptions" :pending-checkin="pendingCheckinOrders" :pending-ship="pendingShipOrders" @export="rows => exportCsv('orders.csv', rows)" @cancel="id => orderAction(id, 'cancel')" @advance="id => orderAction(id, 'advance')" @ship="openShip" @complete="completeOrderFulfillment" @approve-refund="approveRefund" @reject-refund="rejectRefund" @refund="refundOrder" />
 
-          <LogisticsView v-if="view === 'logistics'" :config="logisticsConfig" :exceptions="logisticsExceptions" :loading="logisticsQueryLoading" :query-form="logisticsQueryForm" :result="logisticsQueryResult" @query="queryLogistics" @refresh="refreshLogistics" />
+          <LogisticsView v-if="view === 'logistics'" :config="logisticsConfig" :exceptions="logisticsExceptions" :loading="logisticsQueryLoading" v-model:query-form="logisticsQueryForm" :result="logisticsQueryResult" @query="queryLogistics" @refresh="refreshLogistics" />
 
           <VerifyView
             v-if="view === 'verify'"
@@ -3034,7 +3034,7 @@ function exportCsv(filename, rows) {
       </a-row>
       <a-form-item label="联系地址" required><a-textarea v-model="providerAccountForm.address" :auto-size="{ minRows: 2, maxRows: 4 }" /></a-form-item>
       <a-form-item label="主营产品/服务" required><a-textarea v-model="providerAccountForm.intro" :auto-size="{ minRows: 3, maxRows: 6 }" /></a-form-item>
-      <a-alert type="info" style="margin: 6px 0 16px">申请编号：{{ providerApproveTarget.id }}　提交时间：{{ providerApproveTarget.submittedAt || '—' }}</a-alert>
+      <a-alert type="info" style="margin: 6px 0 16px">申请编号：{{ providerApproveTarget.id }} 提交时间：{{ providerApproveTarget.submittedAt || '—' }}</a-alert>
 
       <a-divider orientation="left">合作资料</a-divider>
       <a-row :gutter="12">

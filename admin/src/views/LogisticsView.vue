@@ -1,12 +1,18 @@
 <script setup>
-defineProps({
+import { computed } from "vue";
+
+const props = defineProps({
   config: { type: Object, required: true },
   exceptions: { type: Array, default: () => [] },
   loading: Boolean,
   queryForm: { type: Object, required: true },
   result: { type: Object, default: null },
 });
-const emit = defineEmits(["query", "refresh"]);
+const emit = defineEmits(["query", "refresh", "update:queryForm"]);
+const trackingNo = computed({
+  get: () => props.queryForm.trackingNo,
+  set: (value) => emit("update:queryForm", { ...props.queryForm, trackingNo: value }),
+});
 const exceptionColumns = [
   { title: "订单号", dataIndex: "orderId", width: 170 },
   { title: "快递公司", dataIndex: "carrier", width: 120 },
@@ -43,7 +49,7 @@ const traceColumns = [
     >
     <a-card title="快递单号查询" :bordered="false"
       ><a-input-search
-        v-model="queryForm.trackingNo"
+        v-model="trackingNo"
         search-button
         allow-clear
         placeholder="输入快递单号，自动识别快递公司"

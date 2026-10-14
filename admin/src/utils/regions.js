@@ -9,7 +9,7 @@ export const areaChildrenByParent = areaRows.reduce((map, item) => {
 }, new Map())
 export const provinceOptions = areaChildrenByParent.get('86') || []
 
-const areaName = (code) => rowByCode.get(String(code || ''))?.name || ''
+export const areaName = (code) => rowByCode.get(String(code || ''))?.name || ''
 const normalizedName = (name) => String(name || '').replace(/特别行政区|自治区|自治州|市辖区|地区|省|市|区|县|盟/g, '')
 
 export function regionArea(region) {
