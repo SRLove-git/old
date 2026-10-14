@@ -2,6 +2,8 @@
 
 这是原生微信小程序版本，使用 WXML / WXSS / JavaScript，可以直接导入微信开发者工具运行。
 
+代码结构与开发规范见 [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)。
+
 ## 导入方式
 
 1. 打开微信开发者工具，选择「导入项目」。
@@ -38,7 +40,8 @@
 - `utils/request.js`：统一 `wx.request` 封装，路径以 `/api` 开头
 - `utils/config.js`：后端地址 `API_BASE`（本地联调改成 `http://127.0.0.1:3000`）
 - 签到页使用微信官方 `wx.chooseLocation` 选择位置并读取地点名称和详细地址，无需配置第三方地址服务域名。
-- `utils/store.js`：客户端缓存与业务封装（下单、退款、绑定、佣金、提现等均调用后端）
+- `utils/store.js`：兼容入口，实际实现拆分为 `store/`（缓存与业务编排）与 `services/`（API 封装）
+- `utils/store-helpers.js`：纯展示与格式化工具（金额、状态、手机号、退款规则、订单筛选）
 - `utils/qrcode.js`：会员码 / 推广码的二维码绘制
 - `app.js`：全局启动、预取与 `ref` 参数处理
 

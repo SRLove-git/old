@@ -2,6 +2,8 @@
 
 基于 Node.js + Express，数据用 `data.json` 持久化（首次运行自动用 `src/seed.js` 种子数据生成）。数据保存采用同目录临时文件原子替换，并在覆盖前保留一份 `data.json.bak`；如果现有数据无法解析，服务会停止启动，避免用种子数据覆盖业务数据。
 
+代码结构与开发规范见 [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)。`npm test` 运行 `src/test` 下的单测。
+
 ## 微信小程序登录
 
 小程序 AppID 已配置为 `wx5d1ccdf824e45e73`。启动生产服务前必须在服务端环境变量中设置：

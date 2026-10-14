@@ -2,6 +2,8 @@
 
 基于 Vue 3 + Vite，对接 `/api` 后端接口。
 
+代码结构与开发规范见 [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)。
+
 ## 启动
 
 ```bash
