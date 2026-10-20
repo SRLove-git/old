@@ -14,6 +14,7 @@ import { normalizePaidOfferingPrices, requiredPaidPrice } from './lib/offering-p
 import { contentMediaUrl, normalizeContentPost } from './lib/content-posts.js'
 import { normalizeBalanceRechargeAmounts } from './lib/balance-config.js'
 import { fenToYuan, multiplyFen, yuanToFen } from './lib/money.js'
+import { validateActivityScheduleDates } from './lib/activity-schedules.js'
 
 export { maskPhone, normalizePhone } from './lib/domain-values.js'
 export { scheduleDaysUntil } from './lib/refund-policy.js'
@@ -920,6 +921,7 @@ export function createActivity(data) {
     managerId,
     regionIds: normalizeRegionIds(data && data.regionIds)
   }
+  validateActivityScheduleDates(activity)
   normalizePaidOfferingPrices(activity, '活动')
   activity.city = regionText(activity.regionIds, activity.city || '线上/全国')
   db.activities.unshift(activity)
@@ -935,6 +937,7 @@ export function updateActivity(id, data) {
   next.managerId = next.publisherType === 'platform' ? null : Number(next.managerId)
   if (next.publisherType === 'merchant' && (!next.managerId || !findManager(next.managerId))) throw badRequest('请先选择有效商家')
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
+  validateActivityScheduleDates(next)
   normalizePaidOfferingPrices(next, '活动')
   next.city = regionText(next.regionIds, next.city || '线上/全国')
   db.activities[idx] = next

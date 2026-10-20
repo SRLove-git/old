@@ -1,6 +1,6 @@
-// 管理后台即使部署在 /admin/ 子目录，业务接口仍统一位于站点根路径 /api。
-// 使用 BASE_URL 会在生产构建后错误地请求 /admin/api，导致页面设置看似保存、实际未落库。
-const BASE = "/api";
+// 生产后台部署在 /admin/ 子目录，Nginx 通过 /admin/api 转发到对应后端。
+// 本地开发仍使用 Vite 的 /api 代理。
+const BASE = import.meta.env.PROD ? "/admin/api" : "/api";
 const TOKEN_KEY = "suiyueli_admin_token";
 const ACCOUNT_KEY = "suiyueli_admin_account";
 const REQUEST_TIMEOUT_MS = 15000;

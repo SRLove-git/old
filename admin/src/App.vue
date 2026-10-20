@@ -878,6 +878,21 @@ function scheduleEditorRow(schedule = {}) {
   }
 }
 
+function localTodayKey() {
+  const now = new Date()
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function disablePastActivityDate(current) {
+  const value = current instanceof Date ? current : new Date(current)
+  if (Number.isNaN(value.getTime())) return false
+  value.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return value.getTime() < today.getTime()
+}
+
 function addActivitySchedule() {
   activitySchedules.value.push(scheduleEditorRow({ totalQuota: activityForm.value?.maxGroup || 0 }))
 }
@@ -898,12 +913,14 @@ function scheduleWeekday(full) {
 }
 
 function serializeActivitySchedules() {
+  const today = localTodayKey()
   return activitySchedules.value.map((schedule, index) => {
     const full = String(schedule.full || '').trim()
     const startTime = String(schedule.startTime || '').trim()
     const endTime = String(schedule.endTime || '').trim()
     const time = startTime && endTime ? `${startTime}-${endTime}` : String(schedule.originalTime || '').trim()
     if (!full || !time || (!!startTime !== !!endTime)) throw new Error(`请完整填写第 ${index + 1} 个场次的日期和时间`)
+    if (full < today) throw new Error(`第 ${index + 1} 个场次只能选择今天或未来日期`)
     const totalQuota = Math.max(0, Number(schedule.totalQuota || 0))
     const soldQuota = Math.max(0, Number(schedule.soldQuota || 0))
     return {
@@ -3188,7 +3205,7 @@ function exportCsv(filename, rows) {
           <div v-for="(schedule, index) in activitySchedules" :key="schedule.id || index" class="schedule-row">
             <div class="schedule-field schedule-date-field">
               <span>日期</span>
-              <a-date-picker v-model="schedule.full" value-format="YYYY-MM-DD" placeholder="选择日期" style="width: 100%" />
+              <a-date-picker v-model="schedule.full" value-format="YYYY-MM-DD" :disabled-date="disablePastActivityDate" placeholder="选择今天或未来日期" style="width: 100%" />
             </div>
             <div class="schedule-field">
               <span>开始时间</span>
