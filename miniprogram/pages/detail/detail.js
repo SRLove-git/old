@@ -66,7 +66,10 @@ Page({
     reviewableOrderId: '',
     reviewSubmitting: false,
     buyersOpen: false,
-    cartCount: 0
+    cartCount: 0,
+    galleryIndex: 0,
+    galleryHeight: 750,
+    galleryHeights: []
   },
 
   async onLoad(options) {
@@ -131,6 +134,9 @@ Page({
     const venues = (activity.skus || [])
       .filter((s) => s.address)
       .map((s) => ({ id: s.id, name: s.name, district: s.district || '', address: s.address }))
+    const sameGallery = this.data.activity && String(this.data.activity.id) === String(activity.id)
+    const galleryHeights = sameGallery ? this.data.galleryHeights : []
+    const galleryHeight = galleryHeights[0] || 750
     this.setData({
       activity,
       isGoods,
@@ -152,8 +158,45 @@ Page({
       buyNowText: activity.expired ? (isGoods ? '商品已下架' : '活动已结束') : (isGoods ? '立即购买' : '立即报名'),
       cartCount: store.getCart().reduce((total, item) => total + Number(item.count || 1), 0),
       selectedSkuId: hasSku && activity.skus && activity.skus.length ? activity.skus[0].id : '',
-      selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null
+      selectedSku: hasSku && activity.skus && activity.skus.length ? activity.skus[0] : null,
+      galleryIndex: 0,
+      galleryHeight,
+      galleryHeights
+    }, () => this.measureGalleryImages(activity.images))
+  },
+
+  onGalleryImageLoad(e) {
+    const index = Number(e.currentTarget.dataset.index || 0)
+    const width = Number(e.detail.width || 0)
+    const height = Number(e.detail.height || 0)
+    this.updateGalleryHeight(index, width, height)
+  },
+
+  measureGalleryImages(images) {
+    const galleryImages = images || []
+    galleryImages.forEach((image, index) => {
+      if (!image || !image.src) return
+      wx.getImageInfo({
+        src: image.src,
+        success: ({ width, height }) => this.updateGalleryHeight(index, Number(width), Number(height))
+      })
     })
+  },
+
+  updateGalleryHeight(index, width, height) {
+    if (!width || !height) return
+    const galleryHeight = Math.max(1, Math.round(750 * height / width))
+    const galleryHeights = [...this.data.galleryHeights]
+    galleryHeights[index] = galleryHeight
+    const next = { galleryHeights }
+    if (index === this.data.galleryIndex) next.galleryHeight = galleryHeight
+    this.setData(next)
+  },
+
+  onGalleryChange(e) {
+    const galleryIndex = Number(e.detail.current || 0)
+    const galleryHeight = this.data.galleryHeights[galleryIndex] || this.data.galleryHeight || 750
+    this.setData({ galleryIndex, galleryHeight })
   },
 
   openReview() {

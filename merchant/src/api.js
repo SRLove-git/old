@@ -1,5 +1,7 @@
 const TOKEN_KEY = 'suiyueli_merchant_token'
-const BASE = '/api'
+// 生产商户端部署在 /merchant/ 子目录，通过 /merchant/api 访问旧版业务后端。
+// 本地开发继续使用 Vite 的 /api 代理。
+const BASE = import.meta.env.PROD ? '/merchant/api' : '/api'
 const REQUEST_TIMEOUT_MS = 15000
 
 export const token = () => localStorage.getItem(TOKEN_KEY) || ''

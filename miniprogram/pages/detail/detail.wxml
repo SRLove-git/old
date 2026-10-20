@@ -1,7 +1,7 @@
 <view wx:if="{{activity}}" class="detail-page">
-  <swiper class="product-gallery" indicator-dots="{{true}}" circular="{{true}}" indicator-color="rgba(255,255,255,.55)" indicator-active-color="#ffffff">
+  <swiper class="product-gallery" style="height: {{galleryHeight}}rpx" indicator-dots="{{true}}" circular="{{true}}" indicator-color="rgba(255,255,255,.55)" indicator-active-color="#ffffff" bindchange="onGalleryChange">
     <swiper-item wx:for="{{activity.images}}" wx:key="id" wx:for-item="img">
-      <view class="gallery-slide"><image class="gallery-image" src="{{img.src}}" mode="aspectFit" /><view class="gallery-shade"></view><view class="gallery-brand">{{copy.detailGalleryBrand}}</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
+      <view class="gallery-slide"><image class="gallery-image" src="{{img.src}}" mode="aspectFit" data-index="{{index}}" bindload="onGalleryImageLoad" /><view class="gallery-shade"></view><view class="gallery-brand">{{copy.detailGalleryBrand}}</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
     </swiper-item>
   </swiper>
 

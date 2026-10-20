@@ -1,26 +1,53 @@
 <view class="shop-page" wx:if="{{manager}}">
   <view class="shop-hero">
-    <view class="shop-head"><view class="shop-logo">{{manager.initial}}</view><view class="shop-info"><view class="shop-name">{{manager.shopName}}</view><view class="shop-owner">店主 {{manager.name}} · 平台认证服务商</view></view><button class="contact" bindtap="callMerchant">联系商家</button></view>
-    <view class="shop-intro">{{manager.shopIntro}}</view>
-    <view class="shop-stats"><view><text>{{stats.count}}</text><text>产品与服务</text></view><view><text>{{stats.sales}}</text><text>累计购买</text></view><view><text>{{stats.rating}}</text><text>店铺评分</text></view></view>
     <view class="hero-ring ring-one"></view><view class="hero-ring ring-two"></view>
+    <view class="shop-kicker"><text class="verify-mark">✓</text><text>岁悦里认证店铺</text></view>
+    <view class="shop-head">
+      <view class="shop-logo">{{manager.initial}}</view>
+      <view class="shop-info">
+        <view class="shop-name">{{manager.shopName}}</view>
+        <view class="shop-owner"><text>店主 {{manager.name}}</text><text class="owner-dot"></text><text>平台认证服务商</text></view>
+      </view>
+    </view>
+    <view wx:if="{{manager.shopIntro}}" class="shop-intro">{{manager.shopIntro}}</view>
+    <view class="shop-stats">
+      <view class="stat-item"><text>{{stats.count}}</text><text>产品与服务</text></view>
+      <view class="stat-item"><text>{{stats.sales}}</text><text>累计购买</text></view>
+      <view class="stat-item"><text>{{stats.rating}}</text><text>店铺评分</text></view>
+    </view>
+    <button class="contact" bindtap="callMerchant">
+      <view class="contact-copy"><text class="contact-title">联系商家</text><text class="contact-subtitle">咨询服务详情与预约安排</text></view>
+      <text class="contact-arrow">›</text>
+    </button>
   </view>
 
-  <view class="shop-notice"><text class="notice-icon">保</text><text>平台认证 · 价格透明 · 售后有保障</text></view>
+  <view class="trust-strip">
+    <view class="trust-item"><text class="trust-icon">✓</text><text>平台认证</text></view>
+    <view class="trust-item"><text class="trust-icon">¥</text><text>明码标价</text></view>
+    <view class="trust-item"><text class="trust-icon">保</text><text>售后保障</text></view>
+  </view>
+
+  <view class="section-heading">
+    <view><view class="section-title">店内精选</view><view class="section-subtitle">发现适合您的服务与好物</view></view>
+    <text class="section-count">{{list.length}} 项</text>
+  </view>
 
   <view class="shop-tabs">
-    <view class="shop-tab {{filter === 'all' ? 'active' : ''}}" data-filter="all" bindtap="setFilter">全部</view>
-    <view class="shop-tab {{filter === 'service' ? 'active' : ''}}" data-filter="service" bindtap="setFilter">服务活动</view>
-    <view class="shop-tab {{filter === 'product' ? 'active' : ''}}" data-filter="product" bindtap="setFilter">精选商品</view>
+    <view class="shop-tab {{filter === 'all' ? 'active' : ''}}" data-filter="all" bindtap="setFilter">全部 {{categoryCounts.all}}</view>
+    <view class="shop-tab {{filter === 'service' ? 'active' : ''}}" data-filter="service" bindtap="setFilter">服务 {{categoryCounts.service}}</view>
+    <view class="shop-tab {{filter === 'product' ? 'active' : ''}}" data-filter="product" bindtap="setFilter">商品 {{categoryCounts.product}}</view>
   </view>
 
   <view wx:if="{{list.length}}" class="offering-grid">
     <view wx:for="{{list}}" wx:key="id" class="offering-card" data-id="{{item.id}}" bindtap="goDetail">
-      <view class="offering-cover"><image src="{{item.art}}" mode="aspectFill" /><text>{{item.typeLabel}}</text></view>
-      <view class="offering-body"><view class="offering-title">{{item.title}}</view><view class="offering-desc">{{item.highlight || item.detail}}</view><view class="offering-foot"><view><text class="price-symbol">¥</text><text class="price">{{item.memberPrice}}</text></view><button data-id="{{item.id}}" catchtap="addCart">＋</button></view></view>
+      <view class="offering-cover"><image src="{{item.art}}" mode="aspectFill" /><text class="type-badge">{{item.typeLabel}}</text><text wx:if="{{item.soldCount}}" class="sold-badge">已售 {{item.soldCount}}</text></view>
+      <view class="offering-body">
+        <view class="offering-title">{{item.title}}</view><view class="offering-desc">{{item.highlight || item.detail}}</view>
+        <view class="offering-foot"><view class="price-block"><text class="member-label">会员价</text><view><text class="price-symbol">¥</text><text class="price">{{item.memberPrice}}</text></view></view><view class="add-cart-button" data-id="{{item.id}}" catchtap="addCart" hover-class="add-cart-button-pressed" hover-stay-time="80" role="button" aria-label="加入购物车"><view class="plus-icon"></view></view></view>
+      </view>
     </view>
   </view>
-  <view wx:else class="empty">该分类暂时没有内容</view>
+  <view wx:else class="empty"><view class="empty-icon">⌁</view><view class="empty-title">该分类暂无内容</view><view class="empty-subtitle">可以看看店内其他服务与商品</view><button wx:if="{{filter !== 'all'}}" data-filter="all" bindtap="setFilter">查看全部</button></view>
 
-  <button class="cart-fab" bindtap="goCart">购物车</button>
+  <button class="cart-fab" bindtap="goCart"><view class="cart-icon-wrap"><image class="cart-fab-icon" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-count">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
 </view>

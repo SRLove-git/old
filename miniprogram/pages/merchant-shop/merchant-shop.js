@@ -14,7 +14,9 @@ Page({
     allOfferings: [],
     list: [],
     filter: 'all',
-    stats: {}
+    stats: {},
+    categoryCounts: { all: 0, service: 0, product: 0 },
+    cartCount: 0
   },
 
   async onLoad(options) {
@@ -41,6 +43,12 @@ Page({
       manager: decoratedManager,
       allOfferings,
       list: allOfferings,
+      categoryCounts: {
+        all: allOfferings.length,
+        service: allOfferings.filter((item) => item.offerType === 'service').length,
+        product: allOfferings.filter((item) => item.offerType === 'product').length
+      },
+      cartCount: this.getCartCount(),
       stats: {
         count: allOfferings.length,
         sales: allOfferings.reduce((sum, item) => sum + Number(item.soldCount || 0), 0),
@@ -52,6 +60,7 @@ Page({
 
   async onShow() {
     if (!this.data.manager) return
+    this.setData({ cartCount: this.getCartCount() })
     try {
       await store.refreshConfig()
       const source = store.getManagers().find((item) => String(item.id) === String(this.data.manager.id)) || this.data.manager
@@ -73,6 +82,7 @@ Page({
     const item = store.getActivity(e.currentTarget.dataset.id)
     try {
       store.addActivityToCart(item)
+      this.setData({ cartCount: this.getCartCount() })
       wx.showToast({ title: '已加入购物车', icon: 'success' })
     } catch (err) {
       wx.showToast({ title: err.message || '加入失败', icon: 'none' })
@@ -81,6 +91,10 @@ Page({
 
   goCart() {
     wx.navigateTo({ url: '/pages/cart/cart' })
+  },
+
+  getCartCount() {
+    return store.getCart().reduce((total, item) => total + Number(item.count || 1), 0)
   },
 
   callMerchant() {
