@@ -33,7 +33,7 @@
   <view class="benefits card">
     <view class="benefits-title heading-cn">会员专属权益</view>
     <view wx:for="{{benefits}}" wx:key="text" class="benefit">
-      <text class="benefit-emoji">{{item.emoji}}</text>
+      <view class="benefit-icon-wrap"><image class="benefit-icon" src="{{item.icon}}" mode="aspectFit" /></view>
       <text class="benefit-text">{{item.text}}</text>
     </view>
   </view>

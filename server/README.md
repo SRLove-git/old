@@ -52,6 +52,28 @@ npm start
 
 证书私钥、APIv3 密钥和平台公钥文件不能提交到 Git。配置不完整时支付接口返回明确错误，不会把订单模拟成已支付。
 
+## 商家转账（提现打款到微信零钱）
+
+提现审核只允许通过微信零钱商家转账打款，后台不能人工标记到账。启用微信转账需要在商户平台[开通商家转账](https://pay.weixin.qq.com/doc/v3/merchant/4013740645.md)、完成转账场景审核，并在「产品中心 → 商家转账 → 前往功能」配置接口安全 IP（服务端出口 IP）。
+
+配置项（基于已有的微信支付商户证书与 APIv3 密钥）：
+
+- `WECHAT_TRANSFER_ENABLED=true`：显式启用；不设置时禁用提现审核打款，避免未开通产品时出现 `NO_AUTH`；
+- `WECHAT_TRANSFER_SCENE_ID`：转账场景 ID，默认 `1005`（佣金报酬）；
+- `WECHAT_TRANSFER_SCENE_REPORT_INFOS`：场景报备信息 JSON 数组；1005 默认传「岗位类型=主理人、报酬说明=推广佣金」，切换其他场景时必须按[场景报备说明](https://pay.weixin.qq.com/doc/v3/merchant/4013774588.md)配置；
+- `WECHAT_TRANSFER_PERCEPTION`、`WECHAT_TRANSFER_REMARK`：用户收款时看到的收款感知与备注；
+- `WECHAT_TRANSFER_NOTIFY_URL`：商家转账回调地址，默认由 `WECHAT_PAY_NOTIFY_URL` 推导为 `/api/transfers/wechat/notify`。
+
+打款流程：管理员在提现审核中发起「微信商家转账」→ 服务端创建转账单（佣金锁定、状态变为「打款中」）→ 主理人在小程序工作台点「确认收款」拉起微信官方页面 → 微信回调 `/api/transfers/wechat/notify` 或服务端每分钟主动查单 → 只有 `SUCCESS` 才结算佣金，`FAIL/CANCELLED` 才释放佣金。后台不提供人工标记到账。
+
+注意事项：
+
+- 单笔转账金额 ≥ 2000 元时微信强制校验收款人实名姓名，必须传入与微信支付实名一致的姓名（只取实名字段，不用昵称代替）；金额更大时还需在商户平台[申请提额](https://pay.weixin.qq.com/doc/v3/merchant/4013747667.md)。
+- 用户 24 小时内未确认收款，微信会自动关单退款，提现单会变为「打款失败」并释放锁定佣金，主理人可重新申请。
+- 项目未接入微信订阅消息：主理人下次进入小程序工作台会看到「待确认收款」提示，运营可另用客服消息/电话提醒。
+- 发起转账遇到任何 HTTP 非 200、网络超时或未知错误码时，服务端保留原商户单号、原请求参数和「打款中」状态，持续查单；不允许人工标记失败或释放锁定佣金。
+- 打款账户（运营账户）余额不足时转账会停留在 `PROCESSING`，需先充值；回调与查单结果才是资金到账的唯一依据。
+
 ## 启动
 
 ```bash
@@ -68,6 +90,9 @@ npm start        # 或 npm run dev（文件变化自动重启）
 
 - `src/index.js`：服务启动、全局中间件和路由装配
 - `src/services/payments.js`：支付下单与退款流程编排
+- `src/services/transfers.js`：商家转账发起、查单、撤销与定时对账
+- `src/lib/wechat-pay.js`：微信支付 APIv3 签名、验签与请求封装
+- `src/lib/wechat-transfer.js`：商家转账接口封装（场景报备、姓名加密）
 - `src/services/logistics.js`：物流订阅、查询与定时刷新编排
 - `src/middleware/body-parsers.js`：按接口风险分级配置请求体解析上限
 - `src/routes/auth.js`：运营后台登录与微信会员登录
@@ -75,7 +100,7 @@ npm start        # 或 npm run dev（文件变化自动重启）
 - `src/routes/balance.js`：会员余额充值、余额流水与微信充值支付接口
 - `src/routes/member-data.js`：报名人与收货地址接口，统一执行会员归属校验
 - `src/routes/uploads.js`：运营后台上传接口
-- `src/routes/webhooks.js`：微信支付/退款与快递鸟原始报文回调
+- `src/routes/webhooks.js`：微信支付/退款、商家转账与快递鸟原始报文回调
 - `src/routes/merchant.js`：商户登录及活动、商品、课程管理接口
 - `src/routes/provider-applications.js`：用户申请商户及后台审核开户接口
 - `src/routes/customers.js`：后台会员列表、会员档案详情及资料维护接口
@@ -107,6 +132,8 @@ npm start        # 或 npm run dev（文件变化自动重启）
 - `GET /api/commissions`、`POST /api/commissions/settle`、`POST /api/commissions/:id/adjust` 佣金
 - `GET /api/commission-settlements` 结算流水（可按 `?managerId=` 过滤）
 - `GET /api/withdraws`、`POST /api/withdraws`、`POST /api/withdraws/:id/{approve,reject}` 提现
+- `POST /api/withdraws/:id/transfer/{sync,cancel,reset}` 微信转账查单、撤销与结果不明确时标记失败
+- `POST /api/transfers/wechat/notify` 商家转账终态通知（验签 + 解密，幂等更新提现单）
 - `GET/PUT /api/config` 全局分佣比例等配置
 - `GET/POST/PUT/DELETE /api/lives` 私域直播（`GET` 可选 `?userId=` 过滤该用户可见的私域直播）
 - `GET /api/stats/dashboard` 数据看板
@@ -156,8 +183,9 @@ https://你的公网域名/api/logistics/kdniao/callback
   且按 `applyTime` 统计当月次数不超过 `config.withdrawMonthlyLimit`；任一条件不满足返回 400。
 - **只锁定申请金额**：提现单按时间顺序锁定等额的可结算佣金；跨越边界时把该佣金单拆成「提现中」与「可结算」两张，
   不会把主理人名下全部可结算佣金一次性锁死。提现单记录 `commissionIds / commissionCount` 便于对账。
-- **打款与拒绝**：`approve` 只把该提现单锁定的佣金标记为「已结算」并写入 `settleTime`，重复打款会被拒绝；
-  `reject` 把锁定佣金释放回「可结算」。
+- **打款与拒绝**：`approve` 只支持 `payMethod: 'wechat'`，必须经微信回调或主动查单确认后才能把该提现单锁定的佣金标记为
+  「已结算」并写入 `settleTime`，重复打款会被拒绝；微信转账则先进入「打款中」，以微信回调/查单结果为准结算，
+  失败或撤销会把锁定佣金释放回「可结算」。`reject` 直接释放锁定佣金。
 - **退款扣回**：退款时按退款比例冲减佣金。
   「待结算 / 可结算」直接扣减；「提现中」同步下调提现单金额与税费（金额归零则自动撤销提现单）；
   「已结算」（已打款）会生成一张负向「待结算」佣金单作为负债，抵扣后续佣金，工作台 `balance.debt` 可见。

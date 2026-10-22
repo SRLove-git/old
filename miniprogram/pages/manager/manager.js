@@ -1,6 +1,21 @@
 const store = require('../../utils/store.js')
 const qrcode = require('../../utils/qrcode.js')
 
+// 微信商家转账单据状态（用户确认收款模式），仅用于工作台展示。
+const TRANSFER_STATE_TEXT = {
+  REQUESTING: '发起转账中',
+  UNKNOWN: '结果待确认',
+  REQUEST_FAILED: '发起失败',
+  ACCEPTED: '转账已受理',
+  PROCESSING: '资金锁定中',
+  WAIT_USER_CONFIRM: '待确认收款',
+  TRANSFERING: '转账中',
+  SUCCESS: '转账成功',
+  FAIL: '转账失败',
+  CANCELING: '撤销中',
+  CANCELLED: '已撤销'
+}
+
 Page({
   data: {
     tab: 'dashboard',
@@ -9,6 +24,8 @@ Page({
     manager: {},
     commissions: [],
     withdraws: [],
+    pendingConfirms: 0,
+    transfer: {},
     customers: [],
     recentOrders: [],
     activities: [],
@@ -69,13 +86,18 @@ Page({
       ...w,
       amount: store.money(w.amount),
       tax: store.money(w.tax || 0),
-      actualAmount: store.money(w.actualAmount || 0)
+      actualAmount: store.money(w.actualAmount || 0),
+      transferStateText: TRANSFER_STATE_TEXT[w.transferState] || '',
+      canConfirm: w.status === '打款中' && !!w.transferPackage,
+      failText: w.transferFailReasonText || w.transferError || ''
     }))
     this.setData({
       // 客户数按实际归属客户计算，不用主理人表里的静态值
       manager,
       commissions: dash.commissions || [],
       withdraws,
+      pendingConfirms: withdraws.filter((w) => w.canConfirm).length,
+      transfer: dash.transfer || {},
       customers: customerList,
       activities: dash.activities || [],
       config: dash.config || {},
@@ -117,7 +139,7 @@ Page({
     const monthlyLimit = Number(cfg.withdrawMonthlyLimit ?? 1)
     const monthKey = this.monthKey()
     const applied = (this.data.withdraws || []).filter(
-      (w) => !['已拒绝', '已撤销'].includes(w.status) && String(w.applyTime || '').slice(0, 7) === monthKey
+      (w) => !['已拒绝', '已撤销', '打款失败'].includes(w.status) && String(w.applyTime || '').slice(0, 7) === monthKey
     ).length
     if (monthlyLimit > 0 && applied >= monthlyLimit) {
       wx.showToast({ title: `每月最多提现${monthlyLimit}次`, icon: 'none' })
@@ -143,6 +165,51 @@ Page({
     } catch (e) {
       wx.showToast({ title: e.message || '提现申请失败', icon: 'none' })
     }
+  },
+
+  async confirmTransfer(e) {
+    const id = e.currentTarget.dataset.id
+    const record = (this.data.withdraws || []).find((item) => String(item.id) === String(id))
+    const transfer = this.data.transfer || {}
+    if (!record || !record.transferPackage) {
+      wx.showToast({ title: '暂无可确认的收款', icon: 'none' })
+      return
+    }
+    if (!transfer.mchId) {
+      wx.showToast({ title: '商家转账未配置，请联系平台', icon: 'none' })
+      return
+    }
+    if (!wx.canIUse || !wx.canIUse('requestMerchantTransfer')) {
+      wx.showModal({
+        title: '微信版本过低',
+        content: '当前微信版本不支持确认收款，请升级微信后重试',
+        showCancel: false
+      })
+      return
+    }
+    // 收款确认页的 success 只代表页面拉起成功，到账结果以服务端查单/回调为准。
+    const appId = (wx.getAccountInfoSync && wx.getAccountInfoSync().miniProgram.appId) || transfer.appId
+    wx.requestMerchantTransfer({
+      mchId: transfer.mchId,
+      appId,
+      package: record.transferPackage,
+      success: async () => {
+        wx.showLoading({ title: '确认中', mask: true })
+        try {
+          await store.syncWithdrawTransfer(id)
+          await this.load()
+          wx.hideLoading()
+          wx.showToast({ title: '已确认，到账以微信通知为准', icon: 'none' })
+        } catch (err) {
+          wx.hideLoading()
+          wx.showToast({ title: (err && err.message) || '结果查询失败', icon: 'none' })
+        }
+      },
+      fail: (res) => {
+        const message = String((res && res.errMsg) || '')
+        wx.showToast({ title: message.indexOf('cancel') >= 0 ? '已取消收款' : '收款确认失败', icon: 'none' })
+      }
+    })
   },
 
   monthKey() {

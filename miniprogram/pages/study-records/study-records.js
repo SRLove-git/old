@@ -14,6 +14,7 @@ Page({
 
   async onShow() {
     await store.ready()
+    await store.refreshUserProfile().catch(() => {})
     this.load()
   },
 

@@ -30,10 +30,10 @@ old/
 │   ├── src/
 │   │   ├── index.js        # 启动与路由挂载
 │   │   ├── store.js        # 数据访问与业务逻辑（待拆分，见下方路线图）
-│   │   ├── lib/            # 纯函数与基础设施（session、uploads、退款、微信支付、快递鸟等）
+│   │   ├── lib/            # 纯函数与基础设施（session、uploads、退款、微信支付/商家转账、快递鸟等）
 │   │   ├── middleware/     # 鉴权、请求体解析
 │   │   ├── routes/         # 按领域拆分的路由
-│   │   ├── services/       # 定时任务与外部服务（物流、支付）
+│   │   ├── services/       # 定时任务与外部服务（物流、支付、提现转账对账）
 │   │   └── seed.js
 │   ├── test/               # node --test 单测（`npm test`）
 │   └── .env.example        # 环境变量模板（.env 本地保留、不入库）
@@ -107,6 +107,6 @@ cd merchant && npm run build            # 商家端
 
 以下文件体量过大，是后续拆分的重点，建议按顺序推进并在每步后跑通测试/构建：
 
-1. `server/src/store.js`（约 4200 行）：按领域拆成 `store/` 模块（orders、finance、managers、catalog、users、lives、points、accounts），保留 `store.js` 作为统一出口以兼容 `routes/` 的现有导入。
-2. `admin/src/App.vue`（约 4800 行）：继续把剩余内联 `<section v-if>` 视图与共享弹窗抽到 `views/` 与独立组件，`App.vue` 只保留登录、侧边栏与视图调度。
+1. `server/src/store.js`（约 4400 行）：按领域拆成 `store/` 模块（orders、finance、managers、catalog、users、lives、points、accounts），保留 `store.js` 作为统一出口以兼容 `routes/` 的现有导入。
+2. `admin/src/App.vue`（约 4900 行）：继续把剩余内联 `<section v-if>` 视图与共享弹窗抽到 `views/` 与独立组件，`App.vue` 只保留登录、侧边栏与视图调度。
 3. 为拆分出的后端领域模块补 `server/test/` 单测，避免纯靠接口冒烟兜底。

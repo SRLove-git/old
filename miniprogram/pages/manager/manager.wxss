@@ -206,6 +206,36 @@
   border-bottom: 1rpx solid var(--color-border);
 }
 
+.withdraw-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.withdraw-confirm {
+  display: inline-block;
+  width: auto;
+  margin: 14rpx 0 0;
+  padding: 0 32rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  border-radius: 32rpx;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.withdraw-confirm::after {
+  border: 0;
+}
+
+.confirm-tip {
+  margin-top: 10rpx;
+  color: var(--color-text-2);
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
 .withdraw-row:last-child {
   border-bottom: 0;
 }

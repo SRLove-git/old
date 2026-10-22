@@ -58,7 +58,10 @@ async function request(path, options = {}) {
       throw new Error(`服务响应格式异常(${res.status})`);
     }
     if (!res.ok || json.code !== 0) {
-      if (res.status === 401) clearToken();
+      if (res.status === 401) {
+        clearToken();
+        window.dispatchEvent(new CustomEvent("suiyueli:admin-auth-expired"));
+      }
       const error = new Error(json.message || `请求失败(${res.status})`);
       error.status = res.status;
       error.code = json.code;

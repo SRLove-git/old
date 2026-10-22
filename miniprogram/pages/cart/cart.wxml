@@ -9,6 +9,7 @@
       </view>
       <view class="cart-info">
         <view class="cart-title" data-id="{{item.id}}" bindtap="goItem">{{item.title}}</view>
+        <view wx:if="{{item.unavailable}}" class="cart-invalid">{{item.unavailableReason}}</view>
         <view class="cart-spec">{{item.skuName ? item.skuName + ' · ' : ''}}{{item.scheduleLabel}}</view>
         <view class="cart-foot">
           <view><text class="price-symbol">¥</text><text class="price">{{item.price}}</text></view>

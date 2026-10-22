@@ -10,6 +10,7 @@ const ART = {
 
 Page({
   data: {
+    managerId: '',
     manager: null,
     allOfferings: [],
     list: [],
@@ -21,8 +22,13 @@ Page({
 
   async onLoad(options) {
     await store.ready()
-    await store.refreshConfig().catch(() => {})
-    const manager = store.getManagers().find((item) => String(item.id) === String(options.id))
+    this.setData({ managerId: String(options.id || '') })
+    await Promise.all([store.refreshHome().catch(() => {}), store.refreshManagers().catch(() => {})])
+    this.applyShop()
+  },
+
+  applyShop() {
+    const manager = store.getManagers().find((item) => String(item.id) === String(this.data.managerId))
     if (!manager) {
       wx.showToast({ title: '店铺不存在', icon: 'none' })
       return
@@ -59,13 +65,11 @@ Page({
   },
 
   async onShow() {
-    if (!this.data.manager) return
-    this.setData({ cartCount: this.getCartCount() })
     try {
-      await store.refreshConfig()
-      const source = store.getManagers().find((item) => String(item.id) === String(this.data.manager.id)) || this.data.manager
-      this.setData({ 'manager.shopIntro': source.shopIntro || store.getCopy().defaultShopIntro || '' })
+      await store.ready()
+      await Promise.all([store.refreshHome(), store.refreshManagers()])
     } catch (e) {}
+    if (this.data.managerId) this.applyShop()
   },
 
   setFilter(e) {

@@ -18,7 +18,10 @@ Page({
       this.getTabBar().setData({ selected: 2 })
     }
     await store.ready()
-    try { await store.refreshOrders() } catch (e) {}
+    await Promise.all([
+      store.refreshHome().catch(() => {}),
+      store.refreshOrders().catch(() => {})
+    ])
     this.refresh()
   },
 
@@ -29,9 +32,18 @@ Page({
       .map((o) => Object.assign({}, o, {
         statusClass: store.statusClass(o.status),
         displayStatus: store.displayStatus(o),
+        coverImage: store.getOrderCoverImage(o),
+        coverFallback: store.getOrderCoverFallback(o.category),
         timeText: o.schedule && o.schedule.date ? `${o.schedule.date} ${o.schedule.weekday || ''}` : (o.skuName || '无需预约')
       }))
     this.setData({ list })
+  },
+
+  onCoverError(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.list[index]
+    if (!Number.isInteger(index) || !item || item.coverImage === item.coverFallback) return
+    this.setData({ [`list[${index}].coverImage`]: item.coverFallback })
   },
 
   setFilter(e) {

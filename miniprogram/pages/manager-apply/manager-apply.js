@@ -49,9 +49,15 @@ Page({
 
   async onShow() {
     try {
-      await store.refreshConfig()
-      const application = store.get().application
-      if (application && application.status === '待审核') this.setData({ statusView: store.getCopy().managerReviewPendingText || this.data.statusView })
+      await Promise.all([store.refreshConfig(), store.refreshUserProfile()])
+      const state = store.get()
+      const application = state.application
+      const statusView = state.isManager
+        ? '您已经是主理人，可在个人中心进入主理人工作台'
+        : application
+          ? (application.status === '待审核' ? (store.getCopy().managerReviewPendingText || '申请审核中') : `当前申请状态：${application.status}`)
+          : ''
+      this.setData({ fee: Number(state.config?.managerApplyFee ?? 0), statusView })
     } catch (e) {}
   },
 

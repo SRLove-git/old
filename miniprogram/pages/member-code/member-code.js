@@ -27,7 +27,7 @@ Page({
   async onShow() {
     if (!this.pageLoaded) return
     try {
-      await store.refreshConfig()
+      await Promise.all([store.refreshConfig(), store.refreshUserProfile()])
       this.applyBranding()
     } catch (e) {}
   },
@@ -35,9 +35,20 @@ Page({
   applyBranding() {
     const brand = store.getBrand()
     const copy = store.getCopy()
-    const benefits = String(copy.memberBenefitLines || '').split('\n').map((line) => {
+    const benefitIcons = [
+      '/assets/member-benefits/member-price-ai-v1.png',
+      '/assets/member-benefits/coupon-ai-v1.png',
+      '/assets/member-benefits/personal-service-ai-v1.png',
+      '/assets/member-benefits/priority-booking-ai-v1.png',
+      '/assets/member-benefits/points-gift-ai-v1.png'
+    ]
+    const benefits = String(copy.memberBenefitLines || '').split('\n').map((line, index) => {
       const separator = line.indexOf('|')
-      return separator >= 0 ? { emoji: line.slice(0, separator).trim(), text: line.slice(separator + 1).trim() } : { emoji: '', text: line.trim() }
+      const text = separator >= 0 ? line.slice(separator + 1).trim() : line.trim()
+      return {
+        text,
+        icon: benefitIcons[index] || '/assets/profile-icons/member-benefits-ai-v1.png'
+      }
     }).filter((item) => item.text)
     this.setData({ ...this.buildCard(store.get().user), brandName: brand.chineseName, copy, benefits, joinText: this.formatCount(copy.memberJoinText, 2) })
   },

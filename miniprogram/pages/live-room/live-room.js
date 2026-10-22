@@ -19,6 +19,7 @@ function decorateCourse(course) {
 
 Page({
   data: {
+    id: '',
     live: null,
     activity: null,
     countdown: '',
@@ -32,11 +33,17 @@ Page({
 
   async onLoad(options) {
     await store.ready()
-    await store.refreshConfig().catch(() => {})
-    const source = store.getLive(options.id)
+    this.setData({ id: String(options.id || '') })
+    await Promise.all([store.refreshLives().catch(() => {}), store.refreshConfig().catch(() => {})])
+    this.loadCourse()
+    this.timer = setInterval(() => this.updateCountdown(), 1000)
+  },
+
+  loadCourse() {
+    const source = store.getLive(this.data.id)
     if (!source) {
       wx.showToast({ title: '课程不存在', icon: 'none' })
-      this.setData({ loading: false })
+      this.setData({ live: null, loading: false })
       return
     }
     const live = decorateCourse(source)
@@ -56,15 +63,14 @@ Page({
       copy: store.getCopy()
     })
     this.updateCountdown()
-    this.timer = setInterval(() => this.updateCountdown(), 1000)
   },
 
   async onShow() {
-    if (!this.data.live) return
     try {
-      await store.refreshConfig()
-      this.setData({ copy: store.getCopy() })
+      await store.ready()
+      await Promise.all([store.refreshLives(), store.refreshConfig()])
     } catch (e) {}
+    if (this.data.id) this.loadCourse()
   },
 
   playLesson(event) {
@@ -130,9 +136,9 @@ Page({
   async payCourse(useBalance) {
     try {
       await store.purchaseLive(this.data.live.id, useBalance)
-      this.setData({ purchased: true })
+      await store.refreshLives()
+      this.loadCourse()
       wx.showToast({ title: '购买成功，已发放计次卡', icon: 'none' })
-      store.refresh().catch(() => {})
     } catch (e) {
       wx.showToast({ title: e.message || '购买失败', icon: 'none' })
     }

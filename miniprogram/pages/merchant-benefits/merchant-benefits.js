@@ -1,12 +1,17 @@
 const store = require('../../utils/store.js')
 
+function localDateKey() {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function decorate(item) {
   const regions = store.getActivityRegionNames(item)
   const schedules = Array.isArray(item.schedules) ? item.schedules : []
   const next = schedules
     .slice()
     .sort((a, b) => String(a.full || '').localeCompare(String(b.full || '')))
-    .find((schedule) => String(schedule.full || '') >= new Date().toISOString().slice(0, 10)) || schedules[0] || {}
+    .find((schedule) => String(schedule.full || '') >= localDateKey()) || schedules[0] || {}
 
   return {
     ...item,

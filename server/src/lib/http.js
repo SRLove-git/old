@@ -10,6 +10,8 @@ export function wrap(handler) {
       const result = await handler(req, res)
       if (result !== undefined && !res.headersSent) {
         res.json({ code: 0, data: result })
+      } else if (!res.headersSent) {
+        res.status(404).json({ code: 404, message: '请求的内容不存在' })
       }
     } catch (error) {
       if (res.headersSent) return

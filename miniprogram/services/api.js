@@ -150,6 +150,11 @@ function applyWithdraw(managerId, amount) {
   return api.post('/withdraws', { managerId, amount })
 }
 
+// 主理人在微信收款确认页返回后，主动查一次转账结果，避免等回调的延迟。
+function syncWithdrawTransfer(withdrawId) {
+  return api.post(`/withdraws/${withdrawId}/transfer/sync`, {})
+}
+
 function getBalanceTransactions() {
   return api.get('/balance/transactions')
 }
@@ -216,6 +221,7 @@ module.exports = {
   submitManagerApply,
   loadManagerDashboard,
   applyWithdraw,
+  syncWithdrawTransfer,
   getBalanceTransactions,
   createBalanceRecharge,
   payBalanceRecharge,

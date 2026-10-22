@@ -57,8 +57,23 @@ export function statusChip(status) {
     return "orange";
   if (["已通过", "已结算", "可结算", "已到账", "正常"].includes(status))
     return "green";
-  if (["已拒绝", "已驳回", "已扣回"].includes(status)) return "red";
-  return ["提现中", "待结算"].includes(status) ? "arcoblue" : "gray";
+  if (["已拒绝", "已驳回", "已扣回", "打款失败"].includes(status)) return "red";
+  return ["提现中", "待结算", "打款中"].includes(status) ? "arcoblue" : "gray";
 }
+export const TRANSFER_STATE_TEXT = {
+  REQUESTING: "发起转账中",
+  UNKNOWN: "结果待确认",
+  REQUEST_FAILED: "发起失败",
+  ACCEPTED: "转账已受理",
+  PROCESSING: "资金锁定中",
+  WAIT_USER_CONFIRM: "待主理人确认收款",
+  TRANSFERING: "转账中",
+  SUCCESS: "转账成功",
+  FAIL: "转账失败",
+  CANCELING: "撤销中",
+  CANCELLED: "已撤销",
+};
+export const transferStateText = (state) =>
+  TRANSFER_STATE_TEXT[String(state || "")] || String(state || "—");
 export const typeTagColor = (type) =>
   type === "news" ? "arcoblue" : type === "video" ? "purple" : "green";

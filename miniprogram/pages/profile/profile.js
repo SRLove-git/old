@@ -28,7 +28,7 @@ Page({
     }
     try {
       await store.ready()
-      await Promise.all([store.refreshUserProfile(), store.refreshConfig()])
+      await Promise.all([store.refreshUserProfile(), store.refreshHome(), store.refreshManagers()])
       if (!this.pageVisible) return
       this.loadState()
       this.startStatusPolling()

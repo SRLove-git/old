@@ -51,7 +51,9 @@ Page({
   },
 
   async onShow() {
-    await this.loadCoupons()
+    await store.ready()
+    await store.refreshUserProfile().catch(() => {})
+    await this.loadCoupons(false)
   },
 
   async onPullDownRefresh() {

@@ -8,6 +8,7 @@
 .kind-label { position: absolute; left: 8rpx; top: 8rpx; padding: 4rpx 9rpx; border-radius: 999rpx; background: rgba(35,45,42,.75); color: #fff; font-size: 22rpx; }
 .cart-info { position: relative; flex: 1; min-width: 0; min-height: 156rpx; margin-left: 18rpx; padding-right: 4rpx; }
 .cart-title { padding-right: 58rpx; color: #303734; font-size: 27rpx; font-weight: 700; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.cart-invalid { margin-top: 8rpx; color: #c84f3a; font-size: 22rpx; }
 .cart-spec { margin-top: 8rpx; color: #929794; font-size: 20rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cart-foot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; }
 .price-symbol { color: var(--color-primary); font-size: 21rpx; } .price { color: var(--color-primary); font-size: 31rpx; font-weight: 700; }

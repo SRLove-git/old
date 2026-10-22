@@ -20,12 +20,12 @@ import {
   POST_TYPE_OPTIONS as postTypeOptions, PROVIDER_TYPE_OPTIONS as providerTypeOptions,
   PUBLISH_OPTIONS as publishOptions, REFUND_RULE_TYPE_OPTIONS as refundRuleTypeOptions,
   SELL_TYPE_OPTIONS as sellTypeOptions, SERVICE_MODE_OPTIONS as serviceModeOptions,
-  WITHDRAW_PAY_CHANNEL_OPTIONS as withdrawPayChannelOptions, WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
+  WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
 } from './options.js'
 import { areaChildrenByParent, areaName, provinceOptions, regionArea } from './utils/regions.js'
 import {
   fmtMoney, fuzzyMatch, isPaidPrice, notificationColor,
-  notificationLabel, orderAddressText, orderChip, statusChip
+  notificationLabel, orderAddressText, orderChip, statusChip, transferStateText
 } from './utils/presentation.js'
 
 const DashboardView = defineAsyncComponent(() => import('./views/DashboardView.vue'))
@@ -638,6 +638,11 @@ function handleLogout() {
   notifications.value = []
 }
 
+function handleAuthExpired() {
+  handleLogout()
+  loginError.value = '登录已失效，请重新登录'
+}
+
 function permissionNames(keys, type = 'admin') {
   if (keys?.includes('*')) return '全部权限'
   const options = permissionOptions.value[type] || []
@@ -701,6 +706,7 @@ function submitSelfPassword() {
 }
 
 onMounted(async () => {
+  window.addEventListener('suiyueli:admin-auth-expired', handleAuthExpired)
   if (!authed.value) return
   try {
     const account = await api.get('/admin/me')
@@ -716,6 +722,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('suiyueli:admin-auth-expired', handleAuthExpired)
   if (notificationTimer) clearInterval(notificationTimer)
   notificationTimer = null
 })
@@ -820,7 +827,7 @@ const filteredWithdraws = computed(() => {
     const applyDate = String(withdraw.applyTime || '').slice(0, 10)
     const matchesStatus = !withdrawStatusFilter.value || withdraw.status === withdrawStatusFilter.value
     const matchesDate = (!from || applyDate >= from) && (!to || applyDate <= to)
-    const matchesKey = fuzzyMatch(`${withdraw.id} ${managerText} ${withdraw.status || ''} ${withdraw.applyTime || ''} ${withdraw.payTime || ''} ${withdraw.payChannel || ''} ${withdraw.payOrderNo || ''} ${withdraw.financeRemark || ''}`, k)
+    const matchesKey = fuzzyMatch(`${withdraw.id} ${managerText} ${withdraw.status || ''} ${withdraw.applyTime || ''} ${withdraw.payTime || ''} ${withdraw.payChannel || ''} ${withdraw.payOrderNo || ''} ${withdraw.financeRemark || ''} ${withdraw.outBillNo || ''} ${withdraw.transferBillNo || ''} ${transferStateText(withdraw.transferState)} ${withdraw.transferFailReasonText || ''}`, k)
     return matchesStatus && matchesDate && matchesKey
   })
 })
@@ -838,6 +845,11 @@ const withdrawExportRows = computed(() => filteredWithdraws.value.map((withdraw)
     锁定佣金笔数: Number(withdraw.commissionCount || 0),
     退款扣减: Number(withdraw.clawbackAmount || 0),
     状态: withdraw.status || '',
+    打款方式: withdraw.payMethod === 'wechat' ? '微信零钱商家转账' : '人工打款',
+    转账状态: transferStateText(withdraw.transferState),
+    微信转账单号: withdraw.transferBillNo || '',
+    微信商户单号: withdraw.outBillNo || '',
+    转账失败原因: withdraw.transferFailReasonText || withdraw.transferFailReason || '',
     申请时间: withdraw.applyTime || '',
     打款时间: withdraw.payTime || '',
     支付渠道: withdraw.payChannel || '',
@@ -1697,7 +1709,9 @@ function closeCustomerDetail() {
 }
 
 function saveCustomer() {
-  const form = { ...customerForm.value }
+  const form = { ...(customerForm.value || {}) }
+  delete form.balance
+  delete form.points
   doAction(async () => {
     await api.put(`/customers/${form.id}`, form)
     customerForm.value = null
@@ -1776,7 +1790,7 @@ function openBanner(b) {
 function saveBanner() {
   const form = { ...bannerForm.value }
   if (!String(form.title || '').trim()) return Message.warning('请填写 Banner 标题')
-  if (!String(form.mediaUrl || '').trim() && !form.id) return Message.warning('请上传 Banner 图片或视频')
+  if (!String(form.mediaUrl || '').trim()) return Message.warning('请上传 Banner 图片或视频')
   doAction(async () => {
     if (form.id) await api.put(`/banners/${form.id}`, form)
     else await api.post('/banners', form)
@@ -1859,8 +1873,8 @@ function submitManagerApproval() {
   if (!target || !form) return
   if (!String(form.name || '').trim()) return Message.warning('请填写申请人姓名')
   if (!/^1\d{10}$/.test(String(form.phone || '').replace(/\D/g, ''))) return Message.warning('请填写正确的11位手机号')
-  if (Number(form.feeAmount || 0) > 0 && !['已到账', '免收费'].includes(form.paymentStatus)) {
-    return Message.warning('收费申请需要先确认已到账，或明确设为免收费')
+  if (Number(form.feeAmount || 0) > 0 && form.paymentStatus !== '已到账') {
+    return Message.warning('收费申请必须等待微信支付确认到账后才能通过')
   }
   if (form.paymentStatus === '已到账') {
     if (Number(form.paidAmount || 0) <= 0) return Message.warning('请填写实际到账金额')
@@ -1878,6 +1892,12 @@ function submitManagerApproval() {
     fields: String(form.fieldsText || '').split(/[、,，\n]+/).map((item) => item.trim()).filter(Boolean)
   }
   delete payload.fieldsText
+  delete payload.feeAmount
+  delete payload.paidAmount
+  delete payload.paymentStatus
+  delete payload.paymentOrderNo
+  delete payload.paidAt
+  delete payload.paymentMethod
   doAction(async () => {
     await api.post(`/manager-applications/${target.id}/approve`, payload)
     closeManagerReview()
@@ -2087,8 +2107,7 @@ async function openWithdrawDetail(record) {
     const withdraw = withdrawDetail.value.withdraw
     withdrawAuditForm.value = {
       taxRate: Number(withdraw.taxRate ?? 20),
-      payChannel: withdraw.payChannel || '微信零钱',
-      payOrderNo: withdraw.payOrderNo || '',
+      payMethod: 'wechat',
       financeRemark: withdraw.financeRemark || ''
     }
   } catch (e) {
@@ -2103,19 +2122,39 @@ function approveWithdraw() {
   const id = withdrawDetail.value?.withdraw?.id
   const form = withdrawAuditForm.value
   if (!id || !form) return
-  if (!String(form.payChannel || '').trim()) return Message.warning('请选择支付渠道')
-  if (!String(form.payOrderNo || '').trim()) return Message.warning('请填写打款流水号')
+  if (!withdrawDetail.value?.transfer?.enabled) return Message.warning('服务端未启用微信商家转账，不能审核打款')
+  if (withdrawAuditActual.value < 0.1) return Message.warning('扣税后实际到账不足 0.10 元，无法微信转账')
   doAction(async () => {
     await api.post(`/withdraws/${id}/approve`, {
+      payMethod: 'wechat',
       taxRate: Number(form.taxRate || 0),
-      payChannel: form.payChannel,
-      payOrderNo: String(form.payOrderNo).trim(),
       financeRemark: String(form.financeRemark || '').trim()
     })
     withdrawDetailTarget.value = null
     withdrawDetail.value = null
     withdrawAuditForm.value = null
-  }, '已完成打款审核')
+  }, '已发起微信零钱转账，等待主理人确认收款')
+}
+
+async function syncWithdrawTransfer(id) {
+  doAction(async () => {
+    const record = await api.post(`/withdraws/${id}/transfer/sync`)
+    await openWithdrawDetail({ id })
+    Message.success(`转账状态：${transferStateText(record.transferState)}`)
+  })
+}
+
+function cancelWithdrawTransfer(id) {
+  Modal.confirm({
+    title: '撤销微信转账',
+    content: '撤销后主理人将无法确认收款，锁定佣金会在微信确认撤销后释放。确定撤销？',
+    okText: '撤销转账',
+    cancelText: '取消',
+    onOk: () => doAction(async () => {
+      await api.post(`/withdraws/${id}/transfer/cancel`)
+      await openWithdrawDetail({ id })
+    }, '已提交撤销，请稍后查单确认结果')
+  })
 }
 
 function rejectWithdraw(id) {
@@ -2189,16 +2228,18 @@ function saveConfig() {
       ...config.value.homeAssistant,
       wechatNote: wechatNoteForStorage(config.value.homeAssistant.wechatNote, config.value.assistant.wechat, configWechatOriginal.value)
     }
-    const [saved] = await Promise.all([
-      api.put('/config', {
+    const savedBundle = await api.put('/config/bundle', {
+      config: {
         ...config.value,
         copy: copyForSave,
         homeAssistant: homeAssistantForSave,
         homeDisplay: { newsLimit, videoLimit },
         balanceRechargeAmounts: rechargeAmounts
-      }),
-      ...categoryList.value.map((item) => api.put(`/categories/${item.id}`, { ...item, homeDisplayLimit: Number(item.homeDisplayLimit) }))
-    ])
+      },
+      categories: categoryList.value.map((item) => ({ ...item, homeDisplayLimit: Number(item.homeDisplayLimit) }))
+    })
+    const saved = savedBundle.config
+    if (savedBundle.categories) categories.value = savedBundle.categories
     const defaults = defaultConfig()
     const mergedBrand = { ...defaults.brand, ...(saved.brand || {}) }
     const mergedAssistant = { ...defaults.assistant, ...(saved.assistant || {}) }
@@ -2230,6 +2271,7 @@ function setCategoryHomeLimit(id, value) {
 function qrPreviewUrl(value) {
   const url = String(value || '')
   if (!url || /^(https?:|data:)/.test(url)) return url
+  if (import.meta.env.PROD && url.startsWith('/api/')) return `/admin${url}`
   return url.startsWith('/') ? url : `/${url}`
 }
 
@@ -2919,24 +2961,53 @@ function exportCsv(filename, rows) {
           <a-descriptions-item label="税费">¥{{ fmtMoney(withdrawDetail.withdraw.status === '待审核' ? withdrawAuditTax : withdrawDetail.withdraw.tax) }}</a-descriptions-item>
           <a-descriptions-item label="实际到账">¥{{ fmtMoney(withdrawDetail.withdraw.status === '待审核' ? withdrawAuditActual : withdrawDetail.withdraw.actualAmount) }}</a-descriptions-item>
           <a-descriptions-item label="退款扣减">¥{{ fmtMoney(withdrawDetail.withdraw.clawbackAmount) }}</a-descriptions-item>
+          <a-descriptions-item label="打款方式">{{ withdrawDetail.withdraw.payMethod === 'wechat' ? '微信零钱商家转账' : (withdrawDetail.withdraw.payMethod === 'manual' ? '人工打款' : '未选择') }}</a-descriptions-item>
+          <a-descriptions-item v-if="withdrawDetail.withdraw.transferState" label="微信转账状态"><a-tag :color="withdrawDetail.withdraw.transferState === 'FAIL' ? 'red' : (withdrawDetail.withdraw.transferState === 'SUCCESS' ? 'green' : 'arcoblue')">{{ transferStateText(withdrawDetail.withdraw.transferState) }}</a-tag></a-descriptions-item>
           <a-descriptions-item v-if="withdrawDetail.withdraw.payTime" label="打款时间">{{ withdrawDetail.withdraw.payTime }}</a-descriptions-item>
+          <a-descriptions-item v-if="withdrawDetail.withdraw.transferBillNo" label="微信转账单号" :span="2">{{ withdrawDetail.withdraw.transferBillNo }}</a-descriptions-item>
           <a-descriptions-item v-if="withdrawDetail.withdraw.rejectReason" label="拒绝原因" :span="2">{{ withdrawDetail.withdraw.rejectReason }}</a-descriptions-item>
         </a-descriptions>
 
         <a-form v-if="withdrawDetail.withdraw.status === '待审核'" :model="withdrawAuditForm" layout="vertical">
           <a-row :gutter="12">
             <a-col :span="6"><a-form-item label="代扣税率（%）" required><a-input-number v-model="withdrawAuditForm.taxRate" :min="0" :max="100" :precision="2" style="width: 100%" /></a-form-item></a-col>
-            <a-col :span="6"><a-form-item label="支付渠道" required><a-select v-model="withdrawAuditForm.payChannel" :options="withdrawPayChannelOptions" /></a-form-item></a-col>
-            <a-col :span="12"><a-form-item label="打款流水号" required><a-input v-model="withdrawAuditForm.payOrderNo" placeholder="财务打款凭证或银行流水号" /></a-form-item></a-col>
+            <a-col :span="18">
+              <a-form-item label="打款方式" required><a-tag color="green" size="large">微信零钱商家转账</a-tag></a-form-item>
+            </a-col>
           </a-row>
           <a-form-item label="财务备注"><a-textarea v-model="withdrawAuditForm.financeRemark" :auto-size="{ minRows: 2, maxRows: 4 }" placeholder="可填写收款账户核对、打款批次等信息" /></a-form-item>
-          <a-alert type="info" style="margin-bottom: 16px">确认后将按实际锁定佣金计算：代扣税 ¥{{ fmtMoney(withdrawAuditTax) }}，实际到账 ¥{{ fmtMoney(withdrawAuditActual) }}。</a-alert>
+          <a-alert
+            type="info"
+            style="margin-bottom: 16px"
+            :title="`将向主理人微信零钱转账 ¥${fmtMoney(withdrawAuditActual)}（代扣税 ¥${fmtMoney(withdrawAuditTax)}）`"
+          >
+            转账场景 {{ withdrawDetail.transfer?.sceneId || '1005' }}（佣金报酬）· 商户号 {{ withdrawDetail.transfer?.mchId || '—' }}。
+            发起后主理人需在 24 小时内在小程序工作台「确认收款」，逾期微信自动关单并释放锁定佣金。
+          </a-alert>
+          <a-alert v-if="!withdrawDetail.transfer?.enabled" type="warning" style="margin-bottom: 16px">
+            {{ withdrawDetail.transfer?.error || '服务端未启用微信商家转账（需设置 WECHAT_TRANSFER_ENABLED=true）' }}。配置完成前不能审核打款。
+          </a-alert>
         </a-form>
-        <a-descriptions v-else :column="2" bordered size="small" style="margin-bottom: 18px">
-          <a-descriptions-item label="支付渠道">{{ withdrawDetail.withdraw.payChannel || '—' }}</a-descriptions-item>
-          <a-descriptions-item label="打款流水号">{{ withdrawDetail.withdraw.payOrderNo || '—' }}</a-descriptions-item>
-          <a-descriptions-item label="财务备注" :span="2">{{ withdrawDetail.withdraw.financeRemark || '—' }}</a-descriptions-item>
-        </a-descriptions>
+        <template v-else>
+          <a-descriptions :column="2" bordered size="small" style="margin-bottom: 18px">
+            <a-descriptions-item label="支付渠道">{{ withdrawDetail.withdraw.payChannel || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="打款流水号">{{ withdrawDetail.withdraw.payOrderNo || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="微信商户单号">{{ withdrawDetail.withdraw.outBillNo || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="财务备注">{{ withdrawDetail.withdraw.financeRemark || '—' }}</a-descriptions-item>
+          </a-descriptions>
+          <a-alert v-if="withdrawDetail.withdraw.status === '打款中'" type="info" style="margin-bottom: 16px">
+            转账已发起，等待主理人在小程序确认收款。服务端每分钟自动查单，也可点「查单」立即同步。
+          </a-alert>
+          <a-alert v-if="withdrawDetail.withdraw.status === '打款失败'" type="error" style="margin-bottom: 16px">
+            转账失败：{{ withdrawDetail.withdraw.transferFailReasonText || withdrawDetail.withdraw.transferError || '未知原因' }}。锁定佣金已释放，主理人可重新申请提现。
+          </a-alert>
+          <a-alert v-if="withdrawDetail.withdraw.status === '已撤销'" type="warning" style="margin-bottom: 16px">
+            微信转账已撤销，锁定佣金已释放。
+          </a-alert>
+          <a-alert v-if="withdrawDetail.withdraw.status === '打款中' && withdrawDetail.withdraw.transferState === 'UNKNOWN'" type="warning" style="margin-bottom: 16px">
+            上次发起转账的结果不明确，服务端会持续按原商户单号查单。为防止重复付款，后台不能人工标记成功或失败，也不会释放锁定佣金。
+          </a-alert>
+        </template>
 
         <a-card title="本次提现佣金明细" :bordered="false">
           <a-table :columns="managerFinanceColumns" :data="withdrawDetail.commissions" :pagination="false" row-key="id" size="small" :scroll="{ x: 1450 }">
@@ -2954,7 +3025,12 @@ function exportCsv(filename, rows) {
       <a-button @click="withdrawDetailTarget = null">关闭</a-button>
       <template v-if="withdrawDetail?.withdraw?.status === '待审核'">
         <a-button status="danger" @click="rejectWithdraw(withdrawDetail.withdraw.id)">拒绝</a-button>
-        <a-button type="primary" @click="approveWithdraw">确认打款</a-button>
+        <a-button type="primary" :disabled="!withdrawDetail.transfer?.enabled" @click="approveWithdraw">发起微信转账</a-button>
+      </template>
+      <template v-else-if="withdrawDetail?.withdraw?.status === '打款中'">
+        <a-button @click="syncWithdrawTransfer(withdrawDetail.withdraw.id)">查单</a-button>
+        <a-button v-if="withdrawDetail.withdraw.transferState === 'CANCELING'" disabled>撤销中</a-button>
+        <a-button v-else-if="withdrawDetail.withdraw.transferState !== 'UNKNOWN'" status="danger" @click="cancelWithdrawTransfer(withdrawDetail.withdraw.id)">撤销转账</a-button>
       </template>
     </template>
   </a-modal>
@@ -2998,13 +3074,13 @@ function exportCsv(filename, rows) {
       <a-divider orientation="left">收费到账与财务核对</a-divider>
       <a-row :gutter="12">
         <a-col :span="8"><a-form-item label="应收费用（元）"><a-input-number v-model="managerApprovalForm.feeAmount" :min="0" :precision="2" style="width: 100%" disabled /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="实际到账（元）"><a-input-number v-model="managerApprovalForm.paidAmount" :min="0" :precision="2" style="width: 100%" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="到账状态"><a-select v-model="managerApprovalForm.paymentStatus" :options="managerPaymentStatusOptions" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="实际到账（元）"><a-input-number v-model="managerApprovalForm.paidAmount" :min="0" :precision="2" style="width: 100%" disabled /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="到账状态"><a-select v-model="managerApprovalForm.paymentStatus" :options="managerPaymentStatusOptions" disabled /></a-form-item></a-col>
       </a-row>
       <a-row :gutter="12">
-        <a-col :span="8"><a-form-item label="支付方式"><a-input v-model="managerApprovalForm.paymentMethod" placeholder="微信支付/转账/现金" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="支付订单编号"><a-input v-model="managerApprovalForm.paymentOrderNo" placeholder="支付单号/收款单号" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="支付时间"><a-input v-model="managerApprovalForm.paidAt" placeholder="YYYY-MM-DD HH:mm" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="支付方式"><a-input v-model="managerApprovalForm.paymentMethod" placeholder="由微信支付结果写入" disabled /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="支付订单编号"><a-input v-model="managerApprovalForm.paymentOrderNo" placeholder="由微信支付结果写入" disabled /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="支付时间"><a-input v-model="managerApprovalForm.paidAt" placeholder="由微信支付结果写入" disabled /></a-form-item></a-col>
       </a-row>
       <a-form-item label="财务备注"><a-textarea v-model="managerApprovalForm.financeRemark" :auto-size="{ minRows: 2, maxRows: 4 }" placeholder="到账账户、核对人员或其他说明" /></a-form-item>
     </a-form>
@@ -3694,8 +3770,8 @@ function exportCsv(filename, rows) {
       </a-row>
       <a-row :gutter="12">
         <a-col :span="8"><a-form-item label="会员状态"><a-radio-group v-model="customerForm.member" type="button"><a-radio :value="true">会员</a-radio><a-radio :value="false">非会员</a-radio></a-radio-group></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="余额"><a-input-number v-model="customerForm.balance" :min="0" style="width: 100%" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="积分"><a-input-number v-model="customerForm.points" :min="0" style="width: 100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="余额（只读）"><a-input-number v-model="customerForm.balance" disabled style="width: 100%" /></a-form-item></a-col>
+        <a-col :span="8"><a-form-item label="积分（只读）"><a-input-number v-model="customerForm.points" disabled style="width: 100%" /></a-form-item></a-col>
       </a-row>
     </a-form>
     <template #footer>

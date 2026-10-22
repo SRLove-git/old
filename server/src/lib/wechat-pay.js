@@ -157,7 +157,7 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
-async function apiRequest(method, requestPath, payload, { contextId = '' } = {}) {
+async function apiRequest(method, requestPath, payload, { contextId = '', extraHeaders = {} } = {}) {
   const cfg = config({ verify: true })
   const body = payload == null ? '' : JSON.stringify(payload)
   const hosts = apiHosts()
@@ -171,6 +171,7 @@ async function apiRequest(method, requestPath, payload, { contextId = '' } = {})
         headers: {
           Accept: 'application/json',
           ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...extraHeaders,
           Authorization: authorization(method, requestPath, body, cfg),
           'User-Agent': 'suiyueli-miniprogram/1.0'
         },
@@ -304,12 +305,30 @@ export function decryptNotification(resource) {
   return JSON.parse(plain)
 }
 
-export function assertNotificationMerchant(payment) {
+export function assertNotificationMerchant(payment, options = {}) {
   const cfg = config()
+  if (!payment?.mchid) throw httpError(400, '微信支付结果缺少商户号')
+  if (options.requireAppId && !payment?.appid) throw httpError(400, '微信支付结果缺少 AppID')
   const appIdMismatch = payment.appid != null && String(payment.appid) !== cfg.appId
   if (appIdMismatch || String(payment.mchid) !== cfg.mchId) {
     throw httpError(400, '微信支付通知商户信息不匹配')
   }
+}
+
+// 商家转账复用同一套商户证书与 APIv3 配置，因此把底层签名/请求能力暴露给转账模块。
+export const wechatPayConfig = config
+export const wechatPayRequest = apiRequest
+
+// 敏感字段（如收款人姓名）需要用微信支付公钥或平台证书加密后传输。
+export function wechatPayPlatformKey() {
+  const serial = String(process.env.WECHAT_PAY_PLATFORM_SERIAL || '').trim()
+  const publicKey = optionalPem(
+    'WECHAT_PAY_PLATFORM_PUBLIC_KEY',
+    process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY,
+    process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH
+  )
+  if (!serial || !publicKey) throw httpError(503, '服务端未配置微信支付公钥，无法加密转账收款人姓名')
+  return { serial, publicKey }
 }
 
 export const __test = { authorization, verifyWithConfig, rfc3339InChina }

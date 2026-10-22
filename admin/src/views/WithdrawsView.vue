@@ -1,5 +1,9 @@
 <script setup>
-import { fmtMoney, statusChip } from "../utils/presentation.js";
+import {
+  fmtMoney,
+  statusChip,
+  transferStateText,
+} from "../utils/presentation.js";
 
 defineProps({
   exportRows: { type: Array, default: () => [] },
@@ -32,8 +36,9 @@ const columns = [
   },
   { title: "退款扣减", slotName: "clawback", align: "right", width: 95 },
   { title: "状态", slotName: "status", width: 90 },
+  { title: "微信转账", slotName: "transfer", width: 120 },
   { title: "申请时间", dataIndex: "applyTime", width: 140 },
-  { title: "支付渠道", dataIndex: "payChannel", width: 105 },
+  { title: "支付渠道", dataIndex: "payChannel", width: 115 },
   {
     title: "打款流水号",
     dataIndex: "payOrderNo",
@@ -51,9 +56,9 @@ const columns = [
       <a-space wrap>
         <a-input-search
           v-model="keyword"
-          placeholder="搜索提现单/主理人/手机号/流水号"
+          placeholder="搜索提现单/主理人/手机号/流水号/微信转账单号"
           allow-clear
-          style="width: 300px"
+          style="width: 340px"
         />
         <a-select
           v-model="status"
@@ -74,7 +79,7 @@ const columns = [
         :data="withdraws"
         :pagination="false"
         row-key="id"
-        :scroll="{ x: 1450 }"
+        :scroll="{ x: 1580 }"
         size="middle"
       >
         <template #manager="{ record }">{{
@@ -102,6 +107,20 @@ const columns = [
             record.status
           }}</a-tag></template
         >
+        <template #transfer="{ record }">
+          <a-tag
+            v-if="record.transferState"
+            :color="
+              record.transferState === 'FAIL'
+                ? 'red'
+                : record.transferState === 'SUCCESS'
+                  ? 'green'
+                  : 'arcoblue'
+            "
+            >{{ transferStateText(record.transferState) }}</a-tag
+          >
+          <span v-else>—</span>
+        </template>
         <template #actions="{ record }"
           ><a-button type="text" size="small" @click="emit('detail', record)">{{
             record.status === "待审核" ? "审核/打款" : "查看明细"

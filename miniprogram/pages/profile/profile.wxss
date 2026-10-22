@@ -8,15 +8,15 @@
 .user-row { position: relative; z-index: 2; display: flex; align-items: center; min-height: 166rpx; }
 .avatar { position: relative; flex: none; width: 116rpx; height: 116rpx; display: flex; align-items: center; justify-content: center; border: 6rpx solid rgba(255,255,255,.9); border-radius: 50%; background: linear-gradient(145deg,#d9b486,#a87447); box-shadow: 0 10rpx 24rpx rgba(91,61,35,.16); }
 .avatar-label { color: #fff; font-family: serif; font-size: 48rpx; font-weight: 700; }
-.avatar-edit { position: absolute; right: -5rpx; bottom: 1rpx; width: 34rpx; height: 34rpx; display: flex; align-items: center; justify-content: center; border: 3rpx solid #f8eee3; border-radius: 50%; background: #596f66; }
-.edit-pencil { width: 13rpx; height: 4rpx; border-radius: 2rpx; background: #fff; transform: rotate(-45deg); }
-.profile-info { flex: 1; min-width: 0; margin-left: 22rpx; }
+.profile-info { flex: 1; min-width: 0; margin-left: 22rpx; transition: opacity 120ms cubic-bezier(.23,1,.32,1); }
+.profile-info-pressed { opacity: .72; }
 .name-row { display: flex; align-items: center; min-width: 0; }
 .name { max-width: 250rpx; overflow: hidden; color: #28312e; font-size: 38rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.verified-dot { flex: none; width: 12rpx; height: 12rpx; margin-left: 10rpx; border: 3rpx solid rgba(255,255,255,.9); border-radius: 50%; background: #7c9988; }
-.phone { margin-top: 3rpx; color: #7b766f; font-size: 23rpx; }
-.profile-complete { display: inline-flex; align-items: center; color: #85603e; }
-.profile-complete-arrow { margin-left: 5rpx; font-size: 30rpx; line-height: 1; }
+.profile-name-pencil { flex: none; width: 32rpx; height: 32rpx; margin-left: 8rpx; }
+.verified-dot { flex: none; width: 12rpx; height: 12rpx; margin-left: 7rpx; border: 3rpx solid rgba(255,255,255,.9); border-radius: 50%; background: #7c9988; }
+.phone { margin-top: 3rpx; overflow: hidden; color: #7b766f; font-size: 23rpx; text-overflow: ellipsis; white-space: nowrap; }
+.profile-edit-arrow { flex: none; width: 34rpx; height: 40rpx; display: flex; align-items: center; justify-content: flex-end; margin-left: auto; color: #9a9690; }
+.profile-edit-chevron { width: 13rpx; height: 13rpx; margin-right: 4rpx; border-top: 3rpx solid currentColor; border-right: 3rpx solid currentColor; transform: rotate(45deg); }
 .member-pill { width: fit-content; display: flex; align-items: center; margin-top: 10rpx; padding: 6rpx 13rpx; border: 1rpx solid rgba(137,91,48,.16); border-radius: 999rpx; background: rgba(255,255,255,.58); color: #785330; font-size: 20rpx; }
 .member-star { margin-right: 6rpx; color: #b8803a; }
 .pill-line { width: 1rpx; height: 20rpx; margin: 0 9rpx; background: rgba(120,83,48,.22); }
@@ -25,8 +25,7 @@
 .code-icon-dot { width: 12rpx; height: 12rpx; border: 3rpx solid currentColor; border-radius: 2rpx; }
 .member-banner { position: relative; z-index: 2; display: flex; align-items: center; min-height: 108rpx; margin-top: 8rpx; padding: 19rpx 22rpx; overflow: hidden; border: 1rpx solid rgba(122,86,53,.12); border-radius: 24rpx; background: linear-gradient(120deg,#354943,#536c63); box-shadow: 0 10rpx 22rpx rgba(42,59,54,.14); color: #fff; }
 .member-banner::after { content: ''; position: absolute; right: -28rpx; top: -62rpx; width: 166rpx; height: 166rpx; border: 22rpx solid rgba(255,255,255,.055); border-radius: 50%; }
-.member-medal { flex: none; width: 62rpx; height: 62rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid rgba(242,211,164,.45); border-radius: 50%; background: rgba(255,255,255,.08); }
-.medal-diamond { width: 19rpx; height: 19rpx; border: 3rpx solid #e8c68f; transform: rotate(45deg); }
+.member-medal { position: relative; z-index: 1; flex: none; width: 66rpx; height: 66rpx; }
 .banner-content { flex: 1; min-width: 0; margin-left: 17rpx; }
 .banner-title { font-size: 27rpx; font-weight: 700; letter-spacing: 1rpx; }
 .banner-copy { margin-top: 3rpx; color: rgba(255,255,255,.68); font-size: 20rpx; white-space: nowrap; }

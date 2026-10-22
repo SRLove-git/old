@@ -1,14 +1,19 @@
 const store = require('../../utils/store.js')
 
 Page({
-  data: { post: null, brandName: '' },
+  data: { id: '', post: null, brandName: '' },
 
   async onLoad(options) {
     await store.ready()
-    await store.refreshConfig().catch(() => {})
-    const post = store.getContentPost(options.id)
+    this.setData({ id: String(options.id || '') })
+    this.loadPost()
+  },
+
+  loadPost() {
+    const post = store.getContentPost(this.data.id)
     if (!post) {
       wx.showToast({ title: '内容不存在或已下架', icon: 'none' })
+      this.setData({ post: null })
       return
     }
     const contentBlocks = Array.isArray(post.contentBlocks) && post.contentBlocks.length
@@ -20,9 +25,10 @@ Page({
 
   async onShow() {
     try {
-      await store.refreshConfig()
-      this.setData({ brandName: store.getBrand().chineseName })
+      await store.ready()
+      await store.refreshHome()
     } catch (e) {}
+    if (this.data.id) this.loadPost()
   },
 
   copyOriginal() {

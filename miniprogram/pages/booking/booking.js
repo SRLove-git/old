@@ -138,18 +138,42 @@ Page({
 
   async onShow() {
     await store.ready()
-    try { await store.refreshRegions() } catch (e) {}
+    try { await Promise.all([store.refreshHome(), store.refreshRegions()]) } catch (e) {}
     const state = store.get()
+    const activity = store.getActivity(this.data.id)
+    if (!activity || Number(activity.status ?? 1) === 0) {
+      wx.showToast({ title: '该活动或商品已下架', icon: 'none' })
+      return
+    }
+    const hasSku = activity.hasSku || activity.sellType === 'sku'
+    const sku = hasSku
+      ? (activity.skus || []).find((item) => String(item.id) === String(this.data.skuId)) || (activity.skus || [])[0] || null
+      : null
+    const schedules = activity.schedules || []
+    const selectedSchedule = activity.sellType === 'sku'
+      ? null
+      : schedules.find((item) => String(item.id) === String(this.data.scheduleId) && Number(item.remaining) > 0)
+        || schedules.find((item) => Number(item.remaining) > 0)
+        || null
     const regionOptions = store.getRegions()
     const picker = regionPicker.buildRegionPicker(regionOptions, this.data.address)
     this.setData({
       participants: decorateParticipants(state.participants, this.data.info, this.data.memberList),
       coupons: state.coupons,
       balance: Number(state.user.balance || 0),
+      activity,
+      skuId: sku ? sku.id : '',
+      skuName: sku ? sku.name : '',
+      memberPrice: sku ? sku.memberPrice : activity.memberPrice,
+      scheduleId: selectedSchedule ? selectedSchedule.id : '',
+      selectedSchedule,
+      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/product-tumbler-v2.jpg' })[activity.category] || '/assets/event-local.jpg',
       regionOptions,
       regionPickerColumns: picker.columns,
       regionPickerIndexes: picker.indexes
     })
+    this.updateSchedules()
+    this.recalc()
   },
 
   recalc() {

@@ -11,6 +11,8 @@ Page({
 
   async onShow() {
     await store.ready()
+    await Promise.all([store.refreshHome().catch(() => {}), store.refreshLives().catch(() => {})])
+    store.reconcileCart()
     this.loadCart()
   },
 
@@ -87,6 +89,11 @@ Page({
     const selected = this.data.cart.filter((item) => item.selected)
     if (!selected.length || this.data.paying) {
       if (!selected.length) wx.showToast({ title: '请先选择结算项目', icon: 'none' })
+      return
+    }
+    const unavailable = selected.find((item) => item.unavailable)
+    if (unavailable) {
+      wx.showToast({ title: unavailable.unavailableReason || '购物车内容已失效，请移除后重试', icon: 'none' })
       return
     }
     try {

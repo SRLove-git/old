@@ -20,6 +20,10 @@ const {
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
 
+function localDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 let cache = {
   activities: [],
   products: [],
@@ -51,8 +55,10 @@ let cache = {
 }
 
 let loaded = false
+let readyPromise = null
 let homeRefreshPromise = null
 let livesRefreshPromise = null
+let managersRefreshPromise = null
 let profileRefreshPromise = null
 let reviewsRefreshPromise = null
 let ordersRefreshPromise = null
@@ -197,7 +203,7 @@ function couponApplicable(coupon, activity, amount, userId) {
   if (!coupon || coupon.status !== 'unused') return false
   if (String(coupon.userId || '') !== String(userId == null ? authUserId() : userId)) return false
   if (coupon.templateStatus === 0) return false
-  if (coupon.expireAt && coupon.expireAt < new Date().toISOString().slice(0, 10)) return false
+  if (coupon.expireAt && coupon.expireAt < localDateKey()) return false
   if (coupon.minAmount && amount < coupon.minAmount) return false
   if (coupon.type === 3 && coupon.scopeCategory && activity.category !== coupon.scopeCategory) return false
   if (coupon.type === 4 && coupon.scopeProductId && String(activity.id) !== String(coupon.scopeProductId)) return false
@@ -257,8 +263,9 @@ function calcRefund(order) {
 
 async function ready() {
   if (loaded) return cache
+  if (readyPromise) return readyPromise
   wx.showLoading({ title: '加载中', mask: true })
-  try {
+  readyPromise = (async () => {
     const memberActive = isLoggedIn()
     const currentUserId = memberActive ? authUserId() : ''
     // 首页是游客浏览的核心数据，不能被评价、主理人、直播等可选接口的失败连带阻断。
@@ -288,12 +295,15 @@ async function ready() {
     }
     loaded = true
     return cache
-  } finally {
+  })().finally(() => {
+    readyPromise = null
     wx.hideLoading()
-  }
+  })
+  return readyPromise
 }
 
 async function refresh() {
+  if (readyPromise) await readyPromise.catch(() => {})
   loaded = false
   return ready()
 }
@@ -328,6 +338,20 @@ async function refreshLives() {
       livesRefreshPromise = null
     })
   return livesRefreshPromise
+}
+
+async function refreshManagers() {
+  if (managersRefreshPromise) return managersRefreshPromise
+  managersRefreshPromise = apiService
+    .fetchManagers()
+    .then((managers) => {
+      cache.managers = Array.isArray(managers) ? managers : []
+      return cache.managers
+    })
+    .finally(() => {
+      managersRefreshPromise = null
+    })
+  return managersRefreshPromise
 }
 
 // 评价与商家回复会在后台独立更新，不能只依赖首次启动时的缓存。
@@ -456,6 +480,21 @@ function getActivity(id) {
   return [...cache.activities, ...cache.products].find((a) => String(a.id) === String(id))
 }
 
+function getOrderCoverFallback(category) {
+  return ({
+    1: '/assets/event-local.jpg',
+    2: '/assets/event-travel.jpg',
+    3: '/assets/event-academy.jpg',
+    4: '/assets/event-benefit.jpg',
+    5: '/assets/product-tumbler-v2.jpg'
+  })[Number(category)] || '/assets/event-local.jpg'
+}
+
+function getOrderCoverImage(order) {
+  const offering = getActivity(order && order.activityId)
+  return apiAssetUrl((offering && offering.coverImage) || (order && order.coverImage)) || getOrderCoverFallback(order && order.category)
+}
+
 function getContentPosts() {
   return cache.contentPosts || []
 }
@@ -498,6 +537,46 @@ function getCart() {
 function saveCart(items) {
   wx.setStorageSync(CART_KEY, items)
   return items
+}
+
+function reconcileCart() {
+  const rows = getCart().map((item) => {
+    if (item.kind === 'course') {
+      const course = getLive(item.targetId)
+      if (!course) return { ...item, unavailable: true, unavailableReason: '课程已下架' }
+      return {
+        ...item,
+        title: course.title,
+        price: Number(course.memberPrice || 0),
+        originalPrice: Number(course.originalPrice || course.memberPrice || 0),
+        coverImage: course.coverImage || item.coverImage || '',
+        unavailable: false,
+        unavailableReason: ''
+      }
+    }
+    const offering = getActivity(item.targetId)
+    if (!offering || Number(offering.status ?? 1) === 0) {
+      return { ...item, unavailable: true, unavailableReason: '商品或活动已下架' }
+    }
+    const sku = item.skuId
+      ? (offering.skus || []).find((row) => String(row.id) === String(item.skuId))
+      : null
+    const schedule = item.scheduleId
+      ? (offering.schedules || []).find((row) => String(row.id) === String(item.scheduleId))
+      : null
+    const invalidChoice = (item.skuId && !sku) || (item.scheduleId && !schedule)
+    return {
+      ...item,
+      title: offering.title,
+      price: Number(sku ? sku.memberPrice : offering.memberPrice),
+      originalPrice: Number((sku && sku.price) || offering.originalPrice || offering.price || 0),
+      coverImage: offering.coverImage || item.coverImage || '',
+      maxCount: Number(offering.limitPerUser || item.maxCount || 99),
+      unavailable: Boolean(invalidChoice),
+      unavailableReason: invalidChoice ? '所选规格或场次已失效' : ''
+    }
+  })
+  return saveCart(rows)
 }
 
 function addCartItem(input) {
@@ -862,12 +941,20 @@ async function applyWithdraw(managerId, amount) {
   return record
 }
 
+async function syncWithdrawTransfer(withdrawId) {
+  const record = await apiService.syncWithdrawTransfer(withdrawId)
+  const index = (cache.withdraws || []).findIndex((item) => String(item.id) === String(withdrawId))
+  if (index >= 0) cache.withdraws[index] = { ...cache.withdraws[index], ...record }
+  return record
+}
+
 module.exports = {
   init,
   ready,
   refresh,
   refreshHome,
   refreshLives,
+  refreshManagers,
   refreshReviews,
   refreshOrders,
   refreshUserProfile,
@@ -893,6 +980,8 @@ module.exports = {
   getActivityRegionNames,
   activityInRegion,
   getActivity,
+  getOrderCoverImage,
+  getOrderCoverFallback,
   getContentPosts,
   getContentPost,
   getOfferings,
@@ -902,6 +991,7 @@ module.exports = {
   getCoursePurchases,
   isCoursePurchased,
   getCart,
+  reconcileCart,
   addCartItem,
   updateCartItem,
   removeCartItems,
@@ -952,5 +1042,6 @@ module.exports = {
   displayStatus,
   submitManagerApply,
   loadManagerDashboard,
-  applyWithdraw
+  applyWithdraw,
+  syncWithdrawTransfer
 }

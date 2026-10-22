@@ -182,9 +182,22 @@
   border-bottom: 0;
 }
 
-.benefit-emoji {
-  font-size: 40rpx;
+.benefit-icon-wrap {
+  flex: none;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-right: 18rpx;
+  border: 1rpx solid rgba(181, 143, 87, 0.16);
+  border-radius: 18rpx;
+  background: linear-gradient(145deg, rgba(255, 251, 243, 0.98), rgba(240, 234, 223, 0.82));
+}
+
+.benefit-icon {
+  width: 50rpx;
+  height: 50rpx;
 }
 
 .benefit-text {

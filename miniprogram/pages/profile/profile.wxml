@@ -6,12 +6,10 @@
     <view class="user-row">
       <view class="avatar" bindtap="goEditName">
         <text class="avatar-label">悦</text>
-        <view class="avatar-edit"><view class="edit-pencil"></view></view>
       </view>
-      <view class="profile-info" bindtap="goEditName">
-        <view class="name-row"><view class="name">{{user.name || '未登录'}}</view><view class="verified-dot"></view></view>
+      <view class="profile-info" bindtap="goEditName" hover-class="profile-info-pressed" hover-stay-time="80">
+        <view class="name-row"><view class="name">{{user.name || '未登录'}}</view><image class="profile-name-pencil" src="/assets/profile-icons/edit-pencil-ai-v1.png" mode="aspectFit" aria-hidden="true" /><view class="verified-dot"></view><view class="profile-edit-arrow" role="button" aria-label="编辑个人信息"><view class="profile-edit-chevron"></view></view></view>
         <view wx:if="{{phoneDisplay}}" class="phone">{{phoneDisplay}}</view>
-        <view wx:else class="phone profile-complete">点击完善个人信息 <text class="profile-complete-arrow">›</text></view>
         <view class="member-pill"><view class="member-star">✦</view><text>{{user.memberLevelName || user.memberType || '会员'}}</text><view class="pill-line"></view><text>成长值 {{user.points || 0}}</text></view>
       </view>
       <view class="code-entry" catchtap="goMemberCode">
@@ -20,7 +18,7 @@
     </view>
 
     <view class="member-banner" bindtap="goMemberCode">
-      <view class="member-medal"><view class="medal-diamond"></view></view>
+      <image class="member-medal" src="/assets/profile-icons/member-benefits-ai-v1.png" mode="aspectFit" aria-hidden="true" />
       <view class="banner-content"><view class="banner-title">会员专属权益</view><view class="banner-copy">{{copy.memberBenefitsSummary}}</view></view>
       <view class="banner-link">查看权益 <text class="banner-link-arrow">›</text></view>
     </view>

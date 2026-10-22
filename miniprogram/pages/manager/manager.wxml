@@ -46,6 +46,10 @@
 
   <view class="content">
     <view wx:if="{{tab === 'dashboard'}}">
+      <view wx:if="{{pendingConfirms > 0}}" class="section card confirm-card">
+        <view class="panel-title">待确认收款</view>
+        <view class="confirm-tip">你有 {{pendingConfirms}} 笔提现已打款到微信零钱，点下方「确认收款」后金额才会入账，24 小时内未确认将自动退回平台。</view>
+      </view>
       <view class="section card">
         <view class="panel-title">佣金概览</view>
         <view class="commission-grid">
@@ -66,12 +70,20 @@
       <view wx:if="{{withdraws.length > 0}}" class="section card">
         <view class="panel-title">提现记录</view>
         <view wx:for="{{withdraws}}" wx:key="id" class="withdraw-row">
-          <view>
+          <view class="withdraw-main">
             <view class="withdraw-amount">¥{{item.amount}}</view>
             <view class="withdraw-meta">代扣税 ¥{{item.tax || 0}} · 到账 ¥{{item.actualAmount || item.amount}} · 锁定佣金 {{item.commissionCount || 0}} 笔</view>
             <view wx:if="{{item.adjustNote}}" class="withdraw-meta">已按退款调整：{{item.adjustNote}}</view>
             <view class="withdraw-meta">{{item.status}} · {{item.payChannel || '微信零钱'}} · {{item.applyTime}}</view>
+            <view wx:if="{{item.transferStateText}}" class="withdraw-meta">微信转账：{{item.transferStateText}}</view>
+            <view wx:if="{{item.failText}}" class="withdraw-meta red">打款失败：{{item.failText}}</view>
             <view wx:if="{{item.rejectReason}}" class="withdraw-meta red">{{item.rejectReason}}</view>
+            <button
+              wx:if="{{item.canConfirm}}"
+              class="withdraw-confirm"
+              data-id="{{item.id}}"
+              bindtap="confirmTransfer"
+            >确认收款</button>
           </view>
         </view>
       </view>

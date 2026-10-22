@@ -15,6 +15,7 @@ import { contentMediaUrl, normalizeContentPost } from './lib/content-posts.js'
 import { normalizeBalanceRechargeAmounts } from './lib/balance-config.js'
 import { fenToYuan, multiplyFen, yuanToFen } from './lib/money.js'
 import { validateActivityScheduleDates } from './lib/activity-schedules.js'
+import { transferFailReasonText } from './lib/wechat-transfer.js'
 
 export { maskPhone, normalizePhone } from './lib/domain-values.js'
 export { scheduleDaysUntil } from './lib/refund-policy.js'
@@ -61,10 +62,6 @@ function normalizeActivities(db) {
   } else {
     const seedLives = new Map((seed.lives || []).map((item) => [String(item.id), item]))
     db.lives = db.lives.map((item) => ({ ...(seedLives.get(String(item.id)) || {}), ...item }))
-    const existing = new Set(db.lives.map((item) => String(item.id)))
-    ;(seed.lives || []).forEach((item) => {
-      if (!existing.has(String(item.id))) db.lives.push(clone(item))
-    })
   }
   db.lives.forEach((live) => {
     normalizeOfferingPrice(live, false)
@@ -78,10 +75,6 @@ function normalizeActivities(db) {
   } else {
     const seedProducts = new Map((seed.products || []).map((item) => [String(item.id), item]))
     db.products = db.products.map((item) => ({ ...(seedProducts.get(String(item.id)) || {}), ...item }))
-    const existingProducts = new Set(db.products.map((item) => String(item.id)))
-    ;(seed.products || []).forEach((item) => {
-      if (!existingProducts.has(String(item.id))) db.products.push(clone(item))
-    })
   }
   db.products.forEach((product) => {
     normalizeOfferingPrice(product)
@@ -93,11 +86,10 @@ function normalizeActivities(db) {
     const seedCards = new Map((seed.cards || []).map((item) => [String(item.id), item]))
     db.cards = db.cards.map((item) => ({ ...(seedCards.get(String(item.id)) || {}), ...item }))
   }
-  // 迁移：把种子里的商品从活动移出，并同步商品类目类型，避免旧数据重复
+  // 迁移：把种子里的商品从活动移出，避免旧数据重复
   const productIds = new Set((seed.products || []).map((p) => String(p.id)))
   db.activities = (db.activities || []).filter((a) => !productIds.has(String(a.id)))
   Object.keys(db.categories || {}).forEach((id) => {
-    if (seed.categories[id]) db.categories[id].type = seed.categories[id].type
     const homeDisplayLimit = Number(db.categories[id].homeDisplayLimit)
     db.categories[id].homeDisplayLimit = Number.isInteger(homeDisplayLimit) && homeDisplayLimit >= 0 && homeDisplayLimit <= 50
       ? homeDisplayLimit
@@ -204,11 +196,38 @@ function normalizeCollections(db) {
   db.withdraws.forEach((withdraw) => {
     const taxRate = Number(withdraw.taxRate ?? db.config?.withdrawTaxRate ?? 20)
     withdraw.taxRate = Number.isFinite(taxRate) ? taxRate : 20
-    withdraw.tax = round2(withdraw.tax ?? (Number(withdraw.amount || 0) * withdraw.taxRate / 100))
-    withdraw.actualAmount = round2(withdraw.actualAmount ?? (Number(withdraw.amount || 0) - withdraw.tax))
+    withdraw.amountFen = Number.isSafeInteger(withdraw.amountFen) ? withdraw.amountFen : yuanToFen(withdraw.amount || 0, '提现金额')
+    withdraw.taxFen = Number.isSafeInteger(withdraw.taxFen)
+      ? withdraw.taxFen
+      : Math.round(withdraw.amountFen * withdraw.taxRate / 100)
+    withdraw.actualAmountFen = Number.isSafeInteger(withdraw.actualAmountFen)
+      ? withdraw.actualAmountFen
+      : Math.max(0, withdraw.amountFen - withdraw.taxFen)
+    withdraw.amount = fenToYuan(withdraw.amountFen)
+    withdraw.tax = fenToYuan(withdraw.taxFen)
+    withdraw.actualAmount = fenToYuan(withdraw.actualAmountFen)
     withdraw.payChannel ||= '微信零钱'
     withdraw.payOrderNo ||= ''
     withdraw.financeRemark ||= ''
+    // 历史提现单都是财务线下打款，没有微信转账字段；补齐后新旧单据共用一套状态机。
+    withdraw.payMethod ||= 'manual'
+    withdraw.outBillNo ||= ''
+    withdraw.transferBillNo ||= ''
+    withdraw.transferState ||= ''
+    withdraw.transferPackage ||= ''
+    withdraw.transferError ||= ''
+    withdraw.transferFailReason ||= ''
+    withdraw.transferFailReasonText ||= ''
+    withdraw.transferOpenid ||= ''
+    withdraw.transferAmountFen = Number.isSafeInteger(withdraw.transferAmountFen) ? withdraw.transferAmountFen : 0
+    withdraw.transferAppId ||= ''
+    withdraw.transferMchId ||= ''
+    withdraw.transferRequest ||= null
+    withdraw.pendingClawbackAmount ||= 0
+    // 统一新状态名，保留历史数据兼容。
+    if (withdraw.status === '转账中') withdraw.status = '打款中'
+    // 进程重启后不存在进行中的发起请求，残留的 REQUESTING 一律按结果不明确处理。
+    if (withdraw.status === '打款中' && withdraw.transferState === 'REQUESTING') withdraw.transferState = 'UNKNOWN'
   })
   db.pointProducts ||= clone(seed.pointProducts || [])
   db.pointOrders ||= []
@@ -222,12 +241,19 @@ function normalizeCollections(db) {
     const legacyAmount = Math.max(0, Number(application.paidAmount || 0))
     if (application.feeAmount == null) application.feeAmount = legacyAmount
     application.feeAmount = Math.max(0, Number(application.feeAmount || 0))
+    application.feeAmountFen = Number.isSafeInteger(application.feeAmountFen)
+      ? application.feeAmountFen
+      : yuanToFen(application.feeAmount, '申请费用')
+    application.feeAmount = fenToYuan(application.feeAmountFen)
     application.paidAmount = application.paymentStatus === '待支付' || application.status === '待付款' ? 0 : legacyAmount
     application.paymentOrderNo ||= ''
     application.paymentMethod ||= application.paidAmount > 0 ? '微信支付' : ''
     application.paidAt ||= ''
     application.paymentStatus ||= application.paidAmount > 0 ? '待核对' : '未收费'
     application.financeRemark ||= ''
+    application.wechatPaymentRequest ||= null
+    application.refundRequest ||= null
+    application.refundRequestStatus ||= ''
   })
 }
 
@@ -636,6 +662,41 @@ export function save() {
   writeJsonFileAtomicSync(DATA_FILE, db)
 }
 
+export function updateConfiguration(nextConfig = {}, categoryUpdates = []) {
+  get()
+  const previousConfig = clone(db.config || {})
+  const previousCategories = clone(db.categories || {})
+  try {
+    db.config = {
+      ...db.config,
+      ...nextConfig,
+      brand: { ...(db.config.brand || {}), ...(nextConfig.brand || {}) },
+      copy: { ...(db.config.copy || {}), ...(nextConfig.copy || {}) },
+      assistant: { ...(db.config.assistant || {}), ...(nextConfig.assistant || {}) },
+      homeAssistant: { ...(db.config.homeAssistant || {}), ...(nextConfig.homeAssistant || {}) },
+      homeDisplay: { ...(db.config.homeDisplay || {}), ...(nextConfig.homeDisplay || {}) },
+      socialQrs: { ...(db.config.socialQrs || {}), ...(nextConfig.socialQrs || {}) },
+      filing: { ...(db.config.filing || {}), ...(nextConfig.filing || {}) }
+    }
+    ;(Array.isArray(categoryUpdates) ? categoryUpdates : []).forEach((input) => {
+      const key = String(input?.id || '')
+      const current = db.categories[key]
+      if (!current) throw badRequest(`分类 ${key || '未知'} 不存在`)
+      const homeDisplayLimit = Number(input.homeDisplayLimit ?? current.homeDisplayLimit ?? 6)
+      if (!Number.isInteger(homeDisplayLimit) || homeDisplayLimit < 0 || homeDisplayLimit > 50) {
+        throw badRequest(`${current.name}的首页显示数量必须是0到50之间的整数`)
+      }
+      db.categories[key] = { ...current, ...input, id: current.id, homeDisplayLimit }
+    })
+    save()
+    return { config: db.config, categories: db.categories }
+  } catch (error) {
+    db.config = previousConfig
+    db.categories = previousCategories
+    throw error
+  }
+}
+
 export function listParticipants(userId = null) {
   const participants = get().participants || []
   return userId == null ? participants : participants.filter((item) => String(item.userId || '') === String(userId))
@@ -889,16 +950,18 @@ function activitySalesView(activity) {
   }
 }
 
-export function listActivitiesForDisplay() {
-  return get().activities
+export function listActivitiesForDisplay(options = {}) {
+  let rows = get().activities
+  if (options.publishedOnly) rows = rows.filter((item) => Number(item.status ?? 1) === 1)
+  return rows
     .map(activitySalesView)
     .sort((left, right) => Number(left.expired) - Number(right.expired)
       || nextActivityDate(left).localeCompare(nextActivityDate(right)))
 }
 
-export function searchActivities(keyword, category) {
+export function searchActivities(keyword, category, options = {}) {
   const terms = normalizeKeyword(keyword)
-  return listActivitiesForDisplay().filter((a) => {
+  return listActivitiesForDisplay(options).filter((a) => {
     const okCat = !category || String(a.category) === String(category)
     const text = activitySearchText(a)
     const okKey = terms.length === 0 || terms.every((t) => text.includes(t))
@@ -1094,7 +1157,7 @@ export function isManagerUser(userId) {
 }
 
 export function listPublicManagers() {
-  return db.managers.filter((m) => Number(m.status) !== 3).map(publicManager)
+  return db.managers.filter((m) => Number(m.status) === 1).map(publicManager)
 }
 
 export function managerBalance(managerId) {
@@ -1305,7 +1368,7 @@ function couponPublisher(payload = {}, current = {}) {
   if (publisherType === 'platform') return { publisherType, managerId: null }
   const managerId = payload.managerId == null ? current.managerId : payload.managerId
   const manager = findManager(managerId)
-  if (!manager || manager.status === 3) throw badRequest('请选择有效的发布商家')
+  if (!manager || Number(manager.status) !== 1) throw badRequest('请选择状态正常的发布商家')
   return { publisherType, managerId: manager.id }
 }
 
@@ -1416,6 +1479,7 @@ function bannerPayload(input, current = {}) {
   const mediaUrl = String(data.mediaUrl == null ? current.mediaUrl || current.imageUrl || '' : data.mediaUrl).trim()
   const linkUrl = String(data.linkUrl == null ? current.linkUrl || '' : data.linkUrl).trim()
   if (!title) throw badRequest('请填写 Banner 标题')
+  if (!mediaUrl) throw badRequest('请上传 Banner 图片或视频')
   if (mediaUrl && !/^(\/api\/uploads\/files\/|\/assets\/|https:\/\/)/.test(mediaUrl)) throw badRequest('图片或视频地址格式不正确')
   if (linkUrl && !/^(\/pages\/|https:\/\/)/.test(linkUrl)) throw badRequest('跳转链接应为小程序页面路径或 HTTPS 地址')
   return {
@@ -1586,6 +1650,19 @@ function releaseSchedule(order) {
   }
 }
 
+function releaseProductStock(order) {
+  if (!order || order.inventoryReleased || order.offeringType !== 'product') return
+  const product = (db.products || []).find((item) => String(item.id) === String(order.activityId))
+  if (!product) return
+  const count = Math.max(1, Number(order.count || 1))
+  if (Number.isInteger(Number(product.stock))) product.stock = Number(product.stock) + count
+  if (order.skuId) {
+    const sku = (product.skus || []).find((item) => String(item.id) === String(order.skuId))
+    if (sku && Number.isInteger(Number(sku.stock))) sku.stock = Number(sku.stock) + count
+  }
+  order.inventoryReleased = true
+}
+
 function returnCoupon(order, force = false) {
   if (!order.couponId) return
   if (!force) {
@@ -1673,20 +1750,36 @@ export function createOrder(payload) {
   if (!Number.isSafeInteger(count) || count < 1) throw badRequest('购买数量不正确')
   if (Number(activity.status ?? 1) === 0) throw badRequest('该活动已下架，无法报名')
   const isActivity = db.activities.some((item) => String(item.id) === String(activity.id))
+  const isProduct = !isActivity && (db.products || []).some((item) => String(item.id) === String(activity.id))
   if (isActivity && activityExpired(activity)) throw badRequest('活动已过期，无法报名')
   const limit = activity.limitPerUser || 99
-  if (count > limit) throw new Error(`每人限购${limit}份`)
+  const alreadyOrdered = db.orders
+    .filter((order) => String(order.userId) === String(payload.userId)
+      && String(order.activityId) === String(activity.id)
+      && !['已取消', '已退款'].includes(order.status))
+    .reduce((total, order) => total + Math.max(1, Number(order.count || 1)), 0)
+  if (alreadyOrdered + count > limit) throw badRequest(`每人限购${limit}份，您已购买${alreadyOrdered}份`)
   const isSkuOnly = activity.sellType === 'sku'
   const hasSku = activity.hasSku || isSkuOnly
-  const sku = hasSku ? activity.skus.find((s) => s.id === payload.skuId) || activity.skus[0] || null : null
+  const requestedSkuId = String(payload.skuId || '')
+  const sku = hasSku
+    ? (activity.skus || []).find((item) => String(item.id) === requestedSkuId) || (!requestedSkuId ? activity.skus?.[0] : null)
+    : null
+  if (hasSku && requestedSkuId && !sku) throw badRequest('所选规格已失效，请刷新后重新选择')
   const memberPrice = requiredPaidPrice(sku ? sku.memberPrice : activity.memberPrice, '支付金额')
   const originalUnitPrice = Number((sku && sku.originalPrice) ?? activity.originalPrice ?? (sku && sku.price) ?? activity.price ?? memberPrice ?? 0)
   const memberPriceFen = yuanToFen(memberPrice, '会员单价')
   const originalUnitPriceFen = yuanToFen(originalUnitPrice, '原单价')
-  const schedule = isSkuOnly ? null : activity.schedules.find((s) => s.id === payload.scheduleId)
-    || activity.schedules.find((item) => !scheduleExpired(item)) || activity.schedules[0] || null
+  const requestedScheduleId = String(payload.scheduleId || '')
+  const schedule = isSkuOnly ? null : (activity.schedules || []).find((item) => String(item.id) === requestedScheduleId)
+    || (!requestedScheduleId ? (activity.schedules || []).find((item) => !scheduleExpired(item)) || activity.schedules?.[0] || null : null)
+  if (!isSkuOnly && requestedScheduleId && !schedule) throw badRequest('所选场次已失效，请刷新后重新选择')
   if (scheduleExpired(schedule)) throw badRequest('所选活动场次已过期，无法报名')
   if (schedule && schedule.remaining < count) throw new Error('该时间段名额不足')
+  if (isProduct) {
+    if (Number.isInteger(Number(activity.stock)) && Number(activity.stock) < count) throw badRequest('商品库存不足')
+    if (sku && Number.isInteger(Number(sku.stock)) && Number(sku.stock) < count) throw badRequest('所选规格库存不足')
+  }
   const venueAddress = (sku && sku.address) || activity.address || ''
   const venueDistrict = (sku && sku.district) || ''
   let coupon = null
@@ -1720,6 +1813,8 @@ export function createOrder(payload) {
     category: activity.category,
     cover: activity.cover,
     coverTone: activity.coverTone,
+    coverImage: activity.coverImage || '',
+    skuId: sku ? sku.id : null,
     skuName: sku ? sku.name : '',
     venueAddress,
     venueDistrict,
@@ -1764,7 +1859,9 @@ export function createOrder(payload) {
     paymentStatus: 'NOTPAY',
     payChannel: '',
     payTime: '',
-    payDeadline: Date.now() + 30 * 60 * 1000
+    payDeadline: Date.now() + 30 * 60 * 1000,
+    offeringType: isProduct ? 'product' : 'activity',
+    inventoryReleased: false
   }
   db.orders.unshift(order)
   reserveOrderBalance(order, payload.useBalance)
@@ -1779,6 +1876,10 @@ export function createOrder(payload) {
     schedule.soldQuota = (schedule.soldQuota || 0) + count
     schedule.remaining = Math.max(0, schedule.totalQuota - schedule.soldQuota)
   }
+  if (isProduct) {
+    if (Number.isInteger(Number(activity.stock))) activity.stock = Number(activity.stock) - count
+    if (sku && Number.isInteger(Number(sku.stock))) sku.stock = Number(sku.stock) - count
+  }
   save()
   return order
 }
@@ -1789,6 +1890,7 @@ export function autoCancelExpired() {
     if (o.status === '待付款' && o.paymentStatus !== 'USERPAYING' && o.payDeadline && now > o.payDeadline) {
       o.status = '已取消'
       releaseSchedule(o)
+      releaseProductStock(o)
       returnCoupon(o, true)
       releaseOrderBalance(o, 1, '订单超时，余额退回')
     }
@@ -1799,9 +1901,9 @@ export function autoCancelExpired() {
 export function payOrder(id) {
   const order = db.orders.find((o) => o.id === id)
   if (!order || order.status !== '待付款') return null
-  const activity = db.activities.find((item) => String(item.id) === String(order.activityId))
+  const activity = [...db.activities, ...(db.products || [])].find((item) => String(item.id) === String(order.activityId))
   if (activity && (activityExpired(activity) || scheduleExpired(order.schedule))) throw badRequest('活动已过期，无法继续付款')
-  if (activity && Number(activity.status ?? 1) === 0) throw badRequest('该活动已下架，无法继续付款')
+  if (activity && Number(activity.status ?? 1) === 0) throw badRequest('该商品或活动已下架，无法继续付款')
   return order
 }
 
@@ -1908,13 +2010,17 @@ export function confirmWechatPayment(outTradeNo, payment) {
       : yuanToFen(application.feeAmount || 0, '申请费用')
     const paidFen = Number(payment?.amount?.payer_total ?? payment?.amount?.total)
     if (!Number.isInteger(paidFen) || paidFen !== expectedFen) throw badRequest('微信支付金额与申请费用不一致')
+    const transactionId = String(payment?.transaction_id || '').trim()
+    if (!transactionId) throw badRequest('微信支付结果缺少微信支付订单号')
     application.paid = true
-    application.paidAmount = paidFen / 100
+    application.paidAmountFen = paidFen
+    application.paidAmount = fenToYuan(paidFen)
     application.paymentStatus = '已到账'
     application.wechatPaymentPayload = null
+    application.wechatPaymentRequest = null
     application.prepayExpiresAt = 0
     application.paymentMethod = '微信支付'
-    application.paymentOrderNo = String(payment.transaction_id || '')
+    application.paymentOrderNo = transactionId
     application.paidAt = String(payment.success_time || nowText()).replace('T', ' ').slice(0, 19)
     application.status = '待审核'
     addLog('微信支付', `主理人申请 ${application.id} 费用支付成功 ¥${application.paidAmount}`)
@@ -1950,6 +2056,7 @@ export function cancelOrder(id) {
   if (order.paymentStatus === 'USERPAYING') throw badRequest('微信支付已发起，暂时不能取消，请等待支付结果')
   order.status = '已取消'
   releaseSchedule(order)
+  releaseProductStock(order)
   returnCoupon(order, true)
   releaseOrderBalance(order, 1, '取消订单，余额退回')
   save()
@@ -1989,9 +2096,23 @@ function reduceWithdrawForClawback(commission, amount, order) {
   if (!record) return
   const deduction = round2(Math.min(round2(amount), round2(record.amount)))
   if (deduction <= 0) return
-  record.amount = round2(round2(record.amount) - deduction)
-  record.tax = round2(record.amount * Number(record.taxRate || 0) / 100)
-  record.actualAmount = round2(record.amount - record.tax)
+  // 转账单已按原金额提交给微信，不能再改提现单金额；先记账，等转账成功后转成佣金负债。
+  if (record.status === '打款中') {
+    const remaining = Math.max(0, round2(round2(record.amount) - round2(record.pendingClawbackAmount || 0)))
+    const booked = round2(Math.min(deduction, remaining))
+    if (booked <= 0) return
+    record.pendingClawbackAmount = round2(round2(record.pendingClawbackAmount || 0) + booked)
+    record.adjustNote = `订单 ${order ? order.id : commission.orderId} 退款 ¥${booked}，转账成功后抵扣佣金`
+    record.adjustTime = nowText()
+    addLog('提现调整', `提现单 ${record.id} 打款中发生退款扣减 ¥${booked}，转账成功后计入佣金负债`)
+    return
+  }
+  record.amountFen = Math.max(0, yuanToFen(record.amount, '提现金额') - yuanToFen(deduction, '退款扣减金额'))
+  record.taxFen = Math.round(record.amountFen * Number(record.taxRate || 0) / 100)
+  record.actualAmountFen = Math.max(0, record.amountFen - record.taxFen)
+  record.amount = fenToYuan(record.amountFen)
+  record.tax = fenToYuan(record.taxFen)
+  record.actualAmount = fenToYuan(record.actualAmountFen)
   record.clawbackAmount = round2(round2(record.clawbackAmount || 0) + deduction)
   record.commissionIds = (record.commissionIds || []).filter((cid) => String(cid) !== String(commission.id))
   record.commissionCount = record.commissionIds.length
@@ -2001,8 +2122,11 @@ function reduceWithdrawForClawback(commission, amount, order) {
     record.status = '已撤销'
     record.rejectReason = '关联佣金已全额退款扣回，提现单自动撤销'
     record.amount = 0
+    record.amountFen = 0
     record.tax = 0
+    record.taxFen = 0
     record.actualAmount = 0
+    record.actualAmountFen = 0
   }
   addLog('提现调整', `提现单 ${record.id} 因订单退款扣减 ¥${deduction}，剩余 ¥${record.amount}（状态：${record.status}）`)
 }
@@ -2060,6 +2184,7 @@ function applyRefund(order, ratio, reason) {
   order.refundAuditRequired = false
   releaseOrderBalance(order, value, '订单退款，余额原路退回')
   releaseSchedule(order)
+  releaseProductStock(order)
   clawbackCommission(order, value)
   if (value >= 1 && order.source === 'live' && order.cardId) {
     db.cards = (db.cards || []).filter((card) => String(card.id) !== String(order.cardId))
@@ -2120,9 +2245,93 @@ export function markWechatRefundRequested(orderId, prepared, result = {}) {
   return order
 }
 
+export function prepareManagerApplicationRefund(applicationOrId, reason = '主理人申请未通过，原路退款') {
+  const application = typeof applicationOrId === 'object'
+    ? applicationOrId
+    : (db.managerApplications || []).find((item) => String(item.id) === String(applicationOrId))
+  if (!application) throw badRequest('主理人申请不存在')
+  if (!['已拒绝'].includes(application.status)) throw badRequest('只有已拒绝的主理人申请可以退款')
+  if (application.paymentStatus === '已退款' || application.refundRequestStatus === 'SUCCESS') {
+    throw badRequest('该主理人申请费用已退款')
+  }
+  if (!['已到账', '待退款', '退款中'].includes(application.paymentStatus)) {
+    throw badRequest('该主理人申请没有可退的微信支付款项')
+  }
+  if (application.refundRequest?.outRefundNo) return { application, ...application.refundRequest }
+  const totalFen = Number.isSafeInteger(application.feeAmountFen)
+    ? application.feeAmountFen
+    : yuanToFen(application.feeAmount || 0, '申请费用')
+  const refundFen = Number.isSafeInteger(application.paidAmountFen)
+    ? application.paidAmountFen
+    : yuanToFen(application.paidAmount || 0, '已付申请费用')
+  if (refundFen < 1 || totalFen < refundFen) throw badRequest('主理人申请退款金额不正确')
+  const outRefundNo = application.outRefundNo || `MAR${Date.now()}${crypto.randomBytes(4).toString('hex')}`
+  application.outRefundNo = outRefundNo
+  application.refundRequestStatus = 'CREATED'
+  application.refundRequest = {
+    outTradeNo: application.id,
+    outRefundNo,
+    reason: String(reason || '主理人申请未通过，原路退款'),
+    refundFen,
+    totalFen
+  }
+  application.refundRequestedAt ||= nowText()
+  application.paymentStatus = '待退款'
+  save()
+  return { application, ...application.refundRequest }
+}
+
+export function markManagerApplicationRefundRequested(applicationId, prepared, result = {}) {
+  const application = (db.managerApplications || []).find((item) => String(item.id) === String(applicationId))
+  if (!application) throw badRequest('主理人申请不存在')
+  application.outRefundNo = prepared.outRefundNo
+  application.refundAmountFen = prepared.refundFen
+  application.refundAmount = fenToYuan(prepared.refundFen)
+  application.refundReason = prepared.reason
+  application.wechatRefundId = String(result.refund_id || application.wechatRefundId || '')
+  application.refundRequestStatus = String(result.status || 'PROCESSING')
+  application.refundRequestedAt = nowText()
+  application.paymentStatus = '退款中'
+  addLog('微信退款', `主理人申请 ${application.id} 已提交退款 ¥${application.refundAmount}`)
+  save()
+  return application
+}
+
+export function markManagerApplicationRefundError(applicationId, error) {
+  const application = (db.managerApplications || []).find((item) => String(item.id) === String(applicationId))
+  if (!application) return null
+  application.refundRequestError = String(error?.message || '微信退款请求失败')
+  application.refundLastAttemptAt = nowText()
+  save()
+  return application
+}
+
 export function confirmWechatRefund(refund) {
   const order = db.orders.find((item) => String(item.id) === String(refund?.out_trade_no))
-  if (!order) throw badRequest('退款关联订单不存在')
+  if (!order) {
+    const application = (db.managerApplications || []).find((item) => String(item.id) === String(refund?.out_trade_no))
+    if (!application) throw badRequest('退款关联业务单不存在')
+    if (application.paymentStatus === '已退款' && application.refundRequestStatus === 'SUCCESS') {
+      return { application, duplicate: true }
+    }
+    if (application.outRefundNo && String(application.outRefundNo) !== String(refund.out_refund_no || '')) {
+      throw badRequest('主理人申请退款单号不匹配')
+    }
+    const expectedFen = Number.isSafeInteger(application.refundAmountFen)
+      ? application.refundAmountFen
+      : Number(application.refundRequest?.refundFen)
+    const actualFen = Number(refund?.amount?.refund)
+    if (!Number.isSafeInteger(actualFen) || actualFen !== expectedFen) throw badRequest('微信退款金额与主理人申请费用不一致')
+    application.wechatRefundId = String(refund.refund_id || application.wechatRefundId || '')
+    application.refundSuccessTime = String(refund.success_time || nowText()).replace('T', ' ').slice(0, 19)
+    application.refundRequestStatus = 'SUCCESS'
+    application.paymentStatus = '已退款'
+    application.paid = false
+    application.refundedAt = application.refundSuccessTime
+    addLog('微信退款', `主理人申请 ${application.id} 退款成功 ¥${fenToYuan(actualFen)}`)
+    save()
+    return { application }
+  }
   if (order.status === '已退款' && order.refundRequestStatus === 'SUCCESS') return { order, duplicate: true }
   if (order.outRefundNo && String(order.outRefundNo) !== String(refund.out_refund_no || '')) throw badRequest('退款单号不匹配')
   const expectedFen = order.wechatRefundFen ?? yuanToFen(order.wechatRefundAmount ?? order.refundAmount ?? 0)
@@ -2559,25 +2768,36 @@ export function applyWithdraw(managerId, amount, options = {}) {
   const monthlyLimit = Number(db.config.withdrawMonthlyLimit ?? 1)
   const month = currentMonthKey()
   const usedThisMonth = db.withdraws.filter((w) => String(w.managerId) === String(managerId)
-    && !['已拒绝', '已撤销'].includes(w.status)
+    && !['已拒绝', '已撤销', '打款失败'].includes(w.status)
     && String(w.applyTime || '').slice(0, 7) === month).length
   if (monthlyLimit > 0 && usedThisMonth >= monthlyLimit) throw badRequest(`每月最多提现 ${monthlyLimit} 次`)
   const balance = managerBalance(managerId)
   if (value > balance.withdrawable) throw badRequest(`超出可结算余额 ¥${balance.withdrawable}`)
 
+  const amountFen = yuanToFen(value, '提现金额')
   const taxRate = Number(db.config.withdrawTaxRate ?? 20)
-  const tax = round2(value * taxRate / 100)
+  const taxFen = Math.round(amountFen * taxRate / 100)
+  const actualAmountFen = Math.max(0, amountFen - taxFen)
   const record = {
     id: `WD${Date.now()}`,
     managerId: manager.id,
     managerName: manager.name,
-    amount: value,
+    amountFen,
+    amount: fenToYuan(amountFen),
     taxRate,
-    tax,
-    actualAmount: round2(value - tax),
+    taxFen,
+    tax: fenToYuan(taxFen),
+    actualAmountFen,
+    actualAmount: fenToYuan(actualAmountFen),
     status: '待审核',
     applyTime: nowText(),
     payChannel: '微信零钱',
+    payMethod: '',
+    outBillNo: '',
+    transferBillNo: '',
+    transferState: '',
+    transferPackage: '',
+    pendingClawbackAmount: 0,
     availableBefore: balance.withdrawable,
     commissionIds: [],
     commissionCount: 0,
@@ -2595,41 +2815,8 @@ export function applyWithdraw(managerId, amount, options = {}) {
   return record
 }
 
-export function approveWithdraw(id, options = {}) {
-  const record = db.withdraws.find((w) => String(w.id) === String(id))
-  if (!record) throw badRequest('提现单不存在')
-  if (record.status !== '待审核') throw badRequest(`提现单当前状态为「${record.status}」，不可重复打款`)
-  const taxRate = Number(options.taxRate ?? record.taxRate ?? db.config.withdrawTaxRate ?? 20)
-  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) throw badRequest('税率必须是 0 到 100 之间的数字')
-  const payChannel = String(options.payChannel ?? record.payChannel ?? '').trim()
-  const payOrderNo = String(options.payOrderNo ?? '').trim()
-  if (!payChannel) throw badRequest('请选择支付渠道')
-  if (!payOrderNo) throw badRequest('请填写打款流水号')
-  const rows = commissionRowsOf(record.id, COMMISSION_STATUS.WITHDRAWING)
-  const lockedTotal = sumCommissions(rows)
-  if (!rows.length || lockedTotal <= 0) throw badRequest('该提现单没有锁定中的佣金，不能打款')
-  if (Math.abs(lockedTotal - round2(record.amount)) > 0.01) {
-    record.amount = lockedTotal
-    addLog('提现审核', `提现单 ${record.id} 金额按锁定佣金校正为 ¥${record.amount}`)
-  }
-  record.taxRate = taxRate
-  record.tax = round2(record.amount * taxRate / 100)
-  record.actualAmount = round2(record.amount - record.tax)
-  record.payChannel = payChannel
-  record.payOrderNo = payOrderNo
-  record.financeRemark = String(options.financeRemark || '').trim()
-  record.status = '已到账'
-  record.payTime = nowText()
-  record.auditTime = record.payTime
-  record.operator = String(options.operator || 'admin')
-  record.settledCommissionIds = rows.map((c) => c.id)
-  rows.forEach((c) => {
-    c.status = COMMISSION_STATUS.SETTLED
-    c.settleTime = nowText()
-  })
-  addLog('提现审核', `提现单 ${record.id} 已通过 ${record.payChannel} 打款 ¥${record.amount}（代扣税 ¥${record.tax}，实付 ¥${record.actualAmount}，流水号 ${record.payOrderNo}）`)
-  save()
-  return record
+export function approveWithdraw() {
+  throw badRequest('人工标记到账已禁用，请通过微信商家转账发起打款')
 }
 
 export function rejectWithdraw(id, reason, operator = 'admin') {
@@ -2648,6 +2835,295 @@ export function rejectWithdraw(id, reason, operator = 'admin') {
   addLog('提现审核', `提现单 ${record.id} 已拒绝并释放锁定佣金，原因：${record.rejectReason}`)
   save()
   return record
+}
+
+// ---------------------------------------------------------------------------
+// 提现打款：微信零钱商家转账（用户确认收款模式）
+// 状态：待审核 → 打款中 →（微信回调/查单确认）已到账 / 打款失败 / 已撤销
+// ---------------------------------------------------------------------------
+
+export function findWithdrawById(id) {
+  return db.withdraws.find((item) => String(item.id) === String(id)) || null
+}
+
+function withdrawOutBillNo(record) {
+  const base = String(record.id || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 28)
+  if (!base) throw badRequest('提现单号无法用于微信转账')
+  const attempt = Number(record.transferAttempt || 0) + 1
+  return attempt <= 1 ? base : `${base}R${attempt}`
+}
+
+function lockedWithdrawCommissions(record) {
+  return commissionRowsOf(record.id, COMMISSION_STATUS.WITHDRAWING)
+}
+
+function settleWithdrawCommissions(record, settledAt) {
+  const rows = lockedWithdrawCommissions(record)
+  rows.forEach((commission) => {
+    commission.status = COMMISSION_STATUS.SETTLED
+    commission.settleTime = settledAt
+  })
+  record.settledCommissionIds = rows.map((commission) => commission.id)
+  return rows
+}
+
+function releaseWithdrawCommissions(record) {
+  const rows = lockedWithdrawCommissions(record)
+  rows.forEach((commission) => {
+    commission.status = COMMISSION_STATUS.AVAILABLE
+    commission.withdrawId = null
+    commission.withdrawTime = null
+  })
+  return rows
+}
+
+// 管理员选择“微信商家转账”后，先锁定本次打款参数，再调用微信接口。
+export function prepareWithdrawTransfer(id, options = {}) {
+  const record = findWithdrawById(id)
+  if (!record) throw badRequest('提现单不存在')
+  if (record.status !== '待审核') throw badRequest(`提现单当前状态为「${record.status}」，不可发起转账`)
+  const taxRate = Number(options.taxRate ?? record.taxRate ?? db.config.withdrawTaxRate ?? 20)
+  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) throw badRequest('税率必须是 0 到 100 之间的数字')
+  const rows = lockedWithdrawCommissions(record)
+  const lockedTotal = sumCommissions(rows)
+  if (!rows.length || lockedTotal <= 0) throw badRequest('该提现单没有锁定中的佣金，不能打款')
+  if (Math.abs(lockedTotal - round2(record.amount)) > 0.01) {
+    record.amount = lockedTotal
+    addLog('提现转账', `提现单 ${record.id} 金额按锁定佣金校正为 ¥${record.amount}`)
+  }
+  record.amountFen = yuanToFen(record.amount, '提现金额')
+  record.amount = fenToYuan(record.amountFen)
+  record.taxRate = taxRate
+  record.taxFen = Math.round(record.amountFen * taxRate / 100)
+  record.actualAmountFen = Math.max(0, record.amountFen - record.taxFen)
+  record.tax = fenToYuan(record.taxFen)
+  record.actualAmount = fenToYuan(record.actualAmountFen)
+  if (record.actualAmountFen < 10) throw badRequest('扣税后实际到账金额不足 0.10 元，无法使用微信零钱转账')
+  record.payMethod = 'wechat'
+  record.payChannel = '微信零钱'
+  record.payOrderNo = ''
+  record.financeRemark = String(options.financeRemark || '').trim()
+  record.operator = String(options.operator || 'admin')
+  record.status = '打款中'
+  record.outBillNo = withdrawOutBillNo(record)
+  record.transferAttempt = Number(record.transferAttempt || 0) + 1
+  record.transferState = 'REQUESTING'
+  record.transferPackage = ''
+  record.transferBillNo = ''
+  record.transferError = ''
+  record.transferFailReason = ''
+  record.transferFailReasonText = ''
+  record.transferOpenid = ''
+  record.transferAmountFen = record.actualAmountFen
+  record.transferAppId = ''
+  record.transferMchId = ''
+  record.transferRequest = null
+  record.transferRequestedAt = nowText()
+  record.transferUpdatedAt = record.transferRequestedAt
+  addLog('提现转账', `提现单 ${record.id} 发起微信零钱转账 ¥${record.actualAmount}（代扣税 ¥${record.tax}）`)
+  save()
+  return record
+}
+
+export function managerTransferRecipient(managerId) {
+  const manager = findManager(managerId)
+  if (!manager) throw badRequest('主理人不存在')
+  if (Number(manager.status) !== 1) throw badRequest('主理人状态异常，不能发起转账')
+  const customer = manager.userId
+    ? db.customers.find((item) => String(item.id) === String(manager.userId))
+    : null
+  const openid = String(customer?.wechatOpenId || '').trim()
+  if (!openid) throw badRequest('该主理人还没有绑定微信会员身份（缺少 openid），无法发起微信转账')
+  return {
+    openid,
+    name: String(manager.realName || customer?.realName || '').trim()
+  }
+}
+
+// 在请求微信前持久化本次不可变打款参数，回调/查单只能与这份快照匹配。
+export function bindWithdrawTransferRequest(id, snapshot = {}) {
+  const record = findWithdrawById(id)
+  if (!record) throw badRequest('提现单不存在')
+  if (record.status !== '打款中' || record.transferState !== 'REQUESTING') {
+    throw badRequest('提现单不在可绑定转账参数的状态')
+  }
+  const amountFen = Number(snapshot.amountFen)
+  if (!Number.isSafeInteger(amountFen) || amountFen !== record.actualAmountFen) throw badRequest('微信转账金额与提现单不一致')
+  const openid = String(snapshot.openid || '').trim()
+  const appId = String(snapshot.appId || '').trim()
+  const mchId = String(snapshot.mchId || '').trim()
+  if (!openid || !appId || !mchId) throw badRequest('微信转账收款人或商户参数不完整')
+  const request = snapshot.request ? clone(snapshot.request) : null
+  if (!request
+    || String(request.outBillNo) !== String(record.outBillNo)
+    || String(request.openid) !== openid
+    || Number(request.amountFen) !== amountFen
+    || String(request.appId) !== appId
+    || String(request.mchId) !== mchId) {
+    throw badRequest('微信转账原始请求快照不完整')
+  }
+  record.transferOpenid = openid
+  record.transferAmountFen = amountFen
+  record.transferAppId = appId
+  record.transferMchId = mchId
+  record.transferRequest = request
+  save()
+  return record
+}
+
+export function markWithdrawTransferCreated(id, bill = {}) {
+  const record = findWithdrawById(id)
+  if (!record) throw badRequest('提现单不存在')
+  if (!bill.out_bill_no || String(bill.out_bill_no) !== String(record.outBillNo)) {
+    throw badRequest('微信转账应答的商户单号不匹配')
+  }
+  record.transferBillNo = String(bill.transfer_bill_no || record.transferBillNo || '')
+  record.transferCreateTime = String(bill.create_time || '')
+  record.transferError = ''
+  addLog('提现转账', `提现单 ${record.id} 微信转账单已创建（状态：${bill.state || '受理中'}，微信单号 ${record.transferBillNo || '—'}）`)
+  if (['SUCCESS', 'FAIL', 'CANCELLED'].includes(String(bill.state || '').toUpperCase())) {
+    // 发起转账应答不含全部对账字段，终态必须再查单确认。
+    record.transferState = 'UNKNOWN'
+    record.transferUpdatedAt = nowText()
+    save()
+    return record
+  }
+  return applyWithdrawTransferState(record.outBillNo, bill)
+}
+
+export function markWithdrawTransferRequestFailed(id, error, options = {}) {
+  const record = findWithdrawById(id)
+  if (!record || record.status !== '打款中') return record
+  const message = String(error?.message || '发起微信转账失败')
+  // 对账任务会周期性重查，结果仍是“不明确”时不要重复写日志。
+  if (options.unknown && record.transferState === 'UNKNOWN' && record.transferError === message) return record
+  record.transferError = message
+  record.transferUpdatedAt = nowText()
+  if (options.unknown) {
+    // 任何已发往微信的非 200/网络异常都必须保留原商户单号查单，不释放佣金。
+    record.transferState = 'UNKNOWN'
+  } else {
+    record.status = '待审核'
+    record.payMethod = ''
+    record.outBillNo = ''
+    record.transferState = 'REQUEST_FAILED'
+    record.transferBillNo = ''
+    record.transferPackage = ''
+    record.transferOpenid = ''
+    record.transferAmountFen = 0
+    record.transferAppId = ''
+    record.transferMchId = ''
+    record.transferRequest = null
+  }
+  addLog('提现转账', `提现单 ${record.id} 发起微信转账失败：${message}`)
+  save()
+  return record
+}
+
+// 微信回调与主动查单共用：按微信单据状态驱动提现单与佣金状态，重复通知保持幂等。
+export function applyWithdrawTransferState(outBillNo, bill = {}, options = {}) {
+  const billNo = String(outBillNo || bill.out_bill_no || '')
+  const record = db.withdraws.find((item) => billNo && String(item.outBillNo) === billNo)
+    || (bill.transfer_bill_no
+      ? db.withdraws.find((item) => String(item.transferBillNo) === String(bill.transfer_bill_no))
+      : null)
+  if (!record) throw badRequest('未找到微信转账单对应的提现单')
+  if (bill.out_bill_no != null && String(bill.out_bill_no) !== String(record.outBillNo)) throw badRequest('微信转账商户单号不匹配')
+  if (record.transferBillNo && bill.transfer_bill_no != null && String(bill.transfer_bill_no) !== String(record.transferBillNo)) {
+    throw badRequest('微信转账单号不匹配')
+  }
+  const requiredFields = Array.isArray(options.requiredFields) ? options.requiredFields : []
+  requiredFields.forEach((field) => {
+    if (bill[field] == null || String(bill[field]).trim() === '') throw badRequest(`微信转账结果缺少必要字段 ${field}`)
+  })
+  if (bill.mch_id != null && String(bill.mch_id) !== String(record.transferMchId)) throw badRequest('微信转账商户号不匹配')
+  if (bill.appid != null && String(bill.appid) !== String(record.transferAppId)) throw badRequest('微信转账 AppID 不匹配')
+  if (bill.openid != null && String(bill.openid) !== String(record.transferOpenid)) throw badRequest('微信转账收款人不匹配')
+  if (bill.transfer_amount != null) {
+    const amountFen = Number(bill.transfer_amount)
+    if (!Number.isSafeInteger(amountFen) || amountFen !== record.transferAmountFen) throw badRequest('微信转账金额不匹配')
+  }
+  const state = String(bill.state || '').toUpperCase()
+  if (!state) return record
+  const terminalStateByStatus = { '已到账': 'SUCCESS', '打款失败': 'FAIL', '已撤销': 'CANCELLED' }
+  const settledState = terminalStateByStatus[record.status]
+  if (settledState) {
+    if (state === settledState) return record
+    throw badRequest(`微信转账终态冲突：本地为 ${settledState}，新结果为 ${state}`)
+  }
+
+  record.transferBillNo = String(bill.transfer_bill_no || record.transferBillNo || '')
+  record.transferState = state
+  record.transferUpdatedAt = String(bill.update_time || nowText())
+  record.transferQueriedAt = nowText()
+  if (bill.fail_reason) {
+    record.transferFailReason = String(bill.fail_reason)
+    record.transferFailReasonText = transferFailReasonText(bill.fail_reason)
+  }
+
+  if (state === 'SUCCESS') {
+    const settledAt = nowText()
+    const rows = settleWithdrawCommissions(record, settledAt)
+    const pendingClawback = round2(record.pendingClawbackAmount || 0)
+    record.status = '已到账'
+    record.payChannel = '微信零钱（商家转账）'
+    record.payOrderNo = record.transferBillNo || record.payOrderNo
+    record.payTime = record.payTime || settledAt
+    record.auditTime = record.payTime
+    record.transferPackage = ''
+    record.transferFinishedAt = settledAt
+    record.operator = record.operator || 'wechat-transfer'
+    // 转账期间订单退款扣减的部分已经随转账付出，转为负向佣金负债抵扣后续佣金。
+    if (pendingClawback > 0) {
+      db.commissions.unshift({
+        id: `CMR${Date.now()}${Math.floor(Math.random() * 1000)}`,
+        managerId: record.managerId,
+        orderId: '',
+        customerId: '',
+        customerName: record.managerName || '',
+        productName: '提现转账期间退款扣减',
+        payAmount: 0,
+        originalAmount: 0,
+        discountedAmount: 0,
+        actualPaidAmount: 0,
+        commissionBasis: 'actualPaidAmount',
+        commissionRate: 0,
+        commissionAmount: -pendingClawback,
+        status: COMMISSION_STATUS.PENDING,
+        type: 'refund-clawback',
+        sourceWithdrawId: record.id,
+        createTime: settledAt,
+        remark: `提现单 ${record.id} 转账期间订单退款，转为负债抵扣后续佣金`
+      })
+      record.pendingClawbackSettledAt = settledAt
+      addLog('提现转账', `提现单 ${record.id} 转账期间退款 ¥${pendingClawback} 已转为佣金负债`)
+    }
+    record.pendingClawbackAmount = 0
+    addLog('提现转账', `提现单 ${record.id} 微信转账成功，实付 ¥${record.actualAmount}，结算佣金 ${rows.length} 笔（微信单号 ${record.transferBillNo || '—'}）`)
+  } else if (['FAIL', 'CANCELLED'].includes(state)) {
+    const rows = releaseWithdrawCommissions(record)
+    record.status = state === 'CANCELLED' ? '已撤销' : '打款失败'
+    record.transferPackage = ''
+    record.transferFinishedAt = nowText()
+    record.pendingClawbackAmount = 0
+    addLog('提现转账', state === 'CANCELLED'
+      ? `提现单 ${record.id} 微信转账已撤销，释放锁定佣金 ${rows.length} 笔`
+      : `提现单 ${record.id} 微信转账失败（${record.transferFailReasonText || record.transferFailReason || '未知原因'}），释放锁定佣金 ${rows.length} 笔`)
+  } else {
+    record.status = '打款中'
+    if (state === 'CANCELING') record.transferPackage = ''
+    if (['WAIT_USER_CONFIRM', 'TRANSFERING'].includes(state) && bill.package_info) {
+      record.transferPackage = String(bill.package_info)
+    }
+  }
+  save()
+  return record
+}
+
+export function pendingWithdrawTransfers(limit = 20) {
+  return db.withdraws
+    .filter((item) => item.status === '打款中' && item.outBillNo)
+    .slice(0, limit)
 }
 
 export function settleCommissions(options = {}) {
@@ -2699,10 +3175,17 @@ export function getSettlementRecords(managerId) {
 
 export function adjustCommission(id, amount, reason) {
   const c = db.commissions.find((x) => x.id === id)
-  if (!c) return null
-  c.commissionAmount = Number(amount)
-  c.adjustReason = reason
-  addLog('佣金调整', `佣金单 ${id} 调整为 ¥${amount}，原因：${reason}`)
+  if (!c) throw badRequest('佣金记录不存在')
+  if (![COMMISSION_STATUS.PENDING, COMMISSION_STATUS.AVAILABLE].includes(c.status)) {
+    throw badRequest('提现中、已结算或已扣回的佣金不能直接调整')
+  }
+  const value = Number(amount)
+  if (!Number.isFinite(value) || value < 0 || value > 1_000_000) throw badRequest('佣金金额须为0至1000000元之间的有效数字')
+  const note = String(reason || '').trim()
+  if (!note) throw badRequest('请填写佣金调整原因')
+  c.commissionAmount = round2(value)
+  c.adjustReason = note
+  addLog('佣金调整', `佣金单 ${id} 调整为 ¥${c.commissionAmount}，原因：${note}`)
   save()
   return c
 }
@@ -2737,14 +3220,16 @@ export function applyManager(form) {
   const hasPending = db.managerApplications.some((a) => a.status === '待审核' && String(a.userId) === String(userId))
   const alreadyManager = Boolean(findManagerByUser(userId)) || Boolean(customer.isManager)
   if (hasPending || alreadyManager) throw badRequest('已有待审核的申请或已是主理人')
-  const fee = Number(db.config.managerApplyFee ?? 0)
+  const feeAmountFen = yuanToFen(db.config.managerApplyFee ?? 0, '主理人申请费用')
+  const fee = fenToYuan(feeAmountFen)
   const app = {
-    id: `APP${Date.now()}`,
+    id: `APP${Date.now()}${crypto.randomBytes(3).toString('hex')}`,
     ...form,
     userId,
     name,
     phone,
     paid: fee <= 0,
+    feeAmountFen,
     feeAmount: fee,
     paidAmount: 0,
     paidAt: '',
@@ -2762,7 +3247,7 @@ export function applyManager(form) {
 
 export function prepareManagerApplicationPayment(id, userId) {
   const application = (db.managerApplications || []).find((item) => String(item.id) === String(id))
-  if (!application || application.status !== '待付款' || application.paymentStatus !== '待支付') {
+  if (!application || application.status !== '待付款' || !['待支付', 'USERPAYING'].includes(application.paymentStatus)) {
     throw badRequest('申请费用已支付或当前状态不能支付')
   }
   if (String(application.userId) !== String(userId)) throw forbidden('无权支付其他会员的申请费用')
@@ -2788,6 +3273,7 @@ export function markWechatPaymentRequested(outTradeNo, expiresAt = 0) {
   }
   const application = (db.managerApplications || []).find((item) => String(item.id) === String(outTradeNo))
   if (application && application.status === '待付款') {
+    application.paymentStatus = 'USERPAYING'
     application.paymentRequestedAt = nowText()
     application.paymentQueryAttempts = 0
     application.prepayExpiresAt = Number(expiresAt || application.prepayExpiresAt || 0)
@@ -2804,6 +3290,32 @@ export function markWechatPaymentRequested(outTradeNo, expiresAt = 0) {
     return recharge
   }
   return null
+}
+
+// 首次请求微信前固化下单参数；重试只能复用这份快照，不能改金额、OpenID 或 time_expire。
+export function bindWechatPaymentRequest(outTradeNo, input = {}) {
+  const record = wechatPaymentRecord(outTradeNo)
+  if (!record) throw badRequest('支付关联业务单不存在')
+  if (record.wechatPaymentRequest) return clone(record.wechatPaymentRequest)
+  const snapshot = {
+    outTradeNo: String(input.outTradeNo || ''),
+    description: String(input.description || ''),
+    amountFen: Number(input.amountFen),
+    openid: String(input.openid || ''),
+    expiresAt: Number(input.expiresAt || 0)
+  }
+  if (snapshot.outTradeNo !== String(outTradeNo)
+    || !snapshot.description
+    || !Number.isSafeInteger(snapshot.amountFen)
+    || snapshot.amountFen < 1
+    || !snapshot.openid
+    || !Number.isFinite(snapshot.expiresAt)
+    || snapshot.expiresAt <= 0) {
+    throw badRequest('微信支付原始请求参数不完整')
+  }
+  record.wechatPaymentRequest = snapshot
+  save()
+  return clone(snapshot)
 }
 
 function wechatPaymentRecord(outTradeNo) {
@@ -2845,9 +3357,14 @@ export function markWechatPaymentClosed(outTradeNo) {
   record.wechatTradeState = 'CLOSED'
   record.prepayExpiresAt = 0
   record.wechatPaymentPayload = null
-  if (record.status === '待付款') {
+  record.wechatPaymentRequest = null
+  const application = (db.managerApplications || []).find((item) => String(item.id) === String(outTradeNo))
+  if (application) {
+    application.status = '已取消'
+  } else if (record.status === '待付款') {
     record.status = '已取消'
     releaseSchedule(record)
+    releaseProductStock(record)
     returnCoupon(record, true)
     releaseOrderBalance(record, 1, '订单关单，余额退回')
   } else if (record.status === '待支付') {
@@ -2908,7 +3425,8 @@ export function markWechatPaymentRequestFailed(outTradeNo, error) {
     return recharge
   }
   const application = (db.managerApplications || []).find((item) => String(item.id) === String(outTradeNo))
-  if (application && application.status === '待付款') {
+  if (application && application.status === '待付款' && application.paymentStatus === 'USERPAYING') {
+    application.paymentStatus = '待支付'
     application.paymentRequestError = String(error?.message || '微信支付下单失败')
     save()
     return application
@@ -3015,18 +3533,21 @@ export function approveManagerApp(id, audit = {}) {
   const phone = normalizePhone(audit.phone ?? app.phone)
   const groupCount = Number(audit.groupCount ?? app.groupCount ?? 0)
   const memberCount = Number(audit.memberCount ?? app.memberCount ?? 0)
-  const paidAmount = Math.max(0, Number(audit.paidAmount ?? app.paidAmount ?? 0))
-  const feeAmount = Math.max(0, Number(audit.feeAmount ?? app.feeAmount ?? paidAmount))
-  const paymentOrderNo = String(audit.paymentOrderNo ?? app.paymentOrderNo ?? '').trim()
-  const paidAt = String(audit.paidAt ?? app.paidAt ?? '').trim()
-  const paymentMethod = String(audit.paymentMethod ?? app.paymentMethod ?? '').trim()
-  const paymentStatus = String(audit.paymentStatus ?? app.paymentStatus ?? (paidAmount > 0 ? '待核对' : '免收费')).trim()
+  // 微信支付凭证只能由回调或查单写入，后台审核不得覆盖金额、状态、微信单号和支付时间。
+  const feeAmountFen = Number.isSafeInteger(app.feeAmountFen) ? app.feeAmountFen : yuanToFen(app.feeAmount || 0, '申请费用')
+  const paidAmountFen = Number.isSafeInteger(app.paidAmountFen) ? app.paidAmountFen : yuanToFen(app.paidAmount || 0, '到账金额')
+  const feeAmount = fenToYuan(feeAmountFen)
+  const paidAmount = fenToYuan(paidAmountFen)
+  const paymentOrderNo = String(app.paymentOrderNo || '').trim()
+  const paidAt = String(app.paidAt || '').trim()
+  const paymentMethod = String(app.paymentMethod || '').trim()
+  const paymentStatus = String(app.paymentStatus || (feeAmountFen > 0 ? '待支付' : '免收费')).trim()
   const commissionRate = audit.commissionRate == null || audit.commissionRate === '' ? null : Number(audit.commissionRate)
   if (!name) throw badRequest('申请人姓名不能为空')
   if (!/^1\d{10}$/.test(phone)) throw badRequest('申请人手机号格式不正确')
   if (!Number.isInteger(groupCount) || groupCount < 0 || groupCount > 50) throw badRequest('微信群数量应为0-50的整数')
   if (!Number.isInteger(memberCount) || memberCount < 0 || memberCount > 5000) throw badRequest('社群总人数应为0-5000的整数')
-  if (feeAmount > 0 && !['已到账', '免收费'].includes(paymentStatus)) throw badRequest('收费申请需要先确认费用已到账，或明确设为免收费')
+  if (feeAmountFen > 0 && paymentStatus !== '已到账') throw badRequest('收费申请必须由微信支付回调或查单确认到账后才能通过')
   if (paymentStatus === '已到账' && paidAmount <= 0) throw badRequest('请填写实际到账金额')
   if (paymentStatus === '已到账' && (!paymentOrderNo || !paidAt || !paymentMethod)) throw badRequest('请完整填写支付订单编号、支付时间和支付方式')
   if (commissionRate != null && (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100)) throw badRequest('分佣比例必须在0到100之间')
@@ -3038,13 +3559,15 @@ export function approveManagerApp(id, audit = {}) {
     scale: `${groupCount}个群，约${memberCount}人`,
     fields: Array.isArray(audit.fields) ? audit.fields.map((item) => String(item).trim()).filter(Boolean) : (app.fields || []),
     intro: String(audit.intro ?? app.intro ?? '').trim(),
+    feeAmountFen,
     feeAmount,
+    paidAmountFen,
     paidAmount,
     paid: paymentStatus === '已到账',
     paymentOrderNo,
     paidAt,
     paymentMethod,
-    paymentStatus: feeAmount <= 0 ? '免收费' : paymentStatus,
+    paymentStatus: feeAmountFen <= 0 ? '免收费' : paymentStatus,
     financeRemark: String(audit.financeRemark ?? app.financeRemark ?? '').trim(),
     auditedAt: nowText()
   })
@@ -3123,7 +3646,7 @@ export function rebindCustomer(customerId, managerId, reason) {
   const c = db.customers.find((x) => x.id === customerId)
   if (!c) return null
   const manager = findManager(managerId)
-  if (!manager || Number(manager.status) === 3) throw badRequest('请选择有效主理人')
+  if (!manager || Number(manager.status) !== 1) throw badRequest('请选择状态正常的主理人')
   const previousManagerId = c.managerId || null
   if (String(previousManagerId || '') === String(manager.id)) throw badRequest('客户已经归属该主理人')
   const effectiveAt = nowText()
@@ -3245,7 +3768,7 @@ export function updateCustomer(id, data) {
   }
 
   // 归属只能通过 rebindCustomer 变更，确保绑定周期、历史订单和佣金都有完整留痕。
-  const allowed = ['name', 'phone', 'member', 'balance', 'points', 'memberSince', 'memberExpireAt', 'memberType']
+  const allowed = ['name', 'phone', 'member', 'memberSince', 'memberExpireAt', 'memberType']
   allowed.forEach((key) => {
     if (input[key] !== undefined) customer[key] = input[key]
   })
@@ -3457,8 +3980,10 @@ export function deleteLive(id) {
   return { ok: true }
 }
 
-export function listProducts() {
-  return (get().products || []).map(activitySalesView)
+export function listProducts(options = {}) {
+  let rows = get().products || []
+  if (options.publishedOnly) rows = rows.filter((item) => Number(item.status ?? 1) === 1)
+  return rows.map(activitySalesView)
 }
 
 function normalizeProductImages(images, coverImage = '') {
@@ -4112,11 +4637,12 @@ export function getManagerDashboard(managerId, viewer = {}) {
     if (!viewer.userId) throw forbidden('请先登录后再查看主理人工作台')
     const own = findManagerByUser(viewer.userId)
     if (!own || String(own.id) !== String(manager.id)) throw forbidden('只能查看自己的主理人工作台')
+    if (Number(manager.status) !== 1) throw forbidden('主理人账号已停用')
   }
   const customers = db.customers.filter((c) => String(c.managerId) === String(managerId))
   const commissions = db.commissions.filter((c) => String(c.managerId) === String(managerId))
   const withdraws = db.withdraws.filter((w) => String(w.managerId) === String(managerId))
-  const activities = db.activities.map((a) => {
+  const activities = db.activities.filter((item) => Number(item.status ?? 1) === 1).map((a) => {
     const rate = resolveRate(a, manager)
     const basePrice = Number(a.memberPrice || a.price || 0)
     return {
@@ -4141,7 +4667,7 @@ export function getManagerDashboard(managerId, viewer = {}) {
   // 可推广对象：活动 + 商品 + 课程，统一带出该主理人的佣金比例与预估佣金
   const promotions = [
     ...activities,
-    ...(db.products || []).map((p) => {
+    ...(db.products || []).filter((item) => Number(item.status ?? 1) === 1).map((p) => {
       const rate = resolveRate(p, manager)
       const basePrice = Number(p.memberPrice || p.price || 0)
       return {
