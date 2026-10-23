@@ -49,5 +49,5 @@
   </view>
   <view wx:else class="empty"><view class="empty-icon">⌁</view><view class="empty-title">该分类暂无内容</view><view class="empty-subtitle">可以看看店内其他服务与商品</view><button wx:if="{{filter !== 'all'}}" data-filter="all" bindtap="setFilter">查看全部</button></view>
 
-  <button class="cart-fab" bindtap="goCart"><view class="cart-icon-wrap"><image class="cart-fab-icon" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-count">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
+  <button class="cart-fab" bindtap="goCart"><view class="cart-icon-wrap"><image class="cart-fab-icon" src="/assets/profile-icons/cart.webp" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-count">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
 </view>

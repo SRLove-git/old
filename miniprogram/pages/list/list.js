@@ -160,7 +160,7 @@ Page({
           ...a,
           isProduct: a.offeringType === 'product',
           city: store.getActivityRegionNames(a).join('、') || a.city || '线上/全国',
-          art: store.assetUrl(a.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/event-benefit.jpg' })[a.category] || '/assets/event-local.jpg',
+          art: store.assetUrl(a.coverImage) || ({ 1: '/assets/event-local.webp', 2: '/assets/event-travel.webp', 3: '/assets/event-academy.webp', 4: '/assets/event-benefit.webp', 5: '/assets/event-benefit.webp' })[a.category] || '/assets/event-local.webp',
           status,
           statusLabel: a.offeringType === 'product' ? (status === 'full' ? '售罄' : '在售') : STATUS_LABEL[status],
           scheduleFull: s0.full || '',

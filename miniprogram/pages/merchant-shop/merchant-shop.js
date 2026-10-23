@@ -1,11 +1,11 @@
 const store = require('../../utils/store.js')
 
 const ART = {
-  1: '/assets/event-local.jpg',
-  2: '/assets/event-travel.jpg',
-  3: '/assets/event-academy.jpg',
-  4: '/assets/event-benefit.jpg',
-  5: '/assets/event-benefit.jpg'
+  1: '/assets/event-local.webp',
+  2: '/assets/event-travel.webp',
+  3: '/assets/event-academy.webp',
+  4: '/assets/event-benefit.webp',
+  5: '/assets/event-benefit.webp'
 }
 
 Page({

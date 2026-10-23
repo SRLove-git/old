@@ -12,11 +12,11 @@ const CATEGORY_ENGLISH = {
 function decorateActivity(activity) {
   if (!activity) return null
   const artByCategory = {
-    1: '/assets/event-local.jpg',
-    2: '/assets/event-travel.jpg',
-    3: '/assets/event-academy.jpg',
-    4: '/assets/event-benefit.jpg',
-    5: '/assets/event-benefit.jpg'
+    1: '/assets/event-local.webp',
+    2: '/assets/event-travel.webp',
+    3: '/assets/event-academy.webp',
+    4: '/assets/event-benefit.webp',
+    5: '/assets/event-benefit.webp'
   }
   const isProduct = activity.offeringType === 'product'
   const regionText = store.getActivityRegionNames(activity).join('、') || activity.city || '线上/全国'
@@ -141,11 +141,11 @@ Page({
   buildCategories() {
     const cats = store.get().categories
     const icons = {
-      1: '/assets/profile-icons/appointment.png',
-      2: '/assets/profile-icons/trip.png',
-      3: '/assets/profile-icons/courses.png',
-      4: '/assets/profile-icons/coupon.png',
-      5: '/assets/profile-icons/points.png'
+      1: '/assets/profile-icons/appointment.webp',
+      2: '/assets/profile-icons/trip.webp',
+      3: '/assets/profile-icons/courses.webp',
+      4: '/assets/profile-icons/coupon.webp',
+      5: '/assets/profile-icons/points.webp'
     }
     return Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id], icon: icons[id] || icons[1] }))
   },

@@ -36,18 +36,18 @@ Page({
     const brand = store.getBrand()
     const copy = store.getCopy()
     const benefitIcons = [
-      '/assets/member-benefits/member-price-ai-v1.png',
-      '/assets/member-benefits/coupon-ai-v1.png',
-      '/assets/member-benefits/personal-service-ai-v1.png',
-      '/assets/member-benefits/priority-booking-ai-v1.png',
-      '/assets/member-benefits/points-gift-ai-v1.png'
+      '/assets/member-benefits/member-price-ai-v1.webp',
+      '/assets/member-benefits/coupon-ai-v1.webp',
+      '/assets/member-benefits/personal-service-ai-v1.webp',
+      '/assets/member-benefits/priority-booking-ai-v1.webp',
+      '/assets/member-benefits/points-gift-ai-v1.webp'
     ]
     const benefits = String(copy.memberBenefitLines || '').split('\n').map((line, index) => {
       const separator = line.indexOf('|')
       const text = separator >= 0 ? line.slice(separator + 1).trim() : line.trim()
       return {
         text,
-        icon: benefitIcons[index] || '/assets/profile-icons/member-benefits-ai-v1.png'
+        icon: benefitIcons[index] || '/assets/profile-icons/member-benefits-ai-v1.webp'
       }
     }).filter((item) => item.text)
     this.setData({ ...this.buildCard(store.get().user), brandName: brand.chineseName, copy, benefits, joinText: this.formatCount(copy.memberJoinText, 2) })

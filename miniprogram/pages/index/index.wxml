@@ -15,7 +15,7 @@
         <view class="hero-slide" data-link="{{item.linkUrl}}" data-cat="{{item.cat}}" bindtap="goBanner" style="background: {{item.tone}}">
           <video wx:if="{{item.mediaType === 'video' && item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" autoplay="{{index === 0}}" muted loop controls="{{false}}" object-fit="cover" />
           <image wx:elif="{{item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" mode="aspectFill" />
-          <image wx:else class="hero-image" src="/assets/home-hero.jpg" mode="aspectFill" />
+          <image wx:else class="hero-image" src="/assets/home-hero.webp" mode="aspectFill" />
           <view class="hero-shade"></view>
           <view class="hero-copy">
             <text class="hero-kicker">{{copy.homeHeroKicker}}</text>

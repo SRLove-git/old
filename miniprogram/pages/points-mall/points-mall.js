@@ -33,8 +33,8 @@ Page({
       const selectedAddressId = this.data.selectedAddressId || String((addresses.find((item) => item.isDefault) || addresses[0] || {}).id || '')
       this.setData({
         user: state.user || {},
-        products: (state.pointProducts || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg' })),
-        orders: (state.pointOrders || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg' })),
+        products: (state.pointProducts || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.webp' })),
+        orders: (state.pointOrders || []).map((item) => ({ ...item, coverUrl: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.webp' })),
         addresses,
         selectedAddressId,
         defaultDescription: `${store.getBrand().chineseName}会员积分专享礼品，具体规格以收到的实物为准。`

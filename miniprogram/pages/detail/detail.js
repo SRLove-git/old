@@ -1,22 +1,22 @@
 const store = require('../../utils/store.js')
 
 const ART_BY_CATEGORY = {
-  1: '/assets/event-local.jpg',
-  2: '/assets/event-travel.jpg',
-  3: '/assets/event-academy.jpg',
-  4: '/assets/event-benefit.jpg',
-  5: '/assets/home-hero.jpg'
+  1: '/assets/event-local.webp',
+  2: '/assets/event-travel.webp',
+  3: '/assets/event-academy.webp',
+  4: '/assets/event-benefit.webp',
+  5: '/assets/home-hero.webp'
 }
 const GALLERY_BY_CATEGORY = {
-  1: ['/assets/home-hero.jpg', '/assets/event-local.jpg'],
-  2: ['/assets/event-travel.jpg', '/assets/home-hero.jpg'],
-  3: ['/assets/event-academy.jpg', '/assets/event-local.jpg'],
-  4: ['/assets/event-benefit.jpg', '/assets/event-local.jpg'],
-  5: ['/assets/event-benefit.jpg', '/assets/home-hero.jpg']
+  1: ['/assets/home-hero.webp', '/assets/event-local.webp'],
+  2: ['/assets/event-travel.webp', '/assets/home-hero.webp'],
+  3: ['/assets/event-academy.webp', '/assets/event-local.webp'],
+  4: ['/assets/event-benefit.webp', '/assets/event-local.webp'],
+  5: ['/assets/event-benefit.webp', '/assets/home-hero.webp']
 }
 
 function decorateOffering(item) {
-  const art = store.assetUrl(item.coverImage) || ART_BY_CATEGORY[item.category] || '/assets/event-local.jpg'
+  const art = store.assetUrl(item.coverImage) || ART_BY_CATEGORY[item.category] || '/assets/event-local.webp'
   return { ...item, art, regionText: store.getActivityRegionNames(item).join('、') || item.city || '线上/全国' }
 }
 

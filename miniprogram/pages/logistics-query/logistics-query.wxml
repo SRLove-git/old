@@ -1,6 +1,6 @@
 <view class="logistics-page">
   <view class="query-hero">
-    <image class="station-image" src="/assets/profile-icons/station.png" mode="aspectFit" />
+    <image class="station-image" src="/assets/profile-icons/station.webp" mode="aspectFit" />
     <view class="hero-copy">
       <view class="hero-kicker">PACKAGE TRACKING</view>
       <view class="hero-title">包裹到哪了？</view>

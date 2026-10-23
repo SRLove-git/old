@@ -99,7 +99,7 @@ Page({
       pendingUnbind: state.pendingUnbind || null,
       products: (state.products || []).slice(0, 6).map((item) => ({
         ...item,
-        coverImage: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.jpg'
+        coverImage: store.assetUrl(item.coverImage) || '/assets/product-tumbler-v2.webp'
       })),
       socialQrs: store.getSocialQrs(),
       brandEnglish: brand.englishName,
@@ -115,7 +115,7 @@ Page({
   onProductImageError(e) {
     const index = Number(e.currentTarget.dataset.index)
     if (!Number.isInteger(index) || !this.data.products[index]) return
-    this.setData({ [`products[${index}].coverImage`]: '/assets/product-tumbler-v2.jpg' })
+    this.setData({ [`products[${index}].coverImage`]: '/assets/product-tumbler-v2.webp' })
   },
 
   go(e) {

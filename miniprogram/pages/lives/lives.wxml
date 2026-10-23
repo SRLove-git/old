@@ -1,6 +1,6 @@
 <view class="academy-page">
   <view class="academy-hero">
-    <image src="/assets/event-academy.jpg" mode="aspectFill" />
+    <image src="/assets/event-academy.webp" mode="aspectFill" />
     <view class="hero-mask"></view>
     <view class="hero-copy"><text class="hero-kicker">SUIYUELI ACADEMY</text><view class="hero-title">在家也能学点新鲜的</view><view class="hero-sub">名师视频课 · 随时随地反复看</view></view>
   </view>

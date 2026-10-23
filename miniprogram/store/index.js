@@ -110,7 +110,11 @@ function getCopy() {
 function apiAssetUrl(value) {
   const url = String(value || '').trim()
   if (!url || /^(https?:|data:|wxfile:)/.test(url)) return url
-  if (url.startsWith('/assets/')) return url
+  if (url.startsWith('/assets/')) {
+    // 后台历史数据仍可能保存旧的 PNG/JPG 本地路径；包内资源已统一为轻量 WebP。
+    if (url === '/assets/assistant-qr.png') return url
+    return url.replace(/\.(?:png|jpe?g)$/i, '.webp')
+  }
   return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`
 }
 
@@ -482,12 +486,12 @@ function getActivity(id) {
 
 function getOrderCoverFallback(category) {
   return ({
-    1: '/assets/event-local.jpg',
-    2: '/assets/event-travel.jpg',
-    3: '/assets/event-academy.jpg',
-    4: '/assets/event-benefit.jpg',
-    5: '/assets/product-tumbler-v2.jpg'
-  })[Number(category)] || '/assets/event-local.jpg'
+    1: '/assets/event-local.webp',
+    2: '/assets/event-travel.webp',
+    3: '/assets/event-academy.webp',
+    4: '/assets/event-benefit.webp',
+    5: '/assets/product-tumbler-v2.webp'
+  })[Number(category)] || '/assets/event-local.webp'
 }
 
 function getOrderCoverImage(order) {
@@ -654,7 +658,7 @@ function addCourseToCart(course) {
     title: course.title,
     price: Number(course.memberPrice || course.price || 0),
     originalPrice: Number(course.originalPrice || 0),
-    coverImage: course.coverImage || '/assets/event-academy.jpg',
+    coverImage: course.coverImage || '/assets/event-academy.webp',
     scheduleLabel: `${course.lessonCount || 1}节视频课 · 购买后永久回看`,
     count: 1,
     maxCount: 1

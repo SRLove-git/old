@@ -107,7 +107,7 @@ Page({
       skuId: skuId || '',
       scheduleId: !isSkuOnly && firstAvailableSchedule ? firstAvailableSchedule.id : '',
       selectedSchedule: !isSkuOnly ? firstAvailableSchedule : null,
-      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/product-tumbler-v2.jpg' })[activity.category] || '/assets/event-local.jpg',
+      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.webp', 2: '/assets/event-travel.webp', 3: '/assets/event-academy.webp', 4: '/assets/event-benefit.webp', 5: '/assets/product-tumbler-v2.webp' })[activity.category] || '/assets/event-local.webp',
       categoryName,
       bookingTitle: activity.title || activity.name || (sku && sku.name) || `${categoryName}报名`,
       participants: decorateParticipants(state.participants, { participantId: firstParticipant.id }, []),
@@ -167,7 +167,7 @@ Page({
       memberPrice: sku ? sku.memberPrice : activity.memberPrice,
       scheduleId: selectedSchedule ? selectedSchedule.id : '',
       selectedSchedule,
-      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.jpg', 2: '/assets/event-travel.jpg', 3: '/assets/event-academy.jpg', 4: '/assets/event-benefit.jpg', 5: '/assets/product-tumbler-v2.jpg' })[activity.category] || '/assets/event-local.jpg',
+      coverImageUrl: store.assetUrl(activity.coverImage) || ({ 1: '/assets/event-local.webp', 2: '/assets/event-travel.webp', 3: '/assets/event-academy.webp', 4: '/assets/event-benefit.webp', 5: '/assets/product-tumbler-v2.webp' })[activity.category] || '/assets/event-local.webp',
       regionOptions,
       regionPickerColumns: picker.columns,
       regionPickerIndexes: picker.indexes

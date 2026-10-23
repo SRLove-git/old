@@ -17,20 +17,20 @@
       <view class="order-title">{{order.title}}</view>
       <view class="meta-list">
         <view class="meta-row">
-          <image class="meta-icon-image" src="/assets/profile-icons/appointment.png" mode="aspectFit" />
+          <image class="meta-icon-image" src="/assets/profile-icons/appointment.webp" mode="aspectFit" />
           <view class="meta-content"><view class="meta-label">预约时间</view><view class="meta-value">{{timeText}}</view></view>
         </view>
         <view wx:if="{{order.skuName}}" class="meta-row">
-          <image class="meta-icon-image" src="/assets/profile-icons/check-in.png" mode="aspectFit" />
+          <image class="meta-icon-image" src="/assets/profile-icons/check-in.webp" mode="aspectFit" />
           <view class="meta-content"><view class="meta-label">预约项目</view><view class="meta-value">{{order.skuName}}</view></view>
         </view>
         <view class="meta-row">
-          <image class="meta-icon-image" src="/assets/profile-icons/contacts.png" mode="aspectFit" />
+          <image class="meta-icon-image" src="/assets/profile-icons/contacts.webp" mode="aspectFit" />
           <view class="meta-content"><view class="meta-label">参与人</view><view class="meta-value">{{order.participants}}</view></view>
         </view>
       </view>
       <view wx:if="{{order.venueAddress}}" class="venue-box">
-        <image class="venue-icon" src="/assets/profile-icons/address.png" mode="aspectFit" />
+        <image class="venue-icon" src="/assets/profile-icons/address.webp" mode="aspectFit" />
         <view class="venue-body"><view class="venue-label">活动地点</view><view class="venue-text">{{order.venueAddress}}</view></view>
       </view>
     </view>
@@ -86,7 +86,7 @@
   </view>
 
   <view class="fixed-bottom order-bottom">
-    <button class="contact" bindtap="contact"><image class="contact-icon" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>联系客服</text></button>
+    <button class="contact" bindtap="contact"><image class="contact-icon" src="/assets/profile-icons/support.webp" mode="aspectFit" /><text>联系客服</text></button>
     <block wx:if="{{order.status === '待付款'}}"><button class="btn btn-ghost bottom-action" bindtap="cancelNow">取消订单</button><button class="btn btn-primary bottom-action bottom-action-main" bindtap="payNow">去支付</button></block>
     <block wx:elif="{{order.status === '待发货'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><view wx:if="{{order.category !== 4}}" class="ship-hint">等待商家发货</view></block>
     <block wx:elif="{{order.status === '待收货'}}"><button wx:if="{{refundInfo.can}}" class="btn btn-ghost bottom-action" bindtap="openRefund">申请退款</button><button class="btn btn-primary bottom-action bottom-action-main" bindtap="advance">{{actionLabel}}</button></block>

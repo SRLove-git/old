@@ -73,9 +73,9 @@
 
   <view class="fixed-bottom product-bottom">
     <view class="quick-actions">
-      <button class="bottom-icon" bindtap="showService"><image class="bi-image" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>客服</text></button>
-      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
-      <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image class="bi-image" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
+      <button class="bottom-icon" bindtap="showService"><image class="bi-image" src="/assets/profile-icons/support.webp" mode="aspectFit" /><text>客服</text></button>
+      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image class="bi-image" src="/assets/profile-icons/merchant.webp" mode="aspectFit" /><text>店铺</text></button>
+      <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image class="bi-image" src="/assets/profile-icons/cart.webp" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
     </view>
     <view class="purchase-actions">
       <button class="action-button add-cart-button {{activity.expired ? 'disabled' : ''}}" bindtap="addToCart" disabled="{{activity.expired}}"><text>{{activity.expired ? (isGoods ? '不可购买' : '不可报名') : '加入购物车'}}</text></button>
