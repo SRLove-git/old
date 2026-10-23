@@ -2530,7 +2530,8 @@ function applyTrackingItem(item, source = 'callback') {
   })).filter((event) => event.time || event.description)
   const latest = shipment.events[shipment.events.length - 1]
   shipment.providerState = String(item.State == null ? shipment.providerState || '' : item.State)
-  shipment.status = logisticsState(shipment.providerState)
+  shipment.providerStateEx = String(item.StateEx == null ? shipment.providerStateEx || '' : item.StateEx)
+  shipment.status = logisticsState(shipment.providerStateEx || shipment.providerState)
   shipment.latestDescription = latest?.description || item.Reason || shipment.latestDescription
   shipment.lastSyncedAt = nowText()
   if (source === 'query') shipment.lastQueryAt = nowText()

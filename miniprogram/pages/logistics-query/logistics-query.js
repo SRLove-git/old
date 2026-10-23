@@ -74,7 +74,24 @@ Page({
       })
 
       if (!order) {
-        this.setData({ searched: true, errorText: '未找到该订单，请检查号码是否正确' })
+        const logistics = await store.queryLogistics(query)
+        const events = (logistics && logistics.events) || []
+        this.setData({
+          searched: true,
+          order: {
+            id: '',
+            title: '快递物流',
+            trackingNo: logistics.trackingNo || query,
+            carrier: logistics.carrier || '自动识别',
+            external: true
+          },
+          logistics: {
+            ...logistics,
+            lastSyncedAt: logistics.queriedAt || ''
+          },
+          events,
+          errorText: events.length ? '' : (logistics.reason || '暂未获取到物流轨迹，请稍后再试')
+        })
         return
       }
 

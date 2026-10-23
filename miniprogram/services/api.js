@@ -105,6 +105,10 @@ function refreshOrderLogistics(id) {
   return api.post(`/orders/${id}/logistics/refresh`)
 }
 
+function queryLogistics(trackingNo) {
+  return api.post('/orders/logistics/query', { trackingNo })
+}
+
 function submitReview(orderId, review) {
   return api.post(`/orders/${orderId}/review`, review)
 }
@@ -210,6 +214,7 @@ module.exports = {
   advanceOrder,
   getOrderLogistics,
   refreshOrderLogistics,
+  queryLogistics,
   submitReview,
   saveParticipant,
   deleteParticipant,

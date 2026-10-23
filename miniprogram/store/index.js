@@ -866,6 +866,10 @@ function refreshOrderLogistics(id) {
   return apiService.refreshOrderLogistics(id)
 }
 
+function queryLogistics(trackingNo) {
+  return apiService.queryLogistics(trackingNo)
+}
+
 async function submitReview(orderId, review) {
   const order = await apiService.submitReview(orderId, { ...review, name: cache.user.name })
   const idx = cache.orders.findIndex((o) => o.id === orderId)
@@ -1033,6 +1037,7 @@ module.exports = {
   advanceOrder,
   getOrderLogistics,
   refreshOrderLogistics,
+  queryLogistics,
   submitReview,
   saveParticipant,
   deleteParticipant,

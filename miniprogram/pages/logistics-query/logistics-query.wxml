@@ -16,7 +16,7 @@
       <view class="paste-button" bindtap="pasteQuery">粘贴</view>
     </view>
     <button class="query-button" loading="{{loading}}" disabled="{{loading}}" bindtap="queryLogistics">{{loading ? '正在查询' : '查询物流'}}</button>
-    <view class="privacy-tip"><view class="shield-mark">✓</view><text>仅查询当前账号下的订单，物流信息更安全</text></view>
+    <view class="privacy-tip"><view class="shield-mark">✓</view><text>订单号仅查询本人订单，快递单号由快递鸟安全查询</text></view>
   </view>
 
   <view wx:if="{{searched && order}}" class="result-card">
@@ -27,7 +27,7 @@
       </view>
       <view class="status-pill">{{logistics.status || order.logisticsStatus || order.status}}</view>
     </view>
-    <view class="result-row"><text>订单号</text><text class="result-value">{{order.id}}</text></view>
+    <view wx:if="{{order.id}}" class="result-row"><text>订单号</text><text class="result-value">{{order.id}}</text></view>
     <view wx:if="{{order.trackingNo}}" class="result-row"><text>快递信息</text><text class="result-value">{{order.carrier || '自动识别中'}} · {{order.trackingNo}}</text></view>
     <view wx:if="{{logistics && logistics.latestDescription}}" class="latest-box">
       <view class="latest-dot"></view>
@@ -42,7 +42,7 @@
     </view>
 
     <view wx:if="{{errorText}}" class="inline-tip">{{errorText}}</view>
-    <button class="detail-button" bindtap="goOrderDetail">查看订单详情 <text>›</text></button>
+    <button wx:if="{{!order.external}}" class="detail-button" bindtap="goOrderDetail">查看订单详情 <text>›</text></button>
   </view>
 
   <view wx:elif="{{searched && errorText}}" class="empty-card">

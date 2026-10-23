@@ -2,7 +2,7 @@ import { Router } from 'express'
 import * as store from '../store.js'
 import { httpError, wrap } from '../lib/http.js'
 import { adminAuth, isAdminRequest, requestUserId, requireOrderOwner, requireUser } from '../middleware/auth.js'
-import { refreshLogisticsShipment, subscribeOrderLogistics } from '../services/logistics.js'
+import { queryLogisticsNumber, refreshLogisticsShipment, subscribeOrderLogistics } from '../services/logistics.js'
 import { refreshWechatPayment, requestOrderPayment, requestWechatRefund } from '../services/payments.js'
 
 const router = Router()
@@ -17,6 +17,11 @@ router.get('/', wrap((req) => {
 }))
 
 router.get('/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
+router.post('/logistics/query', wrap(async (req) => {
+  const userId = requestUserId(req)
+  requireUser(req, userId)
+  return queryLogisticsNumber(req.body?.trackingNo, userId)
+}))
 router.get('/:id', wrap((req) => {
   requireOrderOwner(req, req.params.id)
   store.autoCancelExpired()

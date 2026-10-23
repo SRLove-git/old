@@ -45,7 +45,10 @@ const traceColumns = [
     <a-alert :type="config.configured ? 'success' : 'warning'" class="toolbar"
       >快递鸟物流查询{{
         config.configured ? "已配置" : "未配置，请先配置商户 ID 和 API Key"
-      }}。查询不会发货、创建订单或修改订单状态。</a-alert
+      }}。查询不会发货、创建订单或修改订单状态。<template
+        v-if="config.configured && !config.jdQinglongCodeConfigured"
+        > 京东物流需额外配置青龙商家编码。</template
+      ></a-alert
     >
     <a-card title="快递单号查询" :bordered="false"
       ><a-input-search
