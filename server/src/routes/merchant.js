@@ -80,9 +80,9 @@ router.delete('/courses/:id', merchantAuth, wrap((req) => {
   return store.deleteLive(req.params.id)
 }))
 
-router.post('/uploads/image', merchantAuth, wrap((req) => {
+router.post('/uploads/image', merchantAuth, wrap(async (req) => {
   const merchantId = merchantSession(req).merchantId
-  return { url: saveImageDataUrl(req.body?.dataUrl, `merchant-${merchantId}`) }
+  return { url: await saveImageDataUrl(req.body?.dataUrl, `merchant-${merchantId}`) }
 }))
 
 router.post('/uploads/video', merchantAuth, wrap((req) => {
