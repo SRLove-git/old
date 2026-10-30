@@ -9,7 +9,7 @@
 
   <view wx:elif="{{list.length}}" class="benefit-list">
     <view wx:for="{{list}}" wx:key="id" class="benefit-card" data-id="{{item.id}}" bindtap="goDetail">
-      <image class="benefit-cover" src="{{item.art}}" mode="aspectFill" />
+      <image webp="{{true}}" class="benefit-cover" src="{{item.art}}" mode="aspectFill" />
       <view class="benefit-copy">
         <view class="benefit-title">{{item.title}}</view>
         <view wx:if="{{item.highlight}}" class="benefit-highlight">{{item.highlight}}</view>

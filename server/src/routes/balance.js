@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import * as store from '../store.js'
-import { wrap } from '../lib/http.js'
+import { httpError, wrap } from '../lib/http.js'
 import { requestUserId, requireUser } from '../middleware/auth.js'
 import { refreshWechatPayment, requestBalanceRechargePayment } from '../services/payments.js'
 
@@ -28,8 +28,8 @@ router.post('/recharges/:id/payment-status/refresh', wrap(async (req) => {
   const userId = requestUserId(req)
   requireUser(req, userId)
   const recharge = (store.get().balanceRecharges || []).find((item) => String(item.id) === String(req.params.id))
-  if (!recharge || String(recharge.userId) !== String(userId)) return null
-  return refreshWechatPayment(req.params.id)
+  if (!recharge || String(recharge.userId) !== String(userId)) throw httpError(404, '充值单不存在')
+  return refreshWechatPayment(recharge.id)
 }))
 
 export default router

@@ -12,7 +12,7 @@
 
   <view wx:if="{{products.length}}" class="product-grid">
     <view wx:for="{{products}}" wx:key="id" class="product-card" data-id="{{item.id}}" bindtap="openDetail">
-      <image class="product-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <image webp="{{true}}" class="product-cover" src="{{item.coverUrl}}" mode="aspectFill" />
       <view class="product-body">
         <view class="product-title">{{item.title}}</view>
         <view class="product-desc">{{item.description || '会员积分专享好礼'}}</view>
@@ -30,7 +30,7 @@
   <view wx:if="{{orders.length}}" class="orders-section">
     <view class="section-title">兑换记录</view>
     <view wx:for="{{orders}}" wx:key="id" class="order-card">
-      <image class="order-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <image webp="{{true}}" class="order-cover" src="{{item.coverUrl}}" mode="aspectFill" />
       <view class="order-main">
         <view class="order-title">{{item.productTitle}}</view>
         <view class="order-meta">{{item.pointsUsed}}积分 · {{item.createdAt}}</view>
@@ -44,7 +44,7 @@
     <view class="detail-sheet" catchtap="noop">
       <view class="sheet-bar"></view>
       <scroll-view scroll-y class="detail-scroll">
-        <image class="detail-cover" src="{{detailProduct.coverUrl}}" mode="aspectFill" />
+        <image webp="{{true}}" class="detail-cover" src="{{detailProduct.coverUrl}}" mode="aspectFill" />
         <view class="detail-title-row">
           <view class="detail-product-title">{{detailProduct.title}}</view>
           <view class="detail-cost"><text>{{detailProduct.pointsCost}}</text> 积分</view>
@@ -81,7 +81,7 @@
     <view class="redeem-sheet" catchtap="noop">
       <view class="sheet-bar"></view>
       <view class="sheet-title">确认兑换</view>
-      <view class="sheet-product"><image src="{{selectedProduct.coverUrl}}" mode="aspectFill" /><view><view class="sheet-product-title">{{selectedProduct.title}}</view><view class="sheet-cost">{{selectedProduct.pointsCost}} 积分</view></view></view>
+      <view class="sheet-product"><image webp="{{true}}" src="{{selectedProduct.coverUrl}}" mode="aspectFill" /><view><view class="sheet-product-title">{{selectedProduct.title}}</view><view class="sheet-cost">{{selectedProduct.pointsCost}} 积分</view></view></view>
       <view class="address-head"><text>配送地址</text><text bindtap="goAddresses">管理地址 ›</text></view>
       <view class="address-list">
         <view wx:for="{{addresses}}" wx:key="id" class="address-item {{selectedAddressId == item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectAddress">

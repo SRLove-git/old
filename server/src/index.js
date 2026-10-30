@@ -13,6 +13,7 @@ import { paymentConfigured } from './lib/wechat-pay.js'
 import { parseBalanceRechargeAmounts } from './lib/balance-config.js'
 import {
   adminAuth,
+  adminTokenConfigured,
   hasAdminPermission,
   isAdminRequest,
   requestUserId,
@@ -48,10 +49,10 @@ import uploadsRouter from './routes/uploads.js'
 import webhooksRouter from './routes/webhooks.js'
 import memberDataRouter from './routes/member-data.js'
 import balanceRouter from './routes/balance.js'
+import managerPromotionRouter from './routes/manager-promotion.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || (process.env.NODE_ENV === 'production' ? '' : 'admin-token')
 const WECHAT_APPID = process.env.WECHAT_APPID || 'wx5d1ccdf824e45e73'
 const WECHAT_APP_SECRET = process.env.WECHAT_APP_SECRET || ''
 
@@ -72,6 +73,7 @@ app.use('/api/admin', adminAccountsRouter)
 app.use('/api/uploads', uploadsRouter)
 app.use('/api/orders', ordersRouter)
 app.use('/api/balance', balanceRouter)
+app.use('/api/managers', managerPromotionRouter)
 app.use('/api', memberDataRouter)
 
 // 首页数据
@@ -355,7 +357,7 @@ app.use((req, res) => res.status(404).json({ code: 404, message: '接口不存�
 store.init()
 app.listen(PORT, () => {
   console.log(`岁悦里后端已启动：http://127.0.0.1:${PORT}`)
-  console.log(`管理员认证：${ADMIN_TOKEN ? '已配置' : '未配置'}`)
+  console.log(`管理员静态 Token：${adminTokenConfigured() ? '已配置' : '未配置'}`)
   console.log(`微信登录 AppID：${WECHAT_APPID}（AppSecret ${WECHAT_APP_SECRET ? '已配置' : '未配置'}）`)
   console.log(`微信支付：${paymentConfigured() ? '已配置（真实支付）' : '未配置（支付接口将拒绝请求，不会模拟成功）'}`)
   console.log(`商家转账：${transferConfigured() ? '已启用（提现可打款到微信零钱）' : '未启用（提现审核打款已禁用）'}`)

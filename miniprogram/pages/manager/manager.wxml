@@ -3,7 +3,7 @@
     <view class="denied-icon">🏪</view>
     <view class="denied-title">暂无主理人工作台</view>
     <view class="denied-tip">{{deniedTip || '主理人工作台仅对已通过审核的主理人本人开放'}}</view>
-    <button class="btn btn-primary btn-block" bindtap="goApply">申请成为主理人</button>
+    <button wx:if="{{canApply}}" class="btn btn-primary btn-block" bindtap="goApply">申请成为主理人</button>
     <button class="btn btn-secondary btn-block" bindtap="exit">返回我的</button>
   </view>
 
@@ -112,13 +112,15 @@
     <view wx:if="{{tab === 'promote'}}" class="section card">
       <view class="panel-title">我的推广工具</view>
       <view class="promote-card">
-        <canvas canvas-id="promoQr" class="qr promo-qr"></canvas>
+        <image wx:if="{{promotionCodePath}}" class="qr promo-qr" src="{{promotionCodePath}}" mode="aspectFit" data-path="{{promotionCodePath}}" binderror="onPromotionImageError" />
+        <view wx:else class="qr promo-placeholder"><text>{{promotionCodeLoading ? '正在加载…' : '推广码待加载'}}</text></view>
         <view class="promote-info">
           <view class="promote-name">专属推广码</view>
-          <view class="promote-sub">客户扫码即可绑定为您名下客户</view>
-          <button class="small-btn" bindtap="saveQr">保存图片</button>
+          <view class="promote-sub">客户扫码打开小程序，同意绑定后成为您的客户</view>
+          <button class="small-btn" loading="{{promotionCodeSaving}}" disabled="{{!promotionCodePath || promotionCodeLoading || promotionCodeSaving}}" bindtap="saveQr">保存图片</button>
         </view>
       </view>
+      <view wx:if="{{promotionCodeError}}" class="promotion-error"><text>{{promotionCodeError}}</text><button class="small-btn" disabled="{{promotionCodeLoading}}" bindtap="retryPromotionCode">重新加载</button></view>
       <view class="invite-box">
         <view>
           <view class="promote-name">专属邀请码</view>
@@ -128,28 +130,29 @@
       </view>
       <view class="invite-box">
         <view>
-          <view class="promote-name">专属推广链接</view>
-          <view class="promote-sub">客户点击即绑定为您名下客户</view>
+          <view class="promote-name">小程序推广路径</view>
+          <view class="promote-sub">仅用于小程序内跳转。分享卡片或推广码，客户同意后绑定</view>
         </view>
-        <button class="small-btn" bindtap="copyLink">复制链接</button>
+        <button class="small-btn" bindtap="copyLink">复制路径</button>
       </view>
       <button class="btn btn-primary" bindtap="shareCard">分享活动卡片</button>
     </view>
 
     <view wx:if="{{tab === 'promote'}}" class="section card">
-      <view class="panel-title">活动收益参考</view>
-      <view wx:for="{{activities}}" wx:key="id" class="promote-activity">
+      <view class="panel-title">可推广内容与收益</view>
+      <view wx:if="{{promotions.length === 0}}" class="promote-activity-tip">暂无可推广的活动、商品或课程。</view>
+      <view wx:for="{{promotions}}" wx:key="id" class="promote-activity">
         <view class="promote-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
         <view class="promote-activity-info">
           <view class="promote-activity-title">{{item.title}}</view>
-          <view class="promote-activity-price">会员价 ¥{{item.memberPrice}}</view>
+          <view class="promote-activity-price">{{item.typeLabel}} · 会员价 ¥{{item.memberPrice}}</view>
         </view>
         <view class="promote-commission">
           <view class="promote-commission-rate">{{item.commissionRate}}%</view>
           <view class="promote-commission-amount">约¥{{item.commissionAmount}}</view>
         </view>
       </view>
-      <view class="promote-activity-tip">佣金比例按活动专属比例（如有）或全局默认比例；金额按会员价估算，实际按实付金额结算。</view>
+      <view class="promote-activity-tip">佣金比例按内容专属比例（如有）或全局默认比例；金额按会员价估算，实际按实付金额结算。</view>
     </view>
   </view>
 

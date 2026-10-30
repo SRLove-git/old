@@ -3,7 +3,7 @@
     <view wx:for="{{cart}}" wx:key="id" class="cart-item">
       <view class="check {{item.selected ? 'active' : ''}}" data-id="{{item.id}}" bindtap="toggleItem">{{item.selected ? '✓' : ''}}</view>
       <view class="cart-cover" data-id="{{item.id}}" bindtap="goItem">
-        <image wx:if="{{item.coverImage}}" src="{{item.coverImage}}" mode="aspectFill" />
+        <image webp="{{true}}" wx:if="{{item.coverImage}}" src="{{item.coverImage}}" mode="aspectFill" />
         <view wx:else class="emoji-cover" style="background: {{item.coverTone}}">{{item.cover}}</view>
         <text class="kind-label">{{item.kind === 'course' ? '视频课' : '活动'}}</text>
       </view>

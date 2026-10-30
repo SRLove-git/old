@@ -147,7 +147,7 @@ function normalizeContent(db) {
 function normalizeCollections(db) {
   db.adminAccounts ||= []
   const bootstrapUsername = String(process.env.ADMIN_USER || 'admin').trim().toLowerCase()
-  const bootstrapPassword = String(process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-admin'))
+  const bootstrapPassword = String(process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'development' ? 'suiyueli-admin' : ''))
   if (bootstrapPassword && !db.adminAccounts.some((account) => account.username === bootstrapUsername)) {
     db.adminAccounts.push({
       id: 'admin-super',
@@ -164,7 +164,6 @@ function normalizeCollections(db) {
     account.role ||= account.id === 'admin-super' ? 'super_admin' : 'staff'
     account.permissions = account.role === 'super_admin' ? ['*'] : (Array.isArray(account.permissions) ? account.permissions : [])
     account.status = Number(account.status ?? 1)
-    if (process.env.NODE_ENV === 'production' && account.id === 'admin-super' && !process.env.ADMIN_PASSWORD) account.status = 0
   })
   db.merchantAccounts ||= []
   db.merchantAccounts.forEach((account) => {
@@ -2522,15 +2521,22 @@ function applyTrackingItem(item, source = 'callback') {
     shipment.carrierCode = code
     shipment.carrier = carrierName(code, item.ShipperName || shipment.carrier)
   }
-  shipment.events = traces.map((trace, index) => ({
-    id: `${trace.AcceptTime || trace.ActionTime || index}-${index}`,
-    time: trace.AcceptTime || trace.ActionTime || '',
-    description: trace.AcceptStation || trace.Action || trace.Remark || '',
-    location: trace.Location || ''
-  })).filter((event) => event.time || event.description)
+  if (!Array.isArray(shipment.events)) shipment.events = []
+  if (traces.length) {
+    shipment.events = traces.map((trace, index) => ({
+      id: `${trace.AcceptTime || trace.ActionTime || index}-${index}`,
+      time: trace.AcceptTime || trace.ActionTime || '',
+      description: trace.AcceptStation || trace.Action || trace.Remark || '',
+      location: trace.Location || ''
+    })).filter((event) => event.time || event.description)
+  }
   const latest = shipment.events[shipment.events.length - 1]
   shipment.providerState = String(item.State == null ? shipment.providerState || '' : item.State)
   shipment.providerStateEx = String(item.StateEx == null ? shipment.providerStateEx || '' : item.StateEx)
+  // 扩展状态属于主状态的细分；新主状态不能继续被旧的派送/异常细分状态覆盖。
+  if (shipment.providerState && shipment.providerStateEx && !shipment.providerStateEx.startsWith(shipment.providerState)) {
+    shipment.providerStateEx = ''
+  }
   shipment.status = logisticsState(shipment.providerStateEx || shipment.providerState)
   shipment.latestDescription = latest?.description || item.Reason || shipment.latestDescription
   shipment.lastSyncedAt = nowText()
@@ -3219,7 +3225,8 @@ export function applyManager(form) {
   const pendingPayment = db.managerApplications.find((a) => a.status === '待付款' && String(a.userId) === String(userId))
   if (pendingPayment) return pendingPayment
   const hasPending = db.managerApplications.some((a) => a.status === '待审核' && String(a.userId) === String(userId))
-  const alreadyManager = Boolean(findManagerByUser(userId)) || Boolean(customer.isManager)
+  // 与 getUserProfile 的 isManager 判定保持一致：没有本人主理人记录就不算已是主理人
+  const alreadyManager = Boolean(findManagerByUser(userId))
   if (hasPending || alreadyManager) throw badRequest('已有待审核的申请或已是主理人')
   const feeAmountFen = yuanToFen(db.config.managerApplyFee ?? 0, '主理人申请费用')
   const fee = fenToYuan(feeAmountFen)
@@ -4043,7 +4050,19 @@ export function updateProduct(id, data) {
   if (next.publisherType === 'merchant' && (!next.managerId || !findManager(next.managerId))) throw badRequest('请先选择有效商家')
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   normalizePaidOfferingPrices(next, '商品')
-  next.images = normalizeProductImages(next.images, next.coverImage)
+  if (data && data.images !== undefined) {
+    // 后台轮播图编辑（含排序/删除）以显式提交的列表为准。
+    next.images = normalizeProductImages(data.images)
+  } else if (data && data.coverImage !== undefined) {
+    const coverImage = contentMediaUrl(data.coverImage, '商品主图')
+    if (!coverImage) throw badRequest('请至少上传一张商品展示图')
+    const images = Array.isArray(next.images) ? [...next.images] : []
+    const first = images[0]
+    images[0] = typeof first === 'object' && first ? { ...first, src: coverImage } : { src: coverImage, label: '商品主图' }
+    next.images = normalizeProductImages(images)
+  } else {
+    next.images = normalizeProductImages(next.images, next.coverImage)
+  }
   next.coverImage = next.images[0].src
   next.city = regionText(next.regionIds, next.city || '全国')
   db.products[idx] = next
@@ -4306,7 +4325,8 @@ export function getUserProfile(userId) {
   const addresses = db.addresses.filter((a) => a.userId === userId)
   const ownManagerRecord = findManagerByUser(userId)
   const ownManager = ownManagerRecord ? { ...ownManagerRecord, ...managerBalance(ownManagerRecord.id) } : null
-  const isManager = Boolean(ownManagerRecord) || Boolean(user.isManager)
+  // 入口与工作台权限必须同源：只认本人主理人记录，避免出现「个人中心有入口、点进去却被拒绝」
+  const isManager = Boolean(ownManagerRecord)
   const application = db.managerApplications.find((a) => a.userId && String(a.userId) === String(userId))
     || db.managerApplications.find((a) => String(a.name) === String(user.name)) || null
   const pendingUnbind = (db.unbindApplications || []).find((a) => a.status === '待审核' && String(a.customerId) === String(userId)) || null

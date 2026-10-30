@@ -39,8 +39,9 @@ router.post('/:id/pay', wrap(async (req) => {
   return requestOrderPayment(req.params.id, userId)
 }))
 router.post('/:id/payment-status/refresh', wrap(async (req) => {
-  requireOrderOwner(req, req.params.id)
-  return refreshWechatPayment(req.params.id)
+  // 通用查单服务也支持充值/主理人申请，此入口必须先确认普通订单存在且属于调用者。
+  const order = requireOrderOwner(req, req.params.id)
+  return refreshWechatPayment(order.id)
 }))
 router.post('/:id/cancel', wrap((req) => {
   requireOrderOwner(req, req.params.id)

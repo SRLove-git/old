@@ -301,7 +301,10 @@ async function save() {
     try { payload = prepareActivityPayload() } catch (e) { return Message.warning(e.message) }
     if (payload.skus.some((sku) => !isPaidPrice(sku.memberPrice) || !isPaidPrice(sku.price))) return Message.warning('每个活动规格的会员价和非会员价最低为0.01元')
   } else if (view.value === 'products') {
+    if (!String(form.value.coverImage || '').trim()) return Message.warning('请上传商品封面图片')
     payload = JSON.parse(JSON.stringify(form.value))
+    // 商户端只编辑封面；轮播图由后端保留，避免把读取时的旧首图一并覆盖回去。
+    delete payload.images
     if (payload.refundRule?.type === 'day') payload.refundRule.partialRate = Number(payload.refundRule.partialRatePercent || 0) / 100
   }
   loading.value = true

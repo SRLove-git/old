@@ -1,7 +1,7 @@
 <view wx:if="{{activity}}" class="detail-page">
   <swiper class="product-gallery" style="height: {{galleryHeight}}rpx" indicator-dots="{{true}}" circular="{{true}}" indicator-color="rgba(255,255,255,.55)" indicator-active-color="#ffffff" bindchange="onGalleryChange">
     <swiper-item wx:for="{{activity.images}}" wx:key="id" wx:for-item="img">
-      <view class="gallery-slide"><image class="gallery-image" src="{{img.src}}" mode="aspectFit" data-index="{{index}}" bindload="onGalleryImageLoad" /><view class="gallery-shade"></view><view class="gallery-brand">{{copy.detailGalleryBrand}}</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
+      <view class="gallery-slide"><image webp="{{true}}" class="gallery-image" src="{{img.src}}" mode="aspectFit" data-index="{{index}}" bindload="onGalleryImageLoad" /><view class="gallery-shade"></view><view class="gallery-brand">{{copy.detailGalleryBrand}}</view><view class="gallery-count">{{index + 1}}/{{activity.images.length}}</view></view>
     </swiper-item>
   </swiper>
 
@@ -60,22 +60,22 @@
     <view wx:if="{{merchant}}" class="merchant-card" bindtap="goShop"><view class="merchant-logo">岁</view><view class="merchant-copy"><view class="merchant-name">{{merchant.shopName || merchant.name}}</view><view class="merchant-cert">企业认证</view></view><button class="merchant-enter btn btn-secondary btn-pill">进店逛逛</button></view>
     <block wx:for="{{activity.detailBlocks}}" wx:key="_key" wx:for-item="block">
       <text wx:if="{{block.type === 'text'}}" class="detail-text">{{block.text}}</text>
-      <view wx:elif="{{block.type === 'image'}}" class="detail-media detail-image-media"><image class="detail-rich-image" src="{{block.src || activity.art}}" mode="widthFix" /><text wx:if="{{block.caption}}" class="detail-media-caption">{{block.caption}}</text></view>
+      <view wx:elif="{{block.type === 'image'}}" class="detail-media detail-image-media"><image webp="{{true}}" class="detail-rich-image" src="{{block.src || activity.art}}" mode="widthFix" /><text wx:if="{{block.caption}}" class="detail-media-caption">{{block.caption}}</text></view>
       <view wx:elif="{{block.type === 'video'}}" class="detail-media detail-video"><video wx:if="{{block.url}}" src="{{block.url}}" class="detail-video-player" controls></video><view wx:else class="video-placeholder"><text class="video-play">▶</text><text>{{block.caption}}</text></view></view>
     </block>
   </view>
 
   <view wx:else class="tab-panel recommend-panel">
     <view class="section-heading"><text class="heading-cn">推荐{{contentName}}</text></view>
-    <view class="recommend-grid"><view wx:for="{{recommend}}" wx:key="id" class="recommend-card" data-id="{{item.id}}" bindtap="goDetailFromRec"><image class="recommend-cover" src="{{item.art}}" mode="aspectFill" /><view class="recommend-title">{{item.title}}</view><view wx:if="{{item.rankLabel}}" class="recommend-rank">{{item.rankLabel}}</view><view class="recommend-price">¥{{item.memberPrice}}</view></view></view>
+    <view class="recommend-grid"><view wx:for="{{recommend}}" wx:key="id" class="recommend-card" data-id="{{item.id}}" bindtap="goDetailFromRec"><image webp="{{true}}" class="recommend-cover" src="{{item.art}}" mode="aspectFill" /><view class="recommend-title">{{item.title}}</view><view wx:if="{{item.rankLabel}}" class="recommend-rank">{{item.rankLabel}}</view><view class="recommend-price">¥{{item.memberPrice}}</view></view></view>
     <view wx:if="{{recommend.length === 0}}" class="empty-review">暂无相关推荐</view>
   </view>
 
   <view class="fixed-bottom product-bottom">
     <view class="quick-actions">
-      <button class="bottom-icon" bindtap="showService"><image class="bi-image" src="/assets/profile-icons/support.webp" mode="aspectFit" /><text>客服</text></button>
-      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image class="bi-image" src="/assets/profile-icons/merchant.webp" mode="aspectFit" /><text>店铺</text></button>
-      <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image class="bi-image" src="/assets/profile-icons/cart.webp" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
+      <button class="bottom-icon" bindtap="showService"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>客服</text></button>
+      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
+      <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
     </view>
     <view class="purchase-actions">
       <button class="action-button add-cart-button {{activity.expired ? 'disabled' : ''}}" bindtap="addToCart" disabled="{{activity.expired}}"><text>{{activity.expired ? (isGoods ? '不可购买' : '不可报名') : '加入购物车'}}</text></button>
@@ -107,7 +107,7 @@
     </view>
   </view>
   <view wx:if="{{skuOpen}}" class="sheet-mask mask" bindtap="closeSku">
-    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.skus.length ? '请选择' + (activity.skuLabel || '规格') : (isGoods ? '确认购买' : '确认报名')}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options {{hasVenue ? 'stacked' : ''}}"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><view wx:if="{{selectedSku && selectedSku.address}}" class="sheet-venue"><text class="sheet-venue-pin">📍</text><view class="sheet-venue-body"><view class="sheet-venue-label">本次活动场地</view><view class="sheet-venue-text">{{selectedSku.address}}</view></view></view><button class="sheet-confirm btn btn-primary btn-block" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
+    <view class="sheet" catchtap="noop"><view class="sheet-head"><text class="sheet-title">{{activity.skus.length ? '请选择' + (activity.skuLabel || '规格') : (isGoods ? '确认购买' : '确认报名')}}</text><button class="close" bindtap="closeSku">×</button></view><view class="sku-summary"><image webp="{{true}}" class="sku-cover-image" src="{{activity.art}}" mode="aspectFill" /><view><view class="sku-price">¥{{selectedSku ? selectedSku.memberPrice : activity.memberPrice}}</view><view class="sku-title">{{activity.title}}</view></view></view><view wx:if="{{activity.skus.length}}" class="sku-options {{hasVenue ? 'stacked' : ''}}"><view wx:for="{{activity.skus}}" wx:key="id" class="sku-option {{selectedSkuId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectSku"><text class="sku-name">{{item.name}}</text><text wx:if="{{item.address}}" class="sku-option-addr">📍 {{item.address}}</text><text class="sku-price-sm">¥{{item.memberPrice}}</text><text wx:if="{{item.hot}}" class="hot">热销</text></view></view><view wx:if="{{selectedSku && selectedSku.address}}" class="sheet-venue"><text class="sheet-venue-pin">📍</text><view class="sheet-venue-body"><view class="sheet-venue-label">本次活动场地</view><view class="sheet-venue-text">{{selectedSku.address}}</view></view></view><button class="sheet-confirm btn btn-primary btn-block" bindtap="confirmSku">{{cartIntent ? '加入购物车' : '下一步'}}</button></view>
   </view>
   <contact-sheet visible="{{serviceOpen}}" bindclose="closeService" />
 </view>

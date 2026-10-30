@@ -13,5 +13,9 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "jsqr": "1.4.0",
+    "qrcode-generator": "2.0.4"
   }
 }

@@ -3,7 +3,11 @@ import { httpError } from '../lib/http.js'
 import { decodeSession, sessionFromRequest } from '../lib/session.js'
 import { permissionForRequest } from '../lib/permissions.js'
 
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || (process.env.NODE_ENV === 'production' ? '' : 'admin-token')
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || (process.env.NODE_ENV === 'development' ? 'admin-token' : '')
+
+export function adminTokenConfigured() {
+  return Boolean(ADMIN_TOKEN)
+}
 
 export function isAdminRequest(req) {
   const identity = adminSession(req)
@@ -89,14 +93,15 @@ export function requireMerchantResource(req, collection, id) {
   return row
 }
 
-// 会员身份优先由签名会话解析；x-user-id 仅保留给非生产环境的历史联调。
+// 默认只认签名会话。旧身份参数必须显式开启开发联调，不能因 NODE_ENV 缺省而放行。
 export function requestUserId(req) {
   const session = sessionFromRequest(req)
   if (session) return String(session.userId)
-  const legacyAllowed = process.env.NODE_ENV !== 'production'
-  const raw = legacyAllowed && ((req.headers && req.headers['x-user-id'])
+  const legacyAllowed = process.env.NODE_ENV === 'development' && process.env.ALLOW_LEGACY_USER_ID === 'true'
+  if (!legacyAllowed) return ''
+  const raw = (req.headers && req.headers['x-user-id'])
     || (req.query && req.query.userId)
-    || (req.body && req.body.userId))
+    || (req.body && req.body.userId)
   return String(raw == null ? '' : raw).trim()
 }
 
@@ -109,15 +114,15 @@ export function requireUser(req, targetUserId) {
 }
 
 export function requireOrderOwner(req, orderId) {
-  if (isAdminRequest(req)) return
   const order = store.get().orders.find((item) => String(item.id) === String(orderId))
-  if (!order) return
+  if (!order) throw httpError(404, '订单不存在')
   requireUser(req, order.userId)
+  return order
 }
 
 export function requireRowOwner(req, collection, id) {
-  if (isAdminRequest(req)) return
   const row = (store.get()[collection] || []).find((item) => String(item.id) === String(id))
-  if (!row) return
+  if (!row) throw httpError(404, '记录不存在')
   requireUser(req, row.userId)
+  return row
 }

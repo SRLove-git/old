@@ -273,6 +273,28 @@
   justify-content: center;
   color: var(--color-text-3);
   background: var(--color-fill);
+  flex-shrink: 0;
+}
+
+.promo-placeholder {
+  text-align: center;
+  font-size: 24rpx;
+}
+
+.promotion-error {
+  margin: -8rpx 0 24rpx;
+  color: var(--color-danger);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.promotion-error .small-btn {
+  display: inline-block;
+  margin: 12rpx 0 0;
+}
+
+.promote-info .small-btn[disabled] {
+  opacity: 0.5;
 }
 
 .promote-info {

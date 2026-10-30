@@ -18,6 +18,7 @@ export default [
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      'miniprogram/utils/vendor/**',
       '.vite/**',
       'server/data.json',
       'server/data.json.bak',

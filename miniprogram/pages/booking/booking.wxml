@@ -8,7 +8,7 @@
   </view>
 
   <view class="booking-summary">
-    <image class="booking-cover" src="{{coverImageUrl}}" mode="aspectFill" />
+    <image webp="{{true}}" class="booking-cover" src="{{coverImageUrl}}" mode="aspectFill" />
     <view class="booking-summary-body">
       <view class="booking-eyebrow">{{categoryName}}<text wx:if="{{isGoods}}"> · 支持配送</text></view>
       <view class="booking-title">{{bookingTitle}}</view>

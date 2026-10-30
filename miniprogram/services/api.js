@@ -150,6 +150,10 @@ function loadManagerDashboard(managerId) {
   return api.get(`/managers/${managerId}/dashboard?userId=${authUserId()}`)
 }
 
+function loadManagerPromotionCode(managerId) {
+  return api.get(`/managers/${encodeURIComponent(managerId)}/promotion-code`)
+}
+
 function applyWithdraw(managerId, amount) {
   return api.post('/withdraws', { managerId, amount })
 }
@@ -225,6 +229,7 @@ module.exports = {
   purchaseLive,
   submitManagerApply,
   loadManagerDashboard,
+  loadManagerPromotionCode,
   applyWithdraw,
   syncWithdrawTransfer,
   getBalanceTransactions,

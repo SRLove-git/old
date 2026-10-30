@@ -49,7 +49,7 @@
       <view class="section-heading"><view class="heading-accent"></view><text class="heading-cn">{{group.label}}</text><text class="heading-count">{{group.items.length}}{{group.countUnit}}</text></view>
       <view wx:for="{{group.items}}" wx:key="id" class="activity-card" data-id="{{item.id}}" bindtap="goDetail">
         <view class="card-main">
-          <view class="cover-wrap"><image class="cover-image" src="{{item.art}}" mode="aspectFill" /><text class="status-ribbon {{item.status}}">{{item.statusLabel}}</text></view>
+          <view class="cover-wrap"><image webp="{{true}}" class="cover-image" src="{{item.art}}" mode="aspectFill" /><text class="status-ribbon {{item.status}}">{{item.statusLabel}}</text></view>
           <view class="card-copy">
             <view class="card-title">{{item.title}}</view>
             <view class="meta-line"><text class="meta-icon time-icon"></text><text class="ellipsis">{{item.scheduleLine}}</text></view>

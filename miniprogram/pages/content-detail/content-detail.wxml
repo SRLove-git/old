@@ -4,14 +4,14 @@
   <view class="content-meta"><text>{{post.source || '来源待补充'}}</text><text>{{post.publishedAt}}</text></view>
 
   <video wx:if="{{post.type === 'video' && post.videoUrl}}" class="content-video" src="{{post.videoUrl}}" poster="{{post.coverImage}}" controls enable-play-gesture show-center-play-btn></video>
-  <image wx:elif="{{post.coverImage}}" class="content-cover" src="{{post.coverImage}}" mode="aspectFill" />
+  <image webp="{{true}}" wx:elif="{{post.coverImage}}" class="content-cover" src="{{post.coverImage}}" mode="aspectFill" />
 
   <view wx:if="{{post.summary}}" class="content-summary">{{post.summary}}</view>
   <view class="article-body">
     <block wx:for="{{post.contentBlocks}}" wx:key="_key" wx:for-item="block">
       <text wx:if="{{block.type === 'text'}}" class="content-body" user-select>{{block.text}}</text>
       <view wx:elif="{{block.type === 'image'}}" class="article-media-block">
-        <image class="article-image" src="{{block.src}}" mode="widthFix" show-menu-by-longpress />
+        <image webp="{{true}}" class="article-image" src="{{block.src}}" mode="widthFix" show-menu-by-longpress />
         <view wx:if="{{block.caption}}" class="article-caption">{{block.caption}}</view>
       </view>
       <view wx:elif="{{block.type === 'video'}}" class="article-media-block">

@@ -14,8 +14,8 @@
       <swiper-item wx:for="{{banners}}" wx:key="id">
         <view class="hero-slide" data-link="{{item.linkUrl}}" data-cat="{{item.cat}}" bindtap="goBanner" style="background: {{item.tone}}">
           <video wx:if="{{item.mediaType === 'video' && item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" autoplay="{{index === 0}}" muted loop controls="{{false}}" object-fit="cover" />
-          <image wx:elif="{{item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" mode="aspectFill" />
-          <image wx:else class="hero-image" src="/assets/home-hero.webp" mode="aspectFill" />
+          <image webp="{{true}}" wx:elif="{{item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" mode="aspectFill" />
+          <image webp="{{true}}" wx:else class="hero-image" src="/assets/home-hero.jpg" mode="aspectFill" />
           <view class="hero-shade"></view>
           <view class="hero-copy">
             <text class="hero-kicker">{{copy.homeHeroKicker}}</text>
@@ -32,7 +32,7 @@
     <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><view class="content-head-actions"><text class="official-badge">权威来源</text><view class="content-more" data-type="news" bindtap="goContentList">查看全部 <text class="content-more-arrow">›</text></view></view></view>
     <view class="policy-list">
       <view wx:for="{{newsPosts}}" wx:key="id" class="policy-card" data-id="{{item.id}}" bindtap="goContent">
-        <image class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        <image webp="{{true}}" class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
         <view class="policy-copy"><view class="policy-title">{{item.title}}</view><view class="policy-summary">{{item.summary}}</view><view class="policy-meta"><text>{{item.source}}</text><text>{{item.publishedAt}}</text></view></view>
       </view>
     </view>
@@ -43,7 +43,7 @@
     <scroll-view scroll-x class="video-scroll" enhanced show-scrollbar="{{false}}">
       <view class="video-row">
         <view wx:for="{{videoPosts}}" wx:key="id" class="video-card" data-id="{{item.id}}" bindtap="goContent">
-          <view class="video-cover-wrap"><image class="video-cover" src="{{item.coverImage}}" mode="aspectFill" /><view class="video-play"><view class="play-triangle"></view></view><text class="video-label">视频</text></view>
+          <view class="video-cover-wrap"><image webp="{{true}}" class="video-cover" src="{{item.coverImage}}" mode="aspectFill" /><view class="video-play"><view class="play-triangle"></view></view><text class="video-label">视频</text></view>
           <view class="video-title">{{item.title}}</view><view class="video-meta">{{item.source}} · {{item.publishedAt}}</view>
         </view>
       </view>
@@ -54,12 +54,12 @@
       <view class="quick-heading"><view><view class="quick-title">按兴趣发现</view><view class="quick-sub">从喜欢的生活方式开始</view></view><text class="quick-count">{{copy.homeCategoryCountText}}</text></view>
     <view class="category-grid">
       <view wx:for="{{categories}}" wx:key="id" class="category-item" hover-class="category-item-pressed" data-id="{{item.id}}" bindtap="goCategory">
-        <view class="category-icon"><image class="category-image" src="{{item.icon}}" mode="aspectFit" /></view><text class="category-name">{{item.name}}</text>
+        <view class="category-icon"><image webp="{{true}}" class="category-image" src="{{item.icon}}" mode="aspectFit" /></view><text class="category-name">{{item.name}}</text>
       </view>
     </view>
   </view>
 
-  <view class="member-card">
+  <view wx:if="{{memberChecked && !isMember}}" class="member-card">
     <view class="member-top">
       <view><view class="member-title">{{copy.homeMemberTitle}}</view><view class="member-sub">{{copy.homeMemberSubtitle}}</view></view>
       <button class="member-btn" bindtap="goProfile">立即入会</button>
@@ -79,7 +79,7 @@
     </view>
     <view wx:if="{{featured}}" class="feature-card" data-id="{{featured.id}}" bindtap="goDetail">
       <view class="feature-photo">
-        <image class="feature-image" src="{{featured.art}}" mode="aspectFill" /><view class="feature-tag">{{featured.city}} · {{featured.soldCount}}人已报名</view>
+        <image webp="{{true}}" class="feature-image" src="{{featured.art}}" mode="aspectFill" /><view class="feature-tag">{{featured.city}} · {{featured.soldCount}}人已报名</view>
       </view>
       <view class="feature-body">
         <view class="feature-title">{{featured.title}}</view>
@@ -101,7 +101,7 @@
       <scroll-view scroll-x class="activity-scroll" enhanced show-scrollbar="{{false}}">
         <view class="activity-row">
           <view wx:for="{{group.activities}}" wx:key="id" class="mini-card" data-id="{{item.id}}" bindtap="goDetail">
-            <view class="mini-cover"><image class="mini-image" src="{{item.art}}" mode="aspectFill" /><text class="mini-city">{{item.expired ? '已过期' : item.city}}</text></view>
+            <view class="mini-cover"><image webp="{{true}}" class="mini-image" src="{{item.art}}" mode="aspectFill" /><text class="mini-city">{{item.expired ? '已过期' : item.city}}</text></view>
             <view class="mini-body">
               <view class="mini-title">{{item.title}}</view>
               <view class="mini-date">{{item.displayDate}}<text wx:if="{{item.displayTime}}"> · {{item.displayTime}}</text></view>
@@ -120,7 +120,7 @@
 
   <view class="assistant-panel">
     <view class="assistant-title">{{homeAssistant.title}}</view>
-    <image class="assistant-qr" src="{{homeAssistant.qrImage}}" show-menu-by-longpress mode="aspectFit" />
+    <image webp="{{true}}" class="assistant-qr" src="{{homeAssistant.qrImage}}" show-menu-by-longpress mode="aspectFit" />
     <view class="assistant-tip">{{homeAssistant.tip}}</view>
     <view class="assistant-wechat">{{homeAssistant.wechatNote}}</view>
   </view>

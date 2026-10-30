@@ -51,12 +51,34 @@ Page({
   },
 
   async onShow() {
-    await store.ready()
-    const user = store.get().user || {}
-    const [transactions, config] = await Promise.all([
-      store.getBalanceTransactions().catch(() => []),
-      store.refreshConfig().catch(() => store.get().config || {})
-    ])
+    try {
+      await this.refreshBalance()
+    } catch (error) {
+      if (error.code !== 'AUTH_REQUIRED') wx.showToast({ title: error.message || '余额信息刷新失败，请稍后重试', icon: 'none' })
+    }
+  },
+
+  onUnload() {
+    this.unloaded = true
+    this.balanceVersion = (this.balanceVersion || 0) + 1
+  },
+
+  async refreshBalance() {
+    const version = this.balanceVersion = (this.balanceVersion || 0) + 1
+    let user, transactions, config
+    try {
+      await store.ready()
+      ;[user, transactions, config] = await Promise.all([
+        store.refreshUserProfile().then(() => ({ ...(store.get().user || {}) })),
+        store.getBalanceTransactions(),
+        store.refreshConfig().catch(() => store.get().config || {})
+      ])
+    } catch (error) {
+      if (version !== this.balanceVersion || this.unloaded) return false
+      throw error
+    }
+    if (version !== this.balanceVersion || this.unloaded) return false
+    // 余额与流水都成功后一起展示，失败时保留上一组数据，不伪装成空流水。
     const amounts = configuredRechargeAmounts(config)
     const hasCustomAmount = Boolean(this.data.customAmount)
     let selectedAmount = 0
@@ -75,6 +97,7 @@ Page({
         : store.money(selectedAmount),
       transactions: formatTransactions(transactions)
     })
+    return true
   },
 
   selectAmount(e) {
@@ -99,20 +122,21 @@ Page({
       wx.showToast({ title: '请输入1至50000元', icon: 'none' })
       return
     }
+    // 支付完成前发出的页面刷新不能覆盖到账后的余额。
+    this.balanceVersion = (this.balanceVersion || 0) + 1
     this.setData({ charging: true })
     try {
       await store.rechargeBalance(amount)
-      const user = store.get().user || {}
-      const transactions = await store.getBalanceTransactions()
-      this.setData({
-        balanceText: store.money(user.balance),
-        transactions: formatTransactions(transactions)
-      })
-      wx.showToast({ title: '充值成功', icon: 'success' })
+      if (this.unloaded) return
+      try {
+        if (await this.refreshBalance()) wx.showToast({ title: '充值成功', icon: 'success' })
+      } catch (error) {
+        wx.showToast({ title: '充值已到账，余额信息刷新失败，请稍后重试', icon: 'none' })
+      }
     } catch (error) {
-      wx.showToast({ title: error.message || '充值未完成', icon: 'none' })
+      if (!this.unloaded) wx.showToast({ title: error.message || '充值未完成', icon: 'none' })
     } finally {
-      this.setData({ charging: false })
+      if (!this.unloaded) this.setData({ charging: false })
     }
   },
 

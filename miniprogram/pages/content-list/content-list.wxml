@@ -8,7 +8,7 @@
   <view wx:if="{{posts.length}}" class="post-list">
     <view wx:for="{{posts}}" wx:key="id" class="post-card" data-id="{{item.id}}" bindtap="goDetail">
       <view class="post-cover-wrap">
-        <image class="post-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        <image webp="{{true}}" class="post-cover" src="{{item.coverImage}}" mode="aspectFill" />
         <view wx:if="{{type === 'video'}}" class="post-play"><view></view></view>
       </view>
       <view class="post-copy">

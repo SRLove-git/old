@@ -1,6 +1,6 @@
 <view class="academy-page">
   <view class="academy-hero">
-    <image src="/assets/event-academy.webp" mode="aspectFill" />
+    <image webp="{{true}}" src="/assets/event-academy.jpg" mode="aspectFill" />
     <view class="hero-mask"></view>
     <view class="hero-copy"><text class="hero-kicker">SUIYUELI ACADEMY</text><view class="hero-title">在家也能学点新鲜的</view><view class="hero-sub">名师视频课 · 随时随地反复看</view></view>
   </view>
@@ -19,7 +19,7 @@
   <view wx:if="{{list.length > 0}}" class="course-list">
     <view wx:for="{{list}}" wx:key="id" class="course-card" data-id="{{item.id}}" bindtap="goRoom">
       <view class="course-cover">
-        <image src="{{item.coverImage}}" mode="aspectFill" />
+        <image webp="{{true}}" src="{{item.coverImage}}" mode="aspectFill" />
         <view class="cover-shade"></view>
         <text class="course-type">{{item.courseType}}</text>
         <text class="play-button">▶</text>

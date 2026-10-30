@@ -2,13 +2,14 @@
 
 基于 Node.js + Express，数据用 `data.json` 持久化（首次运行自动用 `src/seed.js` 种子数据生成）。数据保存采用同目录临时文件原子替换，并在覆盖前保留一份 `data.json.bak`；如果现有数据无法解析，服务会停止启动，避免用种子数据覆盖业务数据。
 
-代码结构与开发规范见 [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)。`npm test` 运行 `src/test` 下的单测。
+代码结构与开发规范见 [`docs/DEVELOPMENT.md`](../docs/DEVELOPMENT.md)。`npm test` 运行 `test/` 下的单测与隔离接口回归测试。
 
 ## 微信小程序登录
 
 小程序 AppID 已配置为 `wx5d1ccdf824e45e73`。启动生产服务前必须在服务端环境变量中设置：
 
 ```powershell
+$env:NODE_ENV='production'
 $env:WECHAT_APPID='wx5d1ccdf824e45e73'
 $env:WECHAT_APP_SECRET='从微信公众平台获取的 AppSecret'
 $env:SESSION_SECRET='长度足够的随机会话签名密钥'
@@ -35,6 +36,16 @@ npm start
 ```
 
 模拟登录在 `NODE_ENV=production` 时自动禁用。
+
+会员接口默认只接受 `Authorization: Bearer <签名会话>`。未设置 `NODE_ENV` 也不会信任 `x-user-id`、查询参数或请求体中的 `userId` 作为登录凭据；请求体 `userId` 只能指定与已登录身份一致的用户。确需旧客户端本地联调时，必须同时设置 `NODE_ENV=development` 和 `ALLOW_LEGACY_USER_ID=true`，签名会话仍优先。生产环境始终忽略该联调开关，部署配置应使用 `NODE_ENV=production`、`ALLOW_LEGACY_USER_ID=false`。
+
+## 主理人推广小程序码
+
+`GET /api/managers/:id/promotion-code` 返回 `{ imageBase64, mimeType, envVersion }`，只有持有效签名会员会话、与本人 `userId` 关联且启用中的主理人可获取，管理员令牌和旧联调身份头不能代替会员会话。
+
+服务端使用 `WECHAT_APPID`、`WECHAT_APP_SECRET` 获取微信 `stable_token`，再调用 `getwxacodeunlimit` 生成 `pages/index/index` 的小程序码，场景为 `ref=<主理人ID>`。access_token 只保存在服务端内存，提前刷新；失效时最多重新获取并重试一次，不使用强制刷新。图片缓存有效期 15 分钟，最多 64 张且不超过 16 MiB，所有缓存请求仍检查主理人状态。
+
+`WECHAT_CODE_ENV_VERSION` 默认 `release`，仅可配置 `release`、`trial` 或 `develop`；只有正式版启用微信页面路径校验。正式版需已发布首页，体验版/开发版扫码权限遵循微信平台规则。`WECHAT_CODE_TIMEOUT_MS` 默认 8000（范围 1000–30000）。还需在微信公众平台配置服务器出口 IP 白名单。测试全部使用模拟微信响应，真实凭证、白名单及手机扫码效果需部署后验收。
 
 ## 微信支付 API v3
 
@@ -84,7 +95,7 @@ npm start        # 或 npm run dev（文件变化自动重启）
 
 默认地址：`http://127.0.0.1:3000`
 
-本地开发可使用管理员 Token `admin-token`（通过请求头 `x-admin-token` 传递）。生产环境不会启用该默认值，必须配置 `ADMIN_PASSWORD`，也可另行设置强随机 `ADMIN_TOKEN`。
+只有显式设置 `NODE_ENV=development` 才会启用本地管理员 Token `admin-token`、初始管理员口令和会话签名密钥的开发默认值。生产环境及未设置 `NODE_ENV` 时均不启用这些默认凭据：必须配置 `SESSION_SECRET` 才能签发会话，首次创建管理员需要配置 `ADMIN_PASSWORD`，也可另行设置强随机 `ADMIN_TOKEN`。持久化的已有管理员账号、密码和启停状态不因缺少启动口令而改变。
 
 ## 代码结构
 
@@ -152,9 +163,10 @@ https://你的公网域名/api/logistics/kdniao/callback
 
 发货后服务端会自动订阅轨迹，验签接收快递鸟回调，保存完整轨迹并在签收时更新订单状态。系统默认每 6 小时对未签收运单进行一次补偿查询，可通过 `LOGISTICS_REFRESH_INTERVAL_MS` 调整（最低 30 分钟）。
 
-修改类接口需要登录签发的后台令牌；本地开发也可使用 `x-admin-token: admin-token`。以下读接口同样需要对应后台权限：
+修改类接口需要登录签发的后台令牌；显式 `NODE_ENV=development` 的本地开发也可使用 `x-admin-token: admin-token`。以下读接口同样需要对应后台权限：
 `GET /api/coupons`（含入会赠送券等归属个人券，小程序改从 `/api/users/:id` 取自己的券）、
 `GET /api/commissions`、`GET /api/withdraws`、`GET /api/commission-settlements`、`GET /api/manager-applications`。
+`/api/logistics/*` 管理接口（配置、查询、异常列表和刷新）统一要求 `orders.manage` 权限；会员订单物流入口仍校验订单归属。
 
 ## 优惠券数据模型
 

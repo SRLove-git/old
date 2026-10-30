@@ -2,6 +2,7 @@
 const { ensureLogin, isLoggedIn, getCurrentUserId: authUserId } = require('../utils/request.js')
 const { API_BASE } = require('../utils/config.js')
 const apiService = require('../services/api.js')
+const { normalizeManagerId } = require('../utils/referral.js')
 const {
   bindSourceLabel,
   displayStatus,
@@ -111,9 +112,10 @@ function apiAssetUrl(value) {
   const url = String(value || '').trim()
   if (!url || /^(https?:|data:|wxfile:)/.test(url)) return url
   if (url.startsWith('/assets/')) {
-    // 后台历史数据仍可能保存旧的 PNG/JPG 本地路径；包内资源已统一为轻量 WebP。
+    // 后台历史数据可能仍保存旧扩展名；统一映射到真机稳定的本地 PNG/JPEG。
     if (url === '/assets/assistant-qr.png') return url
-    return url.replace(/\.(?:png|jpe?g)$/i, '.webp')
+    const extension = /^\/assets\/(?:profile-icons|member-benefits)\//.test(url) ? '.png' : '.jpg'
+    return url.replace(/\.(?:webp|png|jpe?g)$/i, extension)
   }
   return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`
 }
@@ -486,12 +488,12 @@ function getActivity(id) {
 
 function getOrderCoverFallback(category) {
   return ({
-    1: '/assets/event-local.webp',
-    2: '/assets/event-travel.webp',
-    3: '/assets/event-academy.webp',
-    4: '/assets/event-benefit.webp',
-    5: '/assets/product-tumbler-v2.webp'
-  })[Number(category)] || '/assets/event-local.webp'
+    1: '/assets/event-local.jpg',
+    2: '/assets/event-travel.jpg',
+    3: '/assets/event-academy.jpg',
+    4: '/assets/event-benefit.jpg',
+    5: '/assets/product-tumbler-v2.jpg'
+  })[Number(category)] || '/assets/event-local.jpg'
 }
 
 function getOrderCoverImage(order) {
@@ -658,7 +660,7 @@ function addCourseToCart(course) {
     title: course.title,
     price: Number(course.memberPrice || course.price || 0),
     originalPrice: Number(course.originalPrice || 0),
-    coverImage: course.coverImage || '/assets/event-academy.webp',
+    coverImage: course.coverImage || '/assets/event-academy.jpg',
     scheduleLabel: `${course.lessonCount || 1}节视频课 · 购买后永久回看`,
     count: 1,
     maxCount: 1
@@ -943,6 +945,13 @@ async function loadManagerDashboard(managerId) {
   return dash
 }
 
+async function loadManagerPromotionCode(managerId) {
+  await ensureLogin()
+  const id = normalizeManagerId(managerId)
+  if (!id) throw new Error('主理人信息无效，请刷新后重试')
+  return apiService.loadManagerPromotionCode(id)
+}
+
 async function applyWithdraw(managerId, amount) {
   const record = await apiService.applyWithdraw(managerId, amount)
   cache.withdraws.unshift(record)
@@ -1051,6 +1060,7 @@ module.exports = {
   displayStatus,
   submitManagerApply,
   loadManagerDashboard,
+  loadManagerPromotionCode,
   applyWithdraw,
   syncWithdrawTransfer
 }

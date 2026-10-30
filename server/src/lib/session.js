@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { httpError } from './http.js'
 
-const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'suiyueli-local-session-secret')
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === 'development' ? 'suiyueli-local-session-secret' : '')
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
 

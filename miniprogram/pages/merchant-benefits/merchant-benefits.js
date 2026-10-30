@@ -15,7 +15,7 @@ function decorate(item) {
 
   return {
     ...item,
-    art: store.assetUrl(item.coverImage) || '/assets/event-benefit.webp',
+    art: store.assetUrl(item.coverImage) || '/assets/event-benefit.jpg',
     regionText: regions.join('、') || item.city || '线上/全国',
     scheduleText: next.full
       ? `${next.date || next.full} ${next.weekday || ''} ${next.time || ''}`.trim()

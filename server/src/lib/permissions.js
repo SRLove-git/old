@@ -28,7 +28,7 @@ export function permissionForRequest(req) {
   if (path.startsWith('/api/products') || path.startsWith('/api/point-products') || path.startsWith('/api/point-orders')) return 'products.manage'
   if (path.startsWith('/api/lives')) return 'courses.manage'
   if (path.startsWith('/api/categories') || path.startsWith('/api/regions') || path.startsWith('/api/content-posts') || path.startsWith('/api/banners') || path.startsWith('/api/config') || path.startsWith('/api/uploads')) return 'content.manage'
-  if (path.startsWith('/api/orders') || path.startsWith('/api/cards') || path.startsWith('/api/participants')) return 'orders.manage'
+  if (path.startsWith('/api/orders') || path.startsWith('/api/cards') || path.startsWith('/api/participants') || path.startsWith('/api/logistics')) return 'orders.manage'
   if (path.startsWith('/api/customers') || path.startsWith('/api/users') || path.startsWith('/api/addresses') || path.startsWith('/api/members') || path.startsWith('/api/bindings') || path.startsWith('/api/unbind-applications')) return 'customers.manage'
   if (path.startsWith('/api/coupons') || path.startsWith('/api/reviews')) return 'marketing.manage'
   if (path.startsWith('/api/manager-applications') || path.startsWith('/api/provider-applications') || path.startsWith('/api/managers')) return 'merchants.manage'

@@ -3,7 +3,7 @@
 
   <block wx:elif="{{live}}">
     <view class="course-hero">
-      <image src="{{live.coverImage}}" mode="aspectFill" />
+      <image webp="{{true}}" src="{{live.coverImage}}" mode="aspectFill" />
       <view class="hero-shade"></view>
       <view class="hero-info"><text class="course-type">{{live.courseType}}</text><view class="course-title">{{live.title}}</view><view class="course-teacher">主讲 · {{live.hostName}}</view></view>
     </view>
