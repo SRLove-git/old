@@ -868,8 +868,12 @@ function refreshOrderLogistics(id) {
   return apiService.refreshOrderLogistics(id)
 }
 
-function queryLogistics(trackingNo) {
-  return apiService.queryLogistics(trackingNo)
+function getLogisticsCarriers() {
+  return apiService.getLogisticsCarriers()
+}
+
+function queryLogistics(trackingNo, options = {}) {
+  return apiService.queryLogistics(trackingNo, options)
 }
 
 async function submitReview(orderId, review) {
@@ -1046,6 +1050,7 @@ module.exports = {
   advanceOrder,
   getOrderLogistics,
   refreshOrderLogistics,
+  getLogisticsCarriers,
   queryLogistics,
   submitReview,
   saveParticipant,

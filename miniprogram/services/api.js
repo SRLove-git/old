@@ -105,8 +105,14 @@ function refreshOrderLogistics(id) {
   return api.post(`/orders/${id}/logistics/refresh`)
 }
 
-function queryLogistics(trackingNo) {
-  return api.post('/orders/logistics/query', { trackingNo })
+function getLogisticsCarriers() {
+  return publicApi.get('/orders/logistics/carriers')
+}
+
+function queryLogistics(trackingNo, options = {}) {
+  // 验证信息仅放在请求体中，不能写入订单缓存、URL 或本地存储。
+  const { carrierCode = '', phoneLast4 = '', jdCustomerCode = '' } = options
+  return api.post('/orders/logistics/query', { trackingNo, carrierCode, phoneLast4, jdCustomerCode })
 }
 
 function submitReview(orderId, review) {
@@ -218,6 +224,7 @@ module.exports = {
   advanceOrder,
   getOrderLogistics,
   refreshOrderLogistics,
+  getLogisticsCarriers,
   queryLogistics,
   submitReview,
   saveParticipant,

@@ -4,6 +4,7 @@ import { httpError, wrap } from '../lib/http.js'
 import { adminAuth, isAdminRequest, requestUserId, requireOrderOwner, requireUser } from '../middleware/auth.js'
 import { queryLogisticsNumber, refreshLogisticsShipment, subscribeOrderLogistics } from '../services/logistics.js'
 import { refreshWechatPayment, requestOrderPayment, requestWechatRefund } from '../services/payments.js'
+import { listLogisticsCarriers } from '../lib/kdniao.js'
 
 const router = Router()
 
@@ -17,10 +18,11 @@ router.get('/', wrap((req) => {
 }))
 
 router.get('/code/:code', adminAuth, wrap((req) => store.getOrderByCode(req.params.code)))
+router.get('/logistics/carriers', wrap(() => listLogisticsCarriers()))
 router.post('/logistics/query', wrap(async (req) => {
   const userId = requestUserId(req)
   requireUser(req, userId)
-  return queryLogisticsNumber(req.body?.trackingNo, userId)
+  return queryLogisticsNumber(req.body?.trackingNo, userId, req.body)
 }))
 router.get('/:id', wrap((req) => {
   requireOrderOwner(req, req.params.id)

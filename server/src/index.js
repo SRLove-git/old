@@ -5,9 +5,7 @@ import { httpError, wrap } from './lib/http.js'
 import { UPLOAD_DIR } from './lib/uploads.js'
 import {
   kdniaoConfigured,
-  kdniaoPublicConfig,
-  normalizeKdniaoQuery,
-  queryKdniao
+  kdniaoPublicConfig
 } from './lib/kdniao.js'
 import { paymentConfigured } from './lib/wechat-pay.js'
 import { parseBalanceRechargeAmounts } from './lib/balance-config.js'
@@ -20,7 +18,7 @@ import {
   requireUser
 } from './middleware/auth.js'
 import { registerBodyParsers } from './middleware/body-parsers.js'
-import { refreshLogisticsShipment, startLogisticsRefreshJob, subscribeOrderLogistics } from './services/logistics.js'
+import { queryLogisticsNumber, refreshLogisticsShipment, startLogisticsRefreshJob, subscribeOrderLogistics } from './services/logistics.js'
 import {
   refreshWechatPayment,
   rejectManagerApplication,
@@ -332,11 +330,7 @@ app.get('/api/stats/dashboard', adminAuth, wrap(() => store.dashboardStats()))
 app.get('/api/logs', adminAuth, wrap(() => store.getLogs()))
 app.get('/api/logistics/config', adminAuth, wrap(() => kdniaoPublicConfig()))
 app.post('/api/logistics/query', adminAuth, wrap(async (req) => {
-  const trackingNo = String(req.body?.trackingNo || '').trim()
-  if (!/^[A-Za-z0-9-]{6,32}$/.test(trackingNo)) throw httpError(400, '请输入正确的快递单号')
-  if (!kdniaoConfigured()) throw httpError(503, '快递鸟未配置')
-  const result = await queryKdniao({ orderId: '', trackingNo, carrier: '', carrierCode: '' })
-  return normalizeKdniaoQuery(result)
+  return queryLogisticsNumber(req.body?.trackingNo, `admin:${req.admin?.id || 'operator'}`, req.body || {})
 }))
 app.get('/api/logistics/exceptions', adminAuth, wrap(() => store.listLogisticsExceptions()))
 app.post('/api/logistics/:id/refresh', adminAuth, wrap((req) => refreshLogisticsShipment(store.getLogisticsShipment(req.params.id))))

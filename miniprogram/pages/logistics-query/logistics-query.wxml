@@ -15,6 +15,25 @@
       <view wx:if="{{query}}" class="clear-button" bindtap="clearQuery">×</view>
       <view class="paste-button" bindtap="pasteQuery">粘贴</view>
     </view>
+    <view class="carrier-field">
+      <view class="field-label">快递公司</view>
+      <input wx:if="{{carriers.length > 15}}" class="carrier-search" value="{{carrierSearch}}" bindinput="onCarrierSearch" placeholder="搜索快递公司名称（可选）" placeholder-class="query-placeholder" />
+      <picker range="{{carrierOptions}}" range-key="name" value="{{carrierIndex}}" bindchange="onCarrierChange">
+        <view class="carrier-picker"><text>{{carrierName}}</text><text class="picker-arrow">⌄</text></view>
+      </picker>
+      <view class="field-hint">实际可查范围取决于快递公司与查询服务支持情况。</view>
+    </view>
+    <view wx:if="{{carrierCode === 'SF'}}" class="verification-field">
+      <view class="field-label">手机号后4位</view>
+      <input class="verification-input" type="number" maxlength="4" value="{{phoneLast4}}" bindinput="onPhoneInput" placeholder="收件人或寄件人手机号后4位" placeholder-class="query-placeholder" />
+      <view class="field-hint">顺丰查询需要核验手机尾号，仅用于本次查询，不保存到本机。</view>
+    </view>
+    <view wx:if="{{carrierCode === 'JD'}}" class="verification-field">
+      <view class="field-label">发件方青龙商家编码</view>
+      <input class="verification-input" maxlength="10" value="{{jdCustomerCode}}" bindinput="onJdCodeInput" placeholder="向发件商家索取10位编码" placeholder-class="query-placeholder" />
+      <view class="field-hint">这是发件商家的10位京东物流编码，并非手机号。没有编码时，可复制单号到京东物流官方渠道查询。</view>
+    </view>
+    <view wx:if="{{carrierCode === '__OTHER__'}}" class="field-hint carrier-guidance">未找到这家快递公司时，请复制单号到承运商官方渠道查询，或联系发件商家。</view>
     <button class="query-button" loading="{{loading}}" disabled="{{loading}}" bindtap="queryLogistics">{{loading ? '正在查询' : '查询物流'}}</button>
     <view class="privacy-tip"><view class="shield-mark">✓</view><text>订单号仅查询本人订单，快递单号由快递鸟安全查询</text></view>
   </view>
@@ -25,7 +44,7 @@
         <view class="result-label">查询结果</view>
         <view class="result-title">{{order.title || '订单物流'}}</view>
       </view>
-      <view class="status-pill">{{logistics.status || order.logisticsStatus || order.status}}</view>
+      <view wx:if="{{resultState === 'ok' && (logistics.status || order.logisticsStatus || order.status)}}" class="status-pill">{{logistics.status || order.logisticsStatus || order.status}}</view>
     </view>
     <view wx:if="{{order.id}}" class="result-row"><text>订单号</text><text class="result-value">{{order.id}}</text></view>
     <view wx:if="{{order.trackingNo}}" class="result-row"><text>快递信息</text><text class="result-value">{{order.carrier || '自动识别中'}} · {{order.trackingNo}}</text></view>
@@ -41,20 +60,32 @@
       </view>
     </view>
 
-    <view wx:if="{{errorText}}" class="inline-tip">{{errorText}}</view>
-    <button wx:if="{{!order.external}}" class="detail-button" bindtap="goOrderDetail">查看订单详情 <text>›</text></button>
+    <view wx:if="{{resultState !== 'ok' || errorText}}" class="inline-tip">
+      <view class="notice-title">{{resultTitle}}</view>
+      <view>{{errorText}}</view>
+      <view wx:if="{{guidance}}" class="notice-guidance">{{guidance}}</view>
+    </view>
+    <button wx:if="{{order.id && !order.external}}" class="detail-button" bindtap="goOrderDetail">查看订单详情 <text>›</text></button>
   </view>
 
   <view wx:elif="{{searched && errorText}}" class="empty-card">
     <view class="empty-icon">?</view>
-    <view class="empty-title">暂未查到物流</view>
+    <view class="empty-title">{{resultTitle}}</view>
     <view class="empty-sub">{{errorText}}</view>
+    <view wx:if="{{guidance}}" class="empty-sub">{{guidance}}</view>
   </view>
+
+  <view wx:if="{{searched}}" class="query-actions">
+    <button wx:if="{{resultState !== 'other_carrier' && resultState !== 'not_found'}}" class="secondary-button" disabled="{{loading}}" bindtap="retryQuery">{{resultState === 'verification_required' ? '补填后重新查询' : '重新查询'}}</button>
+    <button wx:if="{{copyNumber}}" class="secondary-button copy-button" bindtap="copyTrackingNumber">复制单号，官方查询</button>
+  </view>
+  <button wx:elif="{{query && carrierCode === 'JD'}}" class="detail-button" bindtap="copyTrackingNumber">没有青龙码？复制单号官方查</button>
 
   <view class="help-card">
     <view class="help-title">查询提示</view>
     <view class="help-item"><text class="help-index">1</text><text>可输入{{brandName}}订单号，例如 SYL 开头的号码</text></view>
     <view class="help-item"><text class="help-index">2</text><text>也可以直接粘贴商家提供的快递单号</text></view>
-    <view class="help-item"><text class="help-index">3</text><text>订单发货后，物流轨迹可能需要几分钟同步</text></view>
+    <view class="help-item"><text class="help-index">3</text><text>自动识别无结果时，选择实际快递公司后重试。顺丰或京东可能需要补充验证资料。</text></view>
+    <view class="help-item"><text class="help-index">4</text><text>刚发货的包裹可能尚无轨迹；未查到记录不代表包裹没有运输，请联系发件商家或使用承运商官方渠道核实。</text></view>
   </view>
 </view>
