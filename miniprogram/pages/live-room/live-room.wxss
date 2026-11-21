@@ -29,7 +29,10 @@
 .lesson-state { min-width: 70rpx; color: var(--color-primary); text-align: right; font-size: 20rpx; }
 .preview-badge { margin-left: 10rpx; padding: 2rpx 8rpx; border-radius: 999rpx; background: #f5e8d8; color: #a46c31; font-size: 18rpx; }
 .lesson-empty { padding: 30rpx 0 12rpx; color: #9da19f; text-align: center; font-size: 23rpx; }
-.info-desc { color: #5d6562; font-size: 26rpx; line-height: 1.8; }
+.info-desc { display: block; margin-top: 16rpx; color: #5d6562; font-size: 26rpx; line-height: 1.8; white-space: pre-wrap; }
+.info-picture { margin-top: 20rpx; }
+.info-image { display: block; width: 100%; border-radius: 16rpx; }
+.info-caption { display: block; margin-top: 10rpx; color: var(--color-text-3); font-size: 23rpx; line-height: 1.5; }
 .teacher-row { display: flex; align-items: center; margin-top: 24rpx; padding-top: 22rpx; border-top: 1rpx solid #eeebe6; }
 .teacher-avatar { width: 72rpx; height: 72rpx; margin-right: 15rpx; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary-text); text-align: center; line-height: 72rpx; font-weight: 700; }
 .teacher-name { color: #343a38; font-size: 27rpx; font-weight: 700; } .teacher-desc { margin-top: 3rpx; color: #999e9b; font-size: 21rpx; }

@@ -30,7 +30,7 @@ export const NAV_ITEMS = [
   { key: 'regions', name: '地区管理', icon: IconLocation, permission: 'content.manage' },
   { key: 'orders', name: '订单/退款', icon: IconFile, permission: 'orders.manage' },
   { key: 'logistics', name: '物流查询', icon: IconFile, permission: 'orders.manage' },
-  { key: 'verify', name: '签到/核销', icon: IconScan, permission: 'orders.manage' },
+  { key: 'verify', name: '签到/核销/补签', icon: IconScan, permission: 'orders.manage' },
   { key: 'customers', name: '用户管理', icon: IconUserGroup, permission: 'customers.manage' },
   { key: 'coupons', name: '优惠券管理', icon: IconGift, permission: 'marketing.manage' },
   { key: 'reviews', name: '评价管理', icon: IconMessage, permission: 'marketing.manage' },

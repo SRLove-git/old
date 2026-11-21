@@ -39,6 +39,12 @@ const orderColumns = [
       积分商品与普通现金商品相互独立。会员兑换时系统会实时校验并扣减积分和库存。
     </a-alert>
     <a-card title="积分商品" :bordered="false">
+      <template #extra>
+        <a-button type="primary" shape="round" @click="emit('edit', null)">
+          <template #icon><IconPlus /></template>
+          新建积分商品
+        </a-button>
+      </template>
       <a-table
         :columns="productColumns"
         :data="products"
@@ -132,15 +138,6 @@ const orderColumns = [
         </template>
       </a-table>
     </a-card>
-    <a-button
-      type="primary"
-      shape="round"
-      class="fab"
-      @click="emit('edit', null)"
-    >
-      <template #icon><IconPlus /></template>
-      新建积分商品
-    </a-button>
   </section>
 </template>
 
@@ -156,13 +153,5 @@ const orderColumns = [
 .muted {
   color: var(--color-text-3);
   font-size: 13px;
-}
-
-.fab {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 20;
-  box-shadow: 0 6px 20px rgba(29, 27, 22, 0.16);
 }
 </style>

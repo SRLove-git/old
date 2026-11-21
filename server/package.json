@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local src/index.js",
     "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --watch src/index.js",
+    "wechat-mp:spike": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/wechat-mp-spike.mjs",
+    "wechat-mp:newspic-spike": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/wechat-mp-newspic-spike.mjs",
     "test": "node --test"
   },
   "dependencies": {

@@ -1,6 +1,11 @@
 const store = require('../../utils/store.js')
 const { api } = require('../../utils/request.js')
 
+function awaitingUpdate(application) {
+  return application && (application.status === '待审核' ||
+    (application.status === '已通过' && !application.merchantAccountId && !application.loginUsername))
+}
+
 Page({
   data: {
     typeOptions: [
@@ -53,11 +58,11 @@ Page({
 
   startStatusPolling() {
     this.stopStatusPolling()
-    if (!this.data.application || this.data.application.status !== '待审核') return
+    if (!awaitingUpdate(this.data.application)) return
     this.statusTimer = setInterval(async () => {
       try {
         const application = await this.refreshApplication()
-        if (!application || application.status !== '待审核') this.stopStatusPolling()
+        if (!awaitingUpdate(application)) this.stopStatusPolling()
       } catch (e) {
         // 静默等待下一次同步，避免临时断网反复打扰用户。
       }
@@ -82,7 +87,7 @@ Page({
     const form = this.data.form
     const errors = {}
     if (!form.type) errors.type = '请选择个人或公司'
-    if (!form.name.trim()) errors.name = '请填写名称或联系人'
+    if (!form.name.trim()) errors.name = '请填写联系人姓名'
     if (!/^1\d{10}$/.test(form.phone)) errors.phone = '请输入正确的11位手机号'
     if (!form.address.trim()) errors.address = '请填写联系地址'
     if (!form.products.trim()) errors.products = '请填写主营产品或服务'

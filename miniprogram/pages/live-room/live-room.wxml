@@ -5,7 +5,7 @@
     <view class="course-hero">
       <image webp="{{true}}" src="{{live.coverImage}}" mode="aspectFill" />
       <view class="hero-shade"></view>
-      <view class="hero-info"><text class="course-type">{{live.courseType}}</text><view class="course-title">{{live.title}}</view><view class="course-teacher">主讲 · {{live.hostName}}</view></view>
+      <view class="hero-info"><text class="course-type">{{live.courseType}}</text><view class="course-title">{{live.title}}</view><view class="course-teacher"><text wx:if="{{live.publisherType === 'platform'}}">平台自营 · </text>主讲 · {{live.hostName}}</view></view>
     </view>
 
     <view wx:if="{{playableUrl && (purchased || selectedLesson.isPreview)}}" class="player-wrap">
@@ -44,8 +44,14 @@
     </view>
 
     <view class="section-card">
-      <view class="section-title">课程介绍</view>
-      <view class="info-desc">{{live.description || '跟着老师循序渐进学习，每一节都讲得清楚、练得明白。'}}</view>
+      <view wx:if="{{live.detailBlocks.length}}" class="section-title">课程介绍</view>
+      <block wx:for="{{live.detailBlocks}}" wx:for-item="block" wx:key="_key">
+        <text wx:if="{{block.type === 'text'}}" class="info-desc">{{block.text}}</text>
+        <view wx:elif="{{block.type === 'image'}}" class="info-picture">
+          <image webp="{{true}}" class="info-image" src="{{block.src}}" mode="widthFix" show-menu-by-longpress />
+          <text wx:if="{{block.caption}}" class="info-caption">{{block.caption}}</text>
+        </view>
+      </block>
       <view class="teacher-row"><view class="teacher-avatar">师</view><view><view class="teacher-name">{{live.hostName}}</view><view class="teacher-desc">{{copy.courseTeacherDescription}}</view></view></view>
     </view>
 

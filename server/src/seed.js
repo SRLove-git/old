@@ -307,9 +307,9 @@ const lives = [
 ]
 
 const banners = [
-  { id: 1, title: '香山赏红叶 · 本周出发', sub: '15人成团 · 会员价¥79起', tone: 'linear-gradient(135deg,#c96b2a,#f1b35a)', emoji: '🍁', cat: 1 },
-  { id: 2, title: '大理5日研学 · 慢慢游', sub: '全程领队 · 会员价¥2780起', tone: 'linear-gradient(135deg,#2b6f9c,#8fc6e7)', emoji: '🏔️', cat: 2 },
-  { id: 3, title: '免费入会领2张券', sub: '会员价更划算，本单最高省¥100', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', emoji: '🎁', cat: 0 }
+  { id: 1, title: '香山赏红叶 · 本周出发', sub: '15人成团 · 会员价¥79起', tone: 'linear-gradient(135deg,#c96b2a,#f1b35a)', emoji: '🍁', cat: 1, linkUrl: '/pages/detail/detail?id=1' },
+  { id: 2, title: '大理5日研学 · 慢慢游', sub: '全程领队 · 会员价¥2780起', tone: 'linear-gradient(135deg,#2b6f9c,#8fc6e7)', emoji: '🏔️', cat: 2, linkUrl: '/pages/detail/detail?id=3' },
+  { id: 3, title: '免费入会领2张券', sub: '会员价更划算，本单最高省¥100', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', emoji: '🎁', cat: 0, linkUrl: '/pages/profile/profile' }
 ]
 
 const contentPosts = [

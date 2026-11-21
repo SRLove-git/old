@@ -38,7 +38,7 @@ function decorateBanner(banner) {
     ...banner,
     mediaType: banner.mediaType === 'video' ? 'video' : 'image',
     mediaUrl: store.assetUrl(banner.mediaUrl || banner.imageUrl),
-    linkUrl: String(banner.linkUrl || '')
+    linkUrl: String(banner.linkUrl || '').trim()
   }
 }
 
@@ -67,6 +67,7 @@ Page({
     copy: {},
     filing: {},
     newsPosts: [],
+    hasNews: false,
     videoPosts: []
   },
 
@@ -205,6 +206,7 @@ Page({
     })
     const display = store.getHomeDisplay()
     this.setData({
+      hasNews: visible.some((item) => item.type === 'news'),
       newsPosts: visible.filter((item) => item.type === 'news' && item.featured).slice(0, display.newsLimit),
       videoPosts: visible.filter((item) => item.type === 'video' && item.featured).slice(0, display.videoLimit)
     })
@@ -337,29 +339,52 @@ Page({
   },
 
   goBanner(e) {
-    const linkUrl = String(e.currentTarget.dataset.link || '')
+    const linkUrl = String(e.currentTarget.dataset.link || '').trim()
+    if (!linkUrl) return
+    const fail = () => wx.showToast({ title: '暂时无法打开该链接', icon: 'none' })
     if (linkUrl.startsWith('https://')) {
-      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(linkUrl)}` })
+      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(linkUrl)}`, fail })
       return
     }
-    if (linkUrl.startsWith('/pages/')) {
-      const path = linkUrl.split('?')[0]
-      const tabPages = ['/pages/index/index', '/pages/list/list', '/pages/lives/lives', '/pages/profile/profile']
-      if (path === '/pages/list/list') {
-        const category = linkUrl.match(/[?&](?:category|cat)=([^&]+)/)
-        if (category) wx.setStorageSync('pendingCat', Number(decodeURIComponent(category[1])))
+    if (!linkUrl.startsWith('/pages/')) {
+      fail()
+      return
+    }
+    const path = linkUrl.split('?')[0]
+    if (path === '/pages/list/list') {
+      const match = linkUrl.match(/[?&](?:category|cat)=([^&]*)/)
+      let category = 'all'
+      if (match && match[1]) {
+        try {
+          const value = decodeURIComponent(match[1])
+          if (value !== 'all') {
+            const id = Number(value)
+            if (!/^\d+$/.test(value) || !Number.isSafeInteger(id)) {
+              fail()
+              return
+            }
+            if (id > 0) category = id
+          }
+        } catch (error) {
+          fail()
+          return
+        }
       }
-      if (tabPages.includes(path)) wx.switchTab({ url: path })
-      else wx.navigateTo({ url: linkUrl })
+      wx.setStorageSync('pendingCat', category)
+      wx.switchTab({
+        url: path,
+        fail: () => {
+          if (wx.getStorageSync('pendingCat') === category) wx.removeStorageSync('pendingCat')
+          fail()
+        }
+      })
       return
     }
-    const cat = Number(e.currentTarget.dataset.cat)
-    if (!cat) {
-      wx.switchTab({ url: '/pages/profile/profile' })
+    if (['/pages/index/index', '/pages/lives/lives', '/pages/profile/profile'].includes(path)) {
+      wx.switchTab({ url: path, fail })
       return
     }
-    wx.setStorageSync('pendingCat', cat)
-    wx.switchTab({ url: '/pages/list/list' })
+    wx.navigateTo({ url: linkUrl, fail })
   },
 
   goDetail(e) {

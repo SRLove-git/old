@@ -51,33 +51,36 @@ router.get('/activities', merchantAuth, wrap((req) => store.listActivitiesForDis
 router.post('/activities', merchantAuth, wrap((req) => store.createActivity({ ...req.body, publisherType: 'merchant', managerId: merchantSession(req).merchantId })))
 router.put('/activities/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'activities', req.params.id)
-  return store.updateActivity(req.params.id, { ...req.body, publisherType: 'merchant', managerId: merchantSession(req).merchantId })
+  const merchantId = merchantSession(req).merchantId
+  return store.updateActivity(req.params.id, { ...req.body, publisherType: 'merchant', managerId: merchantId }, { managerId: merchantId })
 }))
 router.delete('/activities/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'activities', req.params.id)
-  return store.deleteActivity(req.params.id)
+  return store.deleteActivity(req.params.id, { managerId: merchantSession(req).merchantId })
 }))
 
 router.get('/products', merchantAuth, wrap((req) => store.listProducts().filter((item) => String(item.managerId) === String(merchantSession(req).merchantId))))
 router.post('/products', merchantAuth, wrap((req) => store.createProduct({ ...req.body, publisherType: 'merchant', managerId: merchantSession(req).merchantId })))
 router.put('/products/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'products', req.params.id)
-  return store.updateProduct(req.params.id, { ...req.body, publisherType: 'merchant', managerId: merchantSession(req).merchantId })
+  const merchantId = merchantSession(req).merchantId
+  return store.updateProduct(req.params.id, { ...req.body, publisherType: 'merchant', managerId: merchantId }, { managerId: merchantId })
 }))
 router.delete('/products/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'products', req.params.id)
-  return store.deleteProduct(req.params.id)
+  return store.deleteProduct(req.params.id, { managerId: merchantSession(req).merchantId })
 }))
 
-router.get('/courses', merchantAuth, wrap((req) => (store.get().lives || []).filter((item) => String(item.managerId) === String(merchantSession(req).merchantId))))
-router.post('/courses', merchantAuth, wrap((req) => store.createLive({ ...req.body, managerId: merchantSession(req).merchantId })))
+router.get('/courses', merchantAuth, wrap((req) => (store.get().lives || []).filter((item) => item.publisherType === 'merchant' && String(item.managerId) === String(merchantSession(req).merchantId))))
+router.post('/courses', merchantAuth, wrap((req) => store.createLive({ ...req.body, publisherType: 'merchant', managerId: merchantSession(req).merchantId })))
 router.put('/courses/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'lives', req.params.id)
-  return store.updateLive(req.params.id, { ...req.body, managerId: merchantSession(req).merchantId })
+  const merchantId = merchantSession(req).merchantId
+  return store.updateLive(req.params.id, { ...req.body, publisherType: 'merchant', managerId: merchantId }, { managerId: merchantId })
 }))
 router.delete('/courses/:id', merchantAuth, wrap((req) => {
   requireMerchantResource(req, 'lives', req.params.id)
-  return store.deleteLive(req.params.id)
+  return store.deleteLive(req.params.id, { managerId: merchantSession(req).merchantId })
 }))
 
 router.post('/uploads/image', merchantAuth, wrap(async (req) => {

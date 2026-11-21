@@ -12,10 +12,15 @@ import { pendingStatusForMode, serviceModeOfOffering } from './lib/order-fulfill
 import { COMMISSION_STATUS, commissionAmountOf, sumCommissions } from './lib/commission-values.js'
 import { normalizePaidOfferingPrices, requiredPaidPrice } from './lib/offering-prices.js'
 import { contentMediaUrl, normalizeContentPost } from './lib/content-posts.js'
+import { attempts, isImported, officialAccountName, publicationGroups, publicationView, recordKeys, withdrawn } from './lib/wechat-publication-state.js'
+import { httpError } from './lib/http.js'
+import { descriptionFields } from './lib/description-blocks.js'
 import { normalizeBalanceRechargeAmounts } from './lib/balance-config.js'
 import { fenToYuan, multiplyFen, yuanToFen } from './lib/money.js'
 import { validateActivityScheduleDates } from './lib/activity-schedules.js'
 import { transferFailReasonText } from './lib/wechat-transfer.js'
+import { MERCHANT_PERMISSION_GROUPS } from './lib/permissions.js'
+import { availableBannerLink, bannerTargets, BANNER_LINK_VERSION, normalizeBanners, storedBannerLink } from './lib/banner-links.js'
 
 export { maskPhone, normalizePhone } from './lib/domain-values.js'
 export { scheduleDaysUntil } from './lib/refund-policy.js'
@@ -27,6 +32,11 @@ const DATA_FILE = process.env.DATA_FILE
   : path.join(__dirname, '..', 'data.json')
 
 let db = null
+
+function restoreObject(target, snapshot) {
+  Object.keys(target).forEach((key) => delete target[key])
+  Object.assign(target, snapshot)
+}
 
 function normalizeActivities(db) {
   const paidPrice = (value) => {
@@ -136,6 +146,18 @@ function normalizeContent(db) {
     db.contentPosts = clone(seed.contentPosts || [])
   }
   db.contentPosts.forEach((post) => {
+    const state = post.wechat
+    if (isImported(state) && !state.sourceVerification) {
+      if (state.importKey) {
+        state.sourceVerification = 'wechat-api'
+        state.listLink = state.importUrl
+        state.importUrl = ''
+        state.legacyDate = post.publishedAt
+        post.publishedAt = ''
+      } else {
+        state.sourceVerification = 'unverified'
+      }
+    }
     if (!Array.isArray(post.contentBlocks) || !post.contentBlocks.length) {
       post.contentBlocks = String(post.content || '').trim()
         ? [{ type: 'text', text: String(post.content).trim() }]
@@ -466,54 +488,24 @@ function normalizeManagers(database) {
 }
 
 function normalizeMerchantContent(database) {
-  const managers = (database.managers || []).filter((item) => item.status !== 3)
-  const fallback = managers[0]
-  if (!fallback) return false
   let changed = false
-  ;(database.activities || []).forEach((item) => {
-    if (item.publisherType === 'platform') {
-      if (item.managerId != null) {
-        item.managerId = null
-        changed = true
-      }
-      return
+  const normalize = (item) => {
+    const hasManagerId = item.managerId != null && item.managerId !== ''
+    const publisherType = item.publisherType === 'platform'
+      ? 'platform'
+      : (item.publisherType === 'merchant' || hasManagerId ? 'merchant' : 'platform')
+    // 孤立或已删除商家的历史内容仍保留原商家归属，交由运营显式纠正；
+    // 不能静默转成平台自营后继续公开，也不能猜测另一个商家接管。
+    const managerId = publisherType === 'merchant' ? item.managerId : null
+    if (item.publisherType !== publisherType || item.managerId !== managerId) {
+      item.publisherType = publisherType
+      item.managerId = managerId
+      changed = true
     }
-    if (item.managerId && managers.some((manager) => String(manager.id) === String(item.managerId))) {
-      if (item.publisherType !== 'merchant') {
-        item.publisherType = 'merchant'
-        changed = true
-      }
-      return
-    }
-    item.managerId = fallback.id
-    item.publisherType = 'merchant'
-    changed = true
-  })
-  ;(database.products || []).forEach((item) => {
-    if (item.publisherType === 'platform') {
-      if (item.managerId != null) {
-        item.managerId = null
-        changed = true
-      }
-      return
-    }
-    if (item.managerId && managers.some((manager) => String(manager.id) === String(item.managerId))) {
-      if (item.publisherType !== 'merchant') {
-        item.publisherType = 'merchant'
-        changed = true
-      }
-      return
-    }
-    item.managerId = fallback.id
-    item.publisherType = 'merchant'
-    changed = true
-  })
-  ;(database.lives || []).forEach((item) => {
-    if (item.managerId && managers.some((manager) => String(manager.id) === String(item.managerId))) return
-    const matched = managers.find((manager) => String(manager.name) === String(item.hostName)) || fallback
-    item.managerId = matched.id
-    changed = true
-  })
+  }
+  ;(database.activities || []).forEach(normalize)
+  ;(database.products || []).forEach(normalize)
+  ;(database.lives || []).forEach(normalize)
   return changed
 }
 
@@ -626,6 +618,7 @@ export function init() {
     normalizeConfig(db)
     normalizeContent(db)
     normalizeCollections(db)
+    normalizeBanners(db)
     normalizeCoupons(db)
     normalizeTimestamps(db)
     normalizeManagers(db)
@@ -642,6 +635,7 @@ export function init() {
   normalizeConfig(db)
   normalizeContent(db)
   normalizeCollections(db)
+  normalizeBanners(db)
   normalizeCoupons(db)
   normalizeManagers(db)
   normalizeMerchantContent(db)
@@ -844,15 +838,234 @@ export function changeAdminPassword(id, oldPassword, newPassword, options = {}) 
 }
 
 export function listMerchantAccounts() {
-  return (db.merchantAccounts || []).map(({ salt: _salt, passwordHash: _passwordHash, ...account }) => account)
+  return (db.merchantAccounts || []).map((account) => merchantAccountView(account))
+}
+
+const MERCHANT_PERMISSIONS = new Set(MERCHANT_PERMISSION_GROUPS.map((item) => item.key))
+
+function merchantPermissions(value, fallback = [...MERCHANT_PERMISSIONS]) {
+  if (value !== undefined && !Array.isArray(value)) throw badRequest('商户发布权限格式不正确')
+  const permissions = Array.isArray(value) ? [...new Set(value.map(String))] : [...fallback]
+  if (permissions.some((permission) => !MERCHANT_PERMISSIONS.has(permission))) throw badRequest('商户发布权限不正确')
+  return permissions
+}
+
+function merchantAccountForApplication(application) {
+  if (!application) return null
+  return (db.merchantAccounts || []).find((account) => (
+    String(account.providerApplicationId || '') === String(application.id)
+      || (application.merchantId != null && String(account.merchantId) === String(application.merchantId))
+      || (application.loginUsername && String(account.username).toLowerCase() === String(application.loginUsername).toLowerCase())
+  )) || null
+}
+
+function merchantAccountView(account) {
+  const { salt: _salt, passwordHash: _passwordHash, ...safe } = account
+  const application = account.providerApplicationId
+    ? (db.providerApplications || []).find((item) => String(item.id) === String(account.providerApplicationId))
+    : null
+  return {
+    ...safe,
+    providerApplicationName: application?.name || '',
+    providerApplicationStatus: application?.status || ''
+  }
+}
+
+export function listProviderApplications() {
+  return (db.providerApplications || []).map((application) => {
+    const account = merchantAccountForApplication(application)
+    return {
+      ...application,
+      merchantAccountId: account?.id || '',
+      merchantId: account?.merchantId ?? application.merchantId ?? null,
+      loginUsername: account?.username || application.loginUsername || '',
+      accountStatus: account ? Number(account.status) : null,
+      accountCreatedAt: account?.createdAt || application.accountCreatedAt || ''
+    }
+  })
+}
+
+export function listMerchantAccountCandidates() {
+  return listProviderApplications()
+    .filter((application) => application.status === '已通过' && !application.merchantAccountId)
+    .map((application) => ({
+      id: application.id,
+      name: application.name,
+      phone: application.phone,
+      type: application.type,
+      contactName: application.contactName || application.name || '',
+      contactPhone: application.contactPhone || application.phone || '',
+      contactWechat: application.contactWechat || '',
+      cooperationMode: application.cooperationMode || '',
+      cooperationContent: application.cooperationContent || '',
+      cooperationStartAt: application.cooperationStartAt || '',
+      cooperationEndAt: application.cooperationEndAt || '',
+      cooperationRemark: application.cooperationRemark || ''
+    }))
+}
+
+function nextMerchantId() {
+  let value = Date.now()
+  const used = new Set([
+    ...(db.managers || []).map((item) => String(item.id)),
+    ...(db.merchantAccounts || []).map((item) => String(item.merchantId))
+  ])
+  while (used.has(String(value))) value += 1
+  return value
+}
+
+function nextMerchantInviteCode(merchantId) {
+  const used = new Set((db.managers || []).map((item) => String(item.inviteCode || '').toUpperCase()))
+  const base = `SYL${String(merchantId).slice(-6)}`
+  if (!used.has(base)) return base
+  let suffix = 1
+  while (used.has(`${base}${suffix}`)) suffix += 1
+  return `${base}${suffix}`
+}
+
+export function createMerchantAccount(data = {}) {
+  const username = String(data.username || '').trim().toLowerCase()
+  const password = String(data.password || '')
+  if (!/^[a-z0-9_]{4,24}$/.test(username)) throw badRequest('账号需为4-24位字母、数字或下划线')
+  if (password.length < 8) throw badRequest('临时密码至少8位')
+  if ((db.merchantAccounts || []).some((item) => String(item.username || '').toLowerCase() === username)) throw badRequest('该商户登录账号已存在')
+
+  const providerApplicationId = String(data.providerApplicationId || '').trim()
+  const application = providerApplicationId
+    ? (db.providerApplications || []).find((item) => String(item.id) === providerApplicationId)
+    : null
+  if (providerApplicationId && !application) throw badRequest('关联的服务商申请不存在')
+  if (application && application.status !== '已通过') throw badRequest('只能为已通过的服务商申请创建商户账号')
+  if (application && merchantAccountForApplication(application)) throw badRequest('该服务商申请已经创建过商户账号')
+
+  const shopName = String(data.shopName || '').trim()
+  const contactName = String(data.contactName || application?.contactName || application?.name || '').trim()
+  const contactPhone = normalizePhone(data.contactPhone || data.phone || application?.contactPhone || application?.phone)
+  const contactWechat = String(data.contactWechat || application?.contactWechat || '').trim()
+  const shopIntro = String(data.shopIntro || data.intro || application?.intro || '').trim()
+  const address = String(data.address || application?.address || '').trim()
+  const cooperationMode = String(data.cooperationMode || application?.cooperationMode || '').trim()
+  const cooperationContent = String(data.cooperationContent || application?.cooperationContent || '').trim()
+  if (!shopName) throw badRequest('请填写商户名称')
+  if (!contactName) throw badRequest('请填写合作联系人')
+  if (!/^1\d{10}$/.test(contactPhone)) throw badRequest('请填写正确的11位联系电话')
+
+  // 只能通过申请的 userId 复用既有主理人，禁止按姓名或手机号猜测关联，避免串用他人账本。
+  let manager = null
+  if (application?.merchantId != null) manager = findManager(application.merchantId)
+  if (manager && application?.userId && managerUserIdOf(manager) && managerUserIdOf(manager) !== String(application.userId)) {
+    throw badRequest('申请关联的主理人身份不一致，请先核对历史数据')
+  }
+  if (!manager && application?.userId) {
+    manager = (db.managers || []).find((item) => managerUserIdOf(item) === String(application.userId)) || null
+  }
+  if (manager && Number(manager.status) === 3) throw badRequest('关联主理人已被清退，不能创建商户账号')
+
+  const merchantId = manager?.id ?? nextMerchantId()
+  if ((db.merchantAccounts || []).some((item) => String(item.merchantId) === String(merchantId))) throw badRequest('该商户主体已经存在登录账号')
+  const permissions = merchantPermissions(data.permissions)
+  const status = Number(data.status ?? 1) === 1 ? 1 : 0
+  const now = nowText()
+  const credentials = passwordRecord(password)
+  const rollbackState = {
+    managers: clone(db.managers || []),
+    merchantAccounts: clone(db.merchantAccounts || []),
+    providerApplications: clone(db.providerApplications || []),
+    customers: clone(db.customers || []),
+    logs: clone(db.logs || [])
+  }
+
+  try {
+    if (!manager) {
+      manager = {
+        id: merchantId,
+        userId: application?.userId || null,
+        name: contactName,
+        shopName,
+        shopIntro,
+        phone: contactPhone,
+        address,
+        cooperationMode,
+        cooperationContent,
+        inviteCode: nextMerchantInviteCode(merchantId),
+        commissionRate: 8,
+        status: 1,
+        totalPerformance: 0,
+        totalCommission: 0,
+        totalCustomers: 0,
+        createdAt: now,
+        createdBy: 'admin-merchant-account'
+      }
+      db.managers.push(manager)
+    } else {
+      Object.assign(manager, {
+        userId: manager.userId || application?.userId || null,
+        shopName,
+        shopIntro: shopIntro || manager.shopIntro || '',
+        phone: contactPhone,
+        address: address || manager.address || '',
+        cooperationMode: cooperationMode || manager.cooperationMode || '',
+        cooperationContent: cooperationContent || manager.cooperationContent || ''
+      })
+    }
+
+    const accountIdBase = `merchant-${merchantId}`
+    let accountId = accountIdBase
+    let accountSuffix = 1
+    while ((db.merchantAccounts || []).some((item) => String(item.id) === accountId)) {
+      accountId = `${accountIdBase}-${accountSuffix}`
+      accountSuffix += 1
+    }
+    const account = {
+      id: accountId,
+      merchantId,
+      providerApplicationId: application?.id || null,
+      userId: application?.userId || manager.userId || null,
+      username,
+      phone: contactPhone,
+      shopName,
+      contactName,
+      contactWechat,
+      cooperationMode,
+      cooperationContent,
+      cooperationStartAt: String(data.cooperationStartAt || application?.cooperationStartAt || '').trim(),
+      cooperationEndAt: String(data.cooperationEndAt || application?.cooperationEndAt || '').trim(),
+      cooperationRemark: String(data.cooperationRemark || application?.cooperationRemark || '').trim(),
+      permissions,
+      status,
+      createdAt: now,
+      ...credentials
+    }
+    db.merchantAccounts.push(account)
+
+    if (application) {
+      application.merchantId = merchantId
+      application.merchantAccountId = account.id
+      application.loginUsername = username
+      application.shopName = shopName
+      application.accountCreatedAt = now
+    }
+    const customer = manager.userId ? db.customers.find((item) => String(item.id) === String(manager.userId)) : null
+    if (customer) customer.isManager = true
+    addLog('商户账号管理', `创建商户账号 ${username}（${shopName}）${application ? `，关联申请 ${application.id}` : '，独立创建'}`)
+    save()
+    return merchantAccountView(account)
+  } catch (error) {
+    db.managers = rollbackState.managers
+    db.merchantAccounts = rollbackState.merchantAccounts
+    db.providerApplications = rollbackState.providerApplications
+    db.customers = rollbackState.customers
+    db.logs = rollbackState.logs
+    throw error
+  }
 }
 
 export function updateMerchantAccount(id, data = {}) {
   const account = (db.merchantAccounts || []).find((item) => String(item.id) === String(id))
   if (!account) throw badRequest('商户账号不存在')
-  account.status = Number(data.status ?? account.status) === 1 ? 1 : 0
-  account.permissions = [...new Set(Array.isArray(data.permissions) ? data.permissions.map(String) : account.permissions)]
-  account.updatedAt = nowText()
+  const permissions = merchantPermissions(data.permissions, account.permissions)
+  const status = Number(data.status ?? account.status) === 1 ? 1 : 0
+  Object.assign(account, { status, permissions, updatedAt: nowText() })
   addLog('权限管理', `更新商户账号 ${account.username} 的发布权限或状态`)
   save()
   return listMerchantAccounts().find((item) => String(item.id) === String(id))
@@ -871,6 +1084,7 @@ export function resetMerchantPassword(id, password) {
 export function reset() {
   db = clone(seed)
   normalizeCollections(db)
+  normalizeBanners(db)
   normalizeCoupons(db)
   normalizeConfig(db)
   normalizeManagers(db)
@@ -968,19 +1182,43 @@ export function searchActivities(keyword, category, options = {}) {
   })
 }
 
+function publisherOwnership(payload = {}, current = {}) {
+  const hasManager = payload.managerId != null && payload.managerId !== ''
+  const inheritedType = current.publisherType === 'merchant' || current.publisherType === 'platform'
+    ? current.publisherType
+    : (current.managerId != null ? 'merchant' : null)
+  const publisherType = payload.publisherType == null
+    ? (inheritedType || (hasManager ? 'merchant' : 'platform'))
+    : String(payload.publisherType)
+  if (!['platform', 'merchant'].includes(publisherType)) throw badRequest('发布主体类型不正确')
+  if (publisherType === 'platform') return { publisherType, managerId: null }
+  const requestedManagerId = hasManager ? payload.managerId : current.managerId
+  const manager = findManager(requestedManagerId)
+  if (!manager || Number(manager.status) === 3) throw badRequest('请先选择有效商家')
+  return { publisherType, managerId: manager.id }
+}
+
+function nextCatalogId() {
+  const used = new Set([...(db.activities || []), ...(db.products || [])].map((item) => String(item.id)))
+  let id = Date.now()
+  while (used.has(String(id))) id += 1
+  return id
+}
+
+function merchantOwned(item, managerId) {
+  return item.publisherType === 'merchant' && String(item.managerId) === String(managerId)
+}
+
 export function createActivity(data) {
-  const publisherType = data && data.publisherType === 'platform' ? 'platform' : 'merchant'
-  const managerId = publisherType === 'platform' ? null : Number(data && data.managerId)
-  if (publisherType === 'merchant' && (!managerId || !findManager(managerId))) throw badRequest('请先选择有效商家')
+  const ownership = publisherOwnership(data)
   const activity = {
-    id: Date.now(),
     soldCount: 0,
     hasSku: false,
     skus: [],
     schedules: [],
     ...(data || {}),
-    publisherType,
-    managerId,
+    id: nextCatalogId(),
+    ...ownership,
     regionIds: normalizeRegionIds(data && data.regionIds)
   }
   validateActivityScheduleDates(activity)
@@ -991,13 +1229,12 @@ export function createActivity(data) {
   return activity
 }
 
-export function updateActivity(id, data) {
-  const idx = db.activities.findIndex((a) => String(a.id) === String(id))
+export function updateActivity(id, data, options = {}) {
+  const idx = db.activities.findIndex((a) => String(a.id) === String(id)
+    && (options.managerId == null || merchantOwned(a, options.managerId)))
   if (idx < 0) return null
   const next = { ...db.activities[idx], ...(data || {}), id: db.activities[idx].id }
-  next.publisherType = next.publisherType === 'platform' ? 'platform' : 'merchant'
-  next.managerId = next.publisherType === 'platform' ? null : Number(next.managerId)
-  if (next.publisherType === 'merchant' && (!next.managerId || !findManager(next.managerId))) throw badRequest('请先选择有效商家')
+  Object.assign(next, publisherOwnership(data, db.activities[idx]))
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   validateActivityScheduleDates(next)
   normalizePaidOfferingPrices(next, '活动')
@@ -1007,8 +1244,13 @@ export function updateActivity(id, data) {
   return next
 }
 
-export function deleteActivity(id) {
-  db.activities = db.activities.filter((activity) => String(activity.id) !== String(id))
+export function deleteActivity(id, options = {}) {
+  const activity = db.activities.find((item) => String(item.id) === String(id)
+    && (options.managerId == null || merchantOwned(item, options.managerId)))
+  if (!activity) return null
+  db.activities = options.managerId == null
+    ? db.activities.filter((item) => String(item.id) !== String(id))
+    : db.activities.filter((item) => item !== activity)
   save()
   return { ok: true }
 }
@@ -1065,16 +1307,28 @@ export function deleteCategory(id) {
 }
 
 export function listContentPosts(options = {}) {
-  let rows = (get().contentPosts || []).slice()
-  if (options.type) rows = rows.filter((item) => item.type === options.type)
-  if (options.publishedOnly) rows = rows.filter((item) => item.status === 1)
-  return rows.sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
+  const database = get()
+  const revoked = new Set(database.wechatWithdrawnPublications)
+  return publicationGroups(database.contentPosts)
+    .map(group => publicationView(group, revoked, options.includeInternal))
+    .filter(post => (!options.type || post.type === options.type) && (!options.publishedOnly || post.status === 1))
+    .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')))
+}
+
+export function findContentPost(id) {
+  return groupForPost(id)?.primary || null
+}
+
+function editableContent(data) {
+  const safeData = { ...(data || {}) }
+  for (const key of ['id', 'wechat', 'aliasIds', 'officialArticleUrl', 'officialLinkPending']) delete safeData[key]
+  return safeData
 }
 
 export function createContentPost(data) {
   get()
   const post = {
-    id: `CONTENT${Date.now()}`,
+    id: `CONTENT${crypto.randomUUID()}`,
     type: 'news',
     title: '',
     summary: '',
@@ -1088,7 +1342,7 @@ export function createContentPost(data) {
     regionIds: [],
     featured: false,
     status: 1,
-    ...(data || {})
+    ...editableContent(data)
   }
   post.regionIds = normalizeRegionIds(post.regionIds)
   normalizeContentPost(post)
@@ -1097,22 +1351,176 @@ export function createContentPost(data) {
   return post
 }
 
+function commitContentChanges(fields) {
+  const next = { ...db, ...fields }
+  writeJsonFileAtomicSync(DATA_FILE, next)
+  Object.assign(db, fields)
+}
+
+function groupForPost(id) {
+  return publicationGroups(get().contentPosts).find(group => group.posts.some(post => String(post.id) === String(id)))
+}
+
+function removedPublications(database) {
+  // 旧数据只保存链接或篇次，没有删除时间。
+  return new Map((database.wechatRemovedImports || []).map(entry => Array.isArray(entry) ? entry : [entry, 0]))
+}
+
+function mergeImportedPost(existing, copies, row, manual, operatorId) {
+  const state = { ...existing?.wechat }
+  const confirmedCopy = !state.confirmedAt && copies.find(post => post.wechat.confirmedAt)
+  if (confirmedCopy) {
+    for (const field of ['confirmedAt', 'confirmedBy', 'importUrl']) state[field] = confirmedCopy.wechat[field]
+  }
+  if (row.key) state.importKey = row.key
+  if (row.listLink) state.listLink = row.listLink
+  if (row.updatedAt) state.updatedAt = row.updatedAt
+  state.sourceVerification = state.importKey ? 'wechat-api' : 'operator-confirmed'
+  if (manual) {
+    state.importUrl = row.url
+    state.confirmedAt = new Date().toISOString()
+    state.confirmedBy = operatorId
+  }
+  const post = { ...(existing || {
+    id: `WX${crypto.randomUUID()}`, type: 'news', regionIds: [], status: 1, featured: false,
+    originalUrl: '', content: '', contentBlocks: [], publishedAt: '', summary: '', coverImage: ''
+  }), title: row.title, source: officialAccountName, wechat: state }
+  if (confirmedCopy) {
+    post.publishedAt = confirmedCopy.publishedAt
+    if (confirmedCopy.status === 0) post.status = 0
+  }
+  if (manual) post.publishedAt = row.publishedAt
+  for (const field of ['summary', 'coverImage']) {
+    if (Object.hasOwn(row, field)) post[field] = row[field]
+  }
+  return post
+}
+
+export function importWechatPublications(rows, { manual = false, operatorId } = {}) {
+  const database = get()
+  const nextPosts = database.contentPosts.slice()
+  const removed = removedPublications(database)
+  const revoked = new Set(database.wechatWithdrawnPublications)
+  let added = 0
+  let changed = false
+  for (const row of rows) {
+    const keys = recordKeys({ importKey: row.key, importUrl: row.url, listLink: row.listLink })
+    const matches = record => recordKeys(record).some(key => keys.includes(key))
+    const target = row.postId && nextPosts.find(post => post.id === row.postId)
+    if (row.postId && !isImported(target?.wechat)) throw httpError(409, '导入记录已变更，请刷新列表')
+
+    const copies = nextPosts.filter(post => isImported(post.wechat) && matches(post.wechat))
+    const authored = nextPosts.filter(post => !isImported(post.wechat) && attempts(post.wechat).some(matches))
+    if (target && (authored.length || copies.some(post => post.id !== target.id && post.wechat.importKey && post.wechat.importKey !== target.wechat.importKey))) {
+      throw httpError(409, '原文已关联其他发表记录，请核对文章')
+    }
+    const knownKeys = new Set([...keys, ...copies.flatMap(post => recordKeys(post.wechat)),
+      ...authored.flatMap(post => attempts(post.wechat).filter(matches).flatMap(recordKeys)),
+      ...recordKeys(target?.wechat)])
+    if (row.deleted || [...knownKeys].some(key => revoked.has(key))) {
+      if (manual) throw httpError(409, '微信已撤回或封禁该文章')
+      for (const key of knownKeys) {
+        if (!revoked.has(key)) { revoked.add(key); changed = true }
+      }
+      for (const post of copies) {
+        if (post.status === 0) continue
+        nextPosts[nextPosts.indexOf(post)] = { ...post, status: 0 }
+        changed = true
+      }
+      continue
+    }
+    const deletedAt = Math.max(-1, ...[...knownKeys].filter(key => removed.has(key)).map(key => removed.get(key)))
+    if (!manual && deletedAt >= 0) {
+      const reimported = copies.some(post => Date.parse(post.wechat.confirmedAt) >= deletedAt)
+      if (!reimported) {
+        // 删除时还没有永久链接的副本，可能在后一次同步才与已删除记录关联。
+        for (const post of copies) { nextPosts.splice(nextPosts.indexOf(post), 1); changed = true }
+        for (const key of knownKeys) {
+          if (!removed.has(key)) { removed.set(key, deletedAt); changed = true }
+        }
+        continue
+      }
+    }
+    if (deletedAt >= 0) {
+      for (const key of knownKeys) removed.delete(key)
+      changed = true
+    }
+    for (const post of authored) {
+      if (!row.key) continue
+      const bind = record => matches(record) && !recordKeys(record).includes(row.key)
+        ? { ...record, publicationKey: row.key } : record
+      const state = post.wechat
+      const updated = bind(state)
+      const history = (state.history || []).map(bind)
+      if (updated !== state || history.some((record, index) => record !== state.history[index])) {
+        nextPosts[nextPosts.indexOf(post)] = { ...post, wechat: { ...updated, history } }
+        changed = true
+      }
+    }
+    const existing = target || copies.find(post => post.wechat.importKey === row.key) || copies[0]
+    if (!existing && authored.length) continue
+    const post = mergeImportedPost(existing, copies, row, manual, operatorId)
+    if (existing) {
+      if (JSON.stringify(existing) === JSON.stringify(post)) continue
+      nextPosts[nextPosts.indexOf(existing)] = post
+    } else {
+      nextPosts.unshift(normalizeContentPost(post))
+      added++
+    }
+    changed = true
+  }
+  if (changed) commitContentChanges({
+    contentPosts: nextPosts, wechatRemovedImports: [...removed], wechatWithdrawnPublications: [...revoked]
+  })
+  return { added }
+}
+
 export function updateContentPost(id, data) {
   get()
-  const idx = db.contentPosts.findIndex((item) => String(item.id) === String(id))
-  if (idx < 0) return null
-  const next = { ...db.contentPosts[idx], ...(data || {}), id: db.contentPosts[idx].id }
+  const primary = groupForPost(id)?.primary
+  if (!primary) return null
+  const idx = db.contentPosts.indexOf(primary)
+  const next = { ...primary, ...editableContent(data) }
+  if (isImported(primary.wechat) && withdrawn(primary.wechat, new Set(db.wechatWithdrawnPublications))) next.status = 0
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   normalizeContentPost(next)
-  db.contentPosts[idx] = next
-  save()
+  const posts = db.contentPosts.slice()
+  posts[idx] = next
+  commitContentChanges({ contentPosts: posts })
   return next
 }
 
-export function deleteContentPost(id) {
+export function updateContentWechat(id, patch = {}) {
   get()
-  db.contentPosts = db.contentPosts.filter((item) => String(item.id) !== String(id))
-  save()
+  const post = findContentPost(id)
+  if (!post) return null
+  const allowed = new Set([
+    'draftMediaId', 'draftCreatedAt', 'draftContentHash', 'draftFormat', 'history', 'submissionPending', 'publishId', 'msgDataId',
+    'publishStatus', 'publishSubmittedAt', 'articleId', 'articleUrls', 'publicationKey', 'failIdx', 'lastCheckedAt'
+  ])
+  const next = { ...(post.wechat || {}) }
+  Object.entries(patch).forEach(([key, value]) => {
+    if (allowed.has(key)) next[key] = value
+  })
+  const recorded = { ...post, wechat: next }
+  const revoked = new Set(db.wechatWithdrawnPublications)
+  for (const record of attempts(next)) {
+    if (withdrawn(record, revoked)) for (const key of recordKeys(record)) revoked.add(key)
+  }
+  commitContentChanges({ contentPosts: db.contentPosts.map(item => item === post ? recorded : item), wechatWithdrawnPublications: [...revoked] })
+  return publicationView({ primary: recorded, posts: [recorded] }, revoked, true)
+}
+
+export function deleteContentPost(id) {
+  const group = groupForPost(id)
+  if (!group) return { ok: true }
+  const removed = removedPublications(db)
+  const deletedAt = Date.now()
+  for (const key of group.keys) removed.set(key, deletedAt)
+  commitContentChanges({
+    contentPosts: db.contentPosts.filter(post => !group.posts.includes(post)),
+    wechatRemovedImports: [...removed]
+  })
   return { ok: true }
 }
 
@@ -1456,16 +1864,20 @@ export function listCouponRecords(templateId) {
     .sort((left, right) => String(right.claimedAt || '').localeCompare(String(left.claimedAt || '')))
 }
 
-function bannerView(banner) {
+export function listBannerTargets() {
+  return [...bannerTargets(get()).values()]
+}
+
+function bannerView(banner, targets) {
   const mediaType = banner.mediaType === 'video' ? 'video' : 'image'
-  const legacyLink = Number(banner.cat || 0) > 0
-    ? `/pages/list/list?category=${Number(banner.cat)}`
-    : '/pages/profile/profile'
+  const storedLinkUrl = storedBannerLink(banner)
+  const linkUrl = targets && !availableBannerLink(storedLinkUrl, targets) ? '' : storedLinkUrl
+  const { linkResolutionVersion: _linkResolutionVersion, ...view } = banner
   return {
-    ...banner,
+    ...view,
     mediaType,
     mediaUrl: String(banner.mediaUrl || banner.imageUrl || ''),
-    linkUrl: String(banner.linkUrl || legacyLink),
+    linkUrl,
     status: banner.status === 0 ? 0 : 1,
     sort: Number(banner.sort || 0)
   }
@@ -1475,19 +1887,26 @@ function bannerPayload(input, current = {}) {
   const data = input || {}
   const title = String(data.title == null ? current.title || '' : data.title).trim()
   const mediaType = (data.mediaType == null ? current.mediaType : data.mediaType) === 'video' ? 'video' : 'image'
-  const mediaUrl = String(data.mediaUrl == null ? current.mediaUrl || current.imageUrl || '' : data.mediaUrl).trim()
-  const linkUrl = String(data.linkUrl == null ? current.linkUrl || '' : data.linkUrl).trim()
+  const currentMediaUrl = String(current.mediaUrl || current.imageUrl || '').trim()
+  const mediaUrl = String(data.mediaUrl == null ? currentMediaUrl : data.mediaUrl).trim()
+  const hasCurrent = current && current.id != null
+  const hasLinkInput = Object.prototype.hasOwnProperty.call(data, 'linkUrl')
+  const linkUrl = hasLinkInput
+    ? String(data.linkUrl ?? '').trim()
+    : (hasCurrent ? storedBannerLink(current) : '')
   if (!title) throw badRequest('请填写 Banner 标题')
-  if (!mediaUrl) throw badRequest('请上传 Banner 图片或视频')
+  if (!mediaUrl && (!hasCurrent || currentMediaUrl)) throw badRequest('请上传 Banner 图片或视频')
   if (mediaUrl && !/^(\/api\/uploads\/files\/|\/assets\/|https:\/\/)/.test(mediaUrl)) throw badRequest('图片或视频地址格式不正确')
   if (linkUrl && !/^(\/pages\/|https:\/\/)/.test(linkUrl)) throw badRequest('跳转链接应为小程序页面路径或 HTTPS 地址')
+  if (!availableBannerLink(linkUrl, bannerTargets(db))) throw badRequest('跳转目标不存在、已下架或无法唯一确定，请重新选择')
   return {
     title,
     sub: String(data.sub == null ? current.sub || '' : data.sub).trim(),
     mediaType,
     mediaUrl,
     linkUrl,
-    status: Number(data.status) === 0 ? 0 : 1,
+    linkResolutionVersion: BANNER_LINK_VERSION,
+    status: Number(data.status == null ? current.status ?? 1 : data.status) === 0 ? 0 : 1,
     sort: Number(data.sort == null ? current.sort || 0 : data.sort),
     emoji: String(data.emoji == null ? current.emoji || '🎁' : data.emoji),
     tone: String(data.tone == null ? current.tone || 'linear-gradient(135deg,#c25e3d,#e19a6d)' : data.tone),
@@ -1496,9 +1915,10 @@ function bannerPayload(input, current = {}) {
 }
 
 export function listBanners(includeDisabled = false) {
+  const targets = includeDisabled ? null : bannerTargets(db)
   return (db.banners || [])
     .filter((banner) => includeDisabled || banner.status !== 0)
-    .map(bannerView)
+    .map((banner) => bannerView(banner, targets))
     .sort((left, right) => Number(right.sort || 0) - Number(left.sort || 0))
 }
 
@@ -1742,6 +2162,15 @@ function snapshotOrderAttributionAtPayment(order) {
   order.attributionSource = '支付时会员归属快照'
 }
 
+function nextOrderCode() {
+  const used = new Set((db.orders || []).map((order) => String(order.code || '').replace(/\s+/g, '')).filter(Boolean))
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const code = `${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`
+    if (!used.has(code.replace(/\s+/g, ''))) return code
+  }
+  throw new Error('暂时无法生成唯一核销码，请稍后重试')
+}
+
 export function createOrder(payload) {
   const activity = [...db.activities, ...(db.products || [])].find((a) => String(a.id) === String(payload.activityId))
   if (!activity) return null
@@ -1848,7 +2277,7 @@ export function createOrder(payload) {
     coupon: coupon ? coupon.title : '未使用',
     couponId: couponRecord ? couponRecord.id : null,
     couponTemplateId: couponRecord ? couponRecord.templateId : null,
-    code: `${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`,
+    code: nextOrderCode(),
     managerId: db.customers.find((c) => String(c.id) === String(payload.userId || 'u1'))?.managerId || null,
     managerAssignedAt: nowText(),
     attributionSource: '下单时会员归属快照',
@@ -1860,6 +2289,8 @@ export function createOrder(payload) {
     payTime: '',
     payDeadline: Date.now() + 30 * 60 * 1000,
     offeringType: isProduct ? 'product' : 'activity',
+    publisherType: activity.publisherType === 'merchant' ? 'merchant' : 'platform',
+    publisherManagerId: activity.publisherType === 'merchant' ? activity.managerId : null,
     inventoryReleased: false
   }
   db.orders.unshift(order)
@@ -2609,25 +3040,41 @@ export function listActiveLogisticsShipments() {
 
 export function getOrderByCode(code) {
   const normalized = String(code || '').replace(/\s+/g, '')
-  const order = db.orders.find((o) => String(o.code || '').replace(/\s+/g, '') === normalized)
-  if (!order) throw new Error('核销码不存在')
-  return order
+  if (!/^\d{8}$/.test(normalized)) throw badRequest('核销码格式不正确')
+  const matches = db.orders.filter((o) => String(o.code || '').replace(/\s+/g, '') === normalized)
+  if (!matches.length) throw badRequest('核销码不存在')
+  if (matches.length > 1) throw badRequest('核销码存在冲突，请改用订单号核对，暂勿核销')
+  return matches[0]
 }
 
 export function verifyOrder(orderId) {
   const order = db.orders.find((o) => String(o.id) === String(orderId))
-  if (!order) throw new Error('订单不存在')
+  if (!order) throw badRequest('订单不存在')
   const mode = serviceModeOfOrder(order)
-  if (mode === 'delivery') throw new Error('实物订单不支持签到核销')
-  if (order.status === '待评价' && order.fulfillmentStatus) throw new Error(mode === 'checkin' ? '该订单已签到' : '该订单已核销')
-  if (!['待签到', '待核销', '待使用', '待发货', '待收货'].includes(order.status)) throw new Error('当前状态不可签到或核销')
-  order.fulfillmentStatus = mode === 'checkin' ? '已签到' : (mode === 'online' ? '已使用' : '已核销')
-  order.checkedAt = nowText()
-  order.verifiedAt = order.checkedAt
-  order.status = '待评价'
-  addLog(mode === 'checkin' ? '活动签到' : '订单核销', `订单 ${order.id} ${order.fulfillmentStatus}`)
-  save()
-  return order
+  if (mode === 'delivery') throw badRequest('实物订单不支持签到核销')
+  if (order.status === '待评价' && order.fulfillmentStatus) throw badRequest(mode === 'checkin' ? '该订单已签到' : '该订单已核销')
+  if (!['待签到', '待核销', '待使用', '待发货', '待收货'].includes(order.status)) throw badRequest('当前状态不可签到或核销')
+  const orderSnapshot = clone(order)
+  const logsReference = db.logs
+  const logsSnapshot = [...(db.logs || [])]
+  try {
+    order.fulfillmentStatus = mode === 'checkin' ? '已签到' : (mode === 'online' ? '已使用' : '已核销')
+    order.checkedAt = nowText()
+    order.verifiedAt = order.checkedAt
+    order.status = '待评价'
+    addLog(mode === 'checkin' ? '活动签到' : '订单核销', `订单 ${order.id} ${order.fulfillmentStatus}`)
+    save()
+    return order
+  } catch (error) {
+    restoreObject(order, orderSnapshot)
+    if (logsReference) {
+      logsReference.splice(0, logsReference.length, ...logsSnapshot)
+      db.logs = logsReference
+    } else {
+      db.logs = []
+    }
+    throw error
+  }
 }
 
 export function submitReview(orderId, review) {
@@ -3455,8 +3902,12 @@ export function applyProvider(payload) {
   if (!normalizedIntro) throw badRequest('请填写主营产品或服务')
   const hasPending = (db.providerApplications || []).some((a) => a.status === '待审核' && String(a.userId) === String(userId))
   if (hasPending) throw new Error('已有待审核的申请')
-  const alreadyApproved = (db.providerApplications || []).some((a) => a.status === '已通过' && String(a.userId) === String(userId))
-  if (alreadyApproved) throw new Error('该账号已开通商户资格')
+  const approvedApplication = (db.providerApplications || []).find((a) => a.status === '已通过' && String(a.userId) === String(userId))
+  if (approvedApplication) {
+    throw badRequest(merchantAccountForApplication(approvedApplication)
+      ? '该账号已开通商户账号'
+      : '服务商申请已审核通过，请联系平台在商户管理中开通登录账号')
+  }
   const record = {
     id: `PA${Date.now()}`,
     userId,
@@ -3473,53 +3924,34 @@ export function applyProvider(payload) {
   return record
 }
 
-export function auditProvider(id, approve, rejectReason, account = null) {
+export function auditProvider(id, approve, rejectReason, approval = {}) {
   const app = (db.providerApplications || []).find((a) => String(a.id) === String(id))
   if (!app) return null
   if (app.status !== '待审核') throw badRequest('该申请已经处理')
   const normalizedRejectReason = String(rejectReason || '').trim()
   if (!approve && !normalizedRejectReason) throw badRequest('请填写拒绝原因')
   if (approve) {
-    if (!account || !account.username || !account.passwordHash || !account.salt) throw badRequest('请配置商户登录账号和临时密码')
-    if (db.merchantAccounts.some((item) => item.username === account.username)) throw badRequest('该商户登录账号已存在')
-    const name = String(account.name ?? app.name ?? '').trim()
-    const phone = normalizePhone(account.phone ?? app.phone)
-    const type = account.type === 'company' ? 'company' : 'personal'
-    const intro = String(account.intro ?? app.intro ?? '').trim()
-    const address = String(account.address ?? app.address ?? '').trim()
-    const merchantId = Date.now()
-    const shopName = String(account.shopName || name).trim()
-    const contactName = String(account.contactName || name).trim()
-    const contactPhone = normalizePhone(account.contactPhone || phone)
-    const contactWechat = String(account.contactWechat || '').trim()
-    const cooperationMode = String(account.cooperationMode || '').trim()
-    const cooperationContent = String(account.cooperationContent || '').trim()
-    if (!name || !shopName) throw badRequest('请填写申请人和商户名称')
-    if (!/^1\d{10}$/.test(phone) || !/^1\d{10}$/.test(contactPhone)) throw badRequest('请填写正确的申请手机号和合作联系电话')
-    if (!intro || !address) throw badRequest('请完整填写主营服务和联系地址')
-    if (!contactName || !cooperationMode || !cooperationContent) throw badRequest('请完整填写合作联系人、合作方式和合作内容')
+    // 申请人的姓名、手机号、主体类型及主营资料是原始申请凭证，审核通过时不被开户资料覆盖。
+    const shopName = String(approval.shopName || app.shopName || '').trim()
+    const contactName = String(approval.contactName || app.contactName || app.name || '').trim()
+    const contactPhone = normalizePhone(approval.contactPhone || app.contactPhone || app.phone)
+    const contactWechat = String(approval.contactWechat ?? app.contactWechat ?? '').trim()
+    const cooperationMode = String(approval.cooperationMode ?? app.cooperationMode ?? '').trim()
+    const cooperationContent = String(approval.cooperationContent ?? app.cooperationContent ?? '').trim()
+    if (!contactName) throw badRequest('请填写合作联系人')
+    if (!/^1\d{10}$/.test(contactPhone)) throw badRequest('请填写正确的合作联系电话')
     Object.assign(app, {
-      name,
-      phone,
-      type,
-      intro,
-      address,
       shopName,
       contactName,
       contactPhone,
       contactWechat,
       cooperationMode,
       cooperationContent,
-      cooperationStartAt: String(account.cooperationStartAt || '').trim(),
-      cooperationEndAt: String(account.cooperationEndAt || '').trim(),
-      cooperationRemark: String(account.cooperationRemark || '').trim(),
+      cooperationStartAt: String(approval.cooperationStartAt ?? app.cooperationStartAt ?? '').trim(),
+      cooperationEndAt: String(approval.cooperationEndAt ?? app.cooperationEndAt ?? '').trim(),
+      cooperationRemark: String(approval.cooperationRemark ?? app.cooperationRemark ?? '').trim(),
       auditedAt: nowText()
     })
-    db.managers.push({ id: merchantId, userId: app.userId || null, name: contactName, shopName, shopIntro: intro, phone: contactPhone, address, cooperationMode, cooperationContent, inviteCode: `SYL${String(merchantId).slice(-6)}`, commissionRate: 8, status: 1, totalPerformance: 0, totalCommission: 0, totalCustomers: 0 })
-    db.merchantAccounts.push({ id: `merchant-${merchantId}`, merchantId, providerApplicationId: app.id, userId: app.userId || null, username: account.username, phone: contactPhone, shopName, contactName, contactWechat, cooperationMode, cooperationContent, cooperationStartAt: app.cooperationStartAt, cooperationEndAt: app.cooperationEndAt, cooperationRemark: app.cooperationRemark, permissions: ['merchant.activities', 'merchant.products', 'merchant.courses'], status: 1, createdAt: nowText(), salt: account.salt, passwordHash: account.passwordHash })
-    app.merchantId = merchantId
-    app.loginUsername = account.username
-    app.shopName = shopName
   }
   app.status = approve ? '已通过' : '已拒绝'
   if (!approve) {
@@ -3878,7 +4310,9 @@ function enrichLive(live) {
   const manager = live.managerId ? findManager(live.managerId) : null
   return {
     ...live,
-    private: live.managerId != null,
+    publisherType: live.publisherType === 'merchant' ? 'merchant' : 'platform',
+    managerId: live.publisherType === 'merchant' ? live.managerId : null,
+    private: live.publisherType === 'merchant',
     managerName: manager ? manager.name : null
   }
 }
@@ -3929,23 +4363,22 @@ export function listLives(userId, options = {}) {
 }
 
 export function createLive(data) {
-  const managerId = Number(data && data.managerId)
-  if (!managerId || !findManager(managerId)) throw badRequest('请先选择有效商家')
+  const ownership = publisherOwnership(data)
   const lessons = normalizeLiveLessons(data?.lessons || [])
   const live = {
-    id: `live${Date.now()}`,
+    id: nextLiveId(),
     title: String((data && data.title) || '未命名直播').trim(),
     cover: (data && data.cover) || '📺',
     coverTone: (data && data.coverTone) || 'linear-gradient(135deg,#c25e3d,#e19a6d)',
     hostName: (data && data.hostName) || '岁悦里',
     hostAvatar: (data && data.hostAvatar) || '🧑‍🏫',
-    managerId,
+    ...ownership,
     status: (data && data.status) || 'scheduled',
     startAt: (data && data.startAt) || '',
     endAt: (data && data.endAt) || '',
     streamUrl: (data && data.streamUrl) || '',
     replayUrl: (data && data.replayUrl) || '',
-    description: (data && data.description) || '',
+    ...descriptionFields(data),
     memberPrice: Number((data && data.memberPrice) || 0),
     originalPrice: Number((data && data.originalPrice) || 0),
     lessonCount: lessons.length || Number((data && data.lessonCount) || 1),
@@ -3964,12 +4397,19 @@ export function createLive(data) {
   return enrichLive(live)
 }
 
-export function updateLive(id, data) {
-  const live = (db.lives || []).find((l) => String(l.id) === String(id))
+function nextLiveId() {
+  const used = new Set((db.lives || []).map((item) => String(item.id)))
+  let value = Date.now()
+  while (used.has(`live${value}`)) value += 1
+  return `live${value}`
+}
+
+export function updateLive(id, data, options = {}) {
+  const live = (db.lives || []).find((l) => String(l.id) === String(id)
+    && (options.managerId == null || merchantOwned(l, options.managerId)))
   if (!live) return null
-  const next = { ...live, ...(data || {}), id: live.id }
-  if (data && data.managerId != null) next.managerId = data.managerId === '' ? null : Number(data.managerId)
-  if (!next.managerId || !findManager(next.managerId)) throw badRequest('请先选择有效商家')
+  const next = { ...live, ...(data || {}), ...descriptionFields(data, live), id: live.id }
+  Object.assign(next, publisherOwnership(data, live))
   if (data && data.activityId != null) next.activityId = data.activityId === '' ? null : Number(data.activityId)
   if (data && data.viewers != null) next.viewers = Number(data.viewers)
   if (data && data.lessons !== undefined) {
@@ -3977,13 +4417,18 @@ export function updateLive(id, data) {
     if (next.lessons.length) next.lessonCount = next.lessons.length
   }
   normalizePaidOfferingPrices(next, '课程', { includeRegularPrice: false })
-  db.lives = (db.lives || []).map((l) => String(l.id) === String(id) ? next : l)
+  db.lives = (db.lives || []).map((l) => l === live ? next : l)
   save()
   return enrichLive(next)
 }
 
-export function deleteLive(id) {
-  db.lives = (db.lives || []).filter((l) => String(l.id) !== String(id))
+export function deleteLive(id, options = {}) {
+  const live = (db.lives || []).find((item) => String(item.id) === String(id)
+    && (options.managerId == null || merchantOwned(item, options.managerId)))
+  if (!live) return null
+  db.lives = options.managerId == null
+    ? (db.lives || []).filter((item) => String(item.id) !== String(id))
+    : (db.lives || []).filter((item) => item !== live)
   save()
   return { ok: true }
 }
@@ -4014,11 +4459,8 @@ function normalizeProductImages(images, coverImage = '') {
 }
 
 export function createProduct(data) {
-  const publisherType = data && data.publisherType === 'platform' ? 'platform' : 'merchant'
-  const managerId = publisherType === 'platform' ? null : Number(data && data.managerId)
-  if (publisherType === 'merchant' && (!managerId || !findManager(managerId))) throw badRequest('请先选择有效商家')
+  const ownership = publisherOwnership(data)
   const product = {
-    id: Date.now(),
     soldCount: 0,
     sellType: 'sku',
     hasSku: false,
@@ -4027,8 +4469,8 @@ export function createProduct(data) {
     stock: 0,
     status: 1,
     ...data,
-    publisherType,
-    managerId,
+    id: nextCatalogId(),
+    ...ownership,
     regionIds: normalizeRegionIds(data && data.regionIds)
   }
   normalizePaidOfferingPrices(product, '商品')
@@ -4041,13 +4483,12 @@ export function createProduct(data) {
   return product
 }
 
-export function updateProduct(id, data) {
-  const idx = (db.products || []).findIndex((p) => String(p.id) === String(id))
+export function updateProduct(id, data, options = {}) {
+  const idx = (db.products || []).findIndex((p) => String(p.id) === String(id)
+    && (options.managerId == null || merchantOwned(p, options.managerId)))
   if (idx < 0) return null
   const next = { ...db.products[idx], ...data, id: db.products[idx].id }
-  next.publisherType = next.publisherType === 'platform' ? 'platform' : 'merchant'
-  next.managerId = next.publisherType === 'platform' ? null : Number(next.managerId)
-  if (next.publisherType === 'merchant' && (!next.managerId || !findManager(next.managerId))) throw badRequest('请先选择有效商家')
+  Object.assign(next, publisherOwnership(data, db.products[idx]))
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   normalizePaidOfferingPrices(next, '商品')
   if (data && data.images !== undefined) {
@@ -4070,8 +4511,13 @@ export function updateProduct(id, data) {
   return db.products[idx]
 }
 
-export function deleteProduct(id) {
-  db.products = (db.products || []).filter((p) => String(p.id) !== String(id))
+export function deleteProduct(id, options = {}) {
+  const product = (db.products || []).find((item) => String(item.id) === String(id)
+    && (options.managerId == null || merchantOwned(item, options.managerId)))
+  if (!product) return null
+  db.products = options.managerId == null
+    ? (db.products || []).filter((item) => String(item.id) !== String(id))
+    : (db.products || []).filter((item) => item !== product)
   save()
   return { ok: true }
 }
@@ -4307,6 +4753,63 @@ export function getCustomerAdminDetail(userId) {
   }
 }
 
+function cardAttendanceView(record) {
+  return {
+    id: record.id,
+    date: record.date || '',
+    time: record.time || '',
+    lesson: record.lesson || '',
+    teacher: record.teacher || '',
+    location: record.location || '',
+    status: record.status || '',
+    checkedAt: record.checkedAt || '',
+    checkinType: record.checkinType || '',
+    operator: record.operator || '',
+    makeupReason: record.makeupReason || ''
+  }
+}
+
+function cardOperationsView(card) {
+  const attendanceRecords = Array.isArray(card.attendanceRecords) ? card.attendanceRecords.map(cardAttendanceView) : []
+  return {
+    id: card.id,
+    title: card.title || '',
+    courseName: card.courseName || '',
+    teacher: card.teacher || '',
+    validUntil: card.validUntil || '',
+    remain: Number(card.remain || 0),
+    total: Number(card.total || 0),
+    checkedCount: attendanceRecords.filter((record) => record.status === 'checked').length,
+    absentCount: attendanceRecords.filter((record) => record.status === 'absent').length,
+    attendanceRecords
+  }
+}
+
+export function listCardCustomers(keyword = '') {
+  const query = String(keyword || '').trim().toLowerCase()
+  const owners = new Set((db.cards || []).map((card) => String(card.userId || '')).filter(Boolean))
+  return (db.customers || [])
+    .filter((customer) => query || owners.has(String(customer.id)))
+    .filter((customer) => {
+      if (!query) return true
+      return [customer.id, customer.name, customer.phone]
+        .some((value) => String(value || '').toLowerCase().includes(query))
+    })
+    .slice(0, 30)
+    .map((customer) => ({ id: customer.id, name: customer.name || '', phone: customer.phone || '' }))
+}
+
+export function getCardCustomer(userId) {
+  const customer = (db.customers || []).find((item) => String(item.id) === String(userId))
+  if (!customer) throw badRequest('会员不存在')
+  return {
+    user: { id: customer.id, name: customer.name || '', phone: customer.phone || '' },
+    cards: (db.cards || [])
+      .filter((card) => String(card.userId) === String(customer.id))
+      .map(cardOperationsView)
+  }
+}
+
 const BIND_SOURCE_LABELS = { 1: '扫码绑定', 2: '链接绑定', 3: '邀请码绑定', 4: '客服调整' }
 
 function bindLogView(b) {
@@ -4483,8 +4986,10 @@ export function purchaseLive(liveId, userId, options = {}) {
     status: '待付款',
     coupon: '未使用',
     couponId: null,
-    code: `${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`,
+    code: nextOrderCode(),
     managerId: buyer ? buyer.managerId : null,
+    publisherType: live.publisherType === 'merchant' ? 'merchant' : 'platform',
+    publisherManagerId: live.publisherType === 'merchant' ? live.managerId : null,
     managerAssignedAt: nowText(),
     attributionSource: '购课时会员归属快照',
     commissionRate: 0,
@@ -4502,47 +5007,101 @@ export function purchaseLive(liveId, userId, options = {}) {
   return order
 }
 
+function validCalendarDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const parsed = new Date(year, month - 1, day)
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day
+}
+
+function nextAttendanceId(records) {
+  const used = new Set(records.map((item) => String(item.id)))
+  let value = Date.now()
+  while (used.has(`att${value}`)) value += 1
+  return `att${value}`
+}
+
 function checkInCardRecord(cardId, data = {}, options = {}) {
   const card = db.cards.find((item) => String(item.id) === String(cardId))
-  if (!card) throw new Error('计次卡不存在')
+  if (!card) throw badRequest('计次卡不存在')
   if (options.userId && String(card.userId) !== String(options.userId)) throw forbidden('无权使用其他会员的计次卡')
-  if (Number(card.remain || 0) <= 0) throw new Error('计次卡剩余次数不足')
   card.attendanceRecords = Array.isArray(card.attendanceRecords) ? card.attendanceRecords : []
   const checkedAt = nowText()
-  const date = String(data.date || checkedAt.slice(0, 10)).trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw badRequest('签到日期格式不正确')
-  const sessionId = String(data.sessionId || '')
-  const existing = sessionId
-    ? card.attendanceRecords.find((item) => String(item.id) === sessionId)
-    : card.attendanceRecords.find((item) => String(item.date) === date)
-  if (existing && existing.status === 'checked') throw new Error('本节课程已签到')
-  const record = existing || {
-    id: sessionId || `att${Date.now()}`,
-    date,
-    time: data.time || '',
-    lesson: data.lesson || card.courseName || card.title,
-    teacher: data.teacher || card.teacher || '',
-    location: data.location || ''
+  const sessionId = String(data.sessionId || '').trim()
+  const sessionRecord = sessionId
+    ? card.attendanceRecords.find((item) => String(item.id) === sessionId) || null
+    : null
+  if (sessionId && !sessionRecord) throw badRequest('所选课次不属于该计次卡或已失效')
+  const date = String(data.date || sessionRecord?.date || checkedAt.slice(0, 10)).trim()
+  if (!validCalendarDate(date)) throw badRequest('签到日期格式不正确')
+  if (options.type === 'makeup' && date > todayKey()) throw badRequest('签到日期不能晚于今天')
+  if (options.type === 'makeup' && validCalendarDate(String(card.validUntil || '')) && date > String(card.validUntil)) throw badRequest('签到日期不能超过计次卡有效期')
+  const requestedTime = String(data.time || '').trim().replace(/\s+/g, '')
+  if (requestedTime && !/^(?:[01]\d|2[0-3]):[0-5]\d(?:-(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(requestedTime)) {
+    throw badRequest('请填写正确的补签时间')
   }
-  record.status = 'checked'
-  record.checkedAt = checkedAt
-  record.checkinType = options.type || 'self'
-  record.memberName = String(data.memberName || '')
-  record.memberPhone = normalizePhone(data.memberPhone)
-  record.latitude = data.latitude === '' || data.latitude == null ? null : Number(data.latitude)
-  record.longitude = data.longitude === '' || data.longitude == null ? null : Number(data.longitude)
-  record.accuracy = data.accuracy === '' || data.accuracy == null ? null : Number(data.accuracy)
-  record.operator = String(data.operator || '')
-  record.makeupReason = String(data.reason || '').trim()
-  if (!existing) card.attendanceRecords.unshift(record)
-  card.remain = Math.max(0, Number(card.remain || 0) - 1)
-  save()
-  return card
+  let existing = null
+  if (sessionId) {
+    existing = sessionRecord
+    if (String(existing.date || '') !== date) throw badRequest('所选课次与补签日期不一致')
+    const existingTime = String(existing.time || '').trim().replace(/\s+/g, '')
+    if (requestedTime && existingTime && existingTime !== requestedTime) throw badRequest('所选课次与补签时间不一致')
+  } else {
+    const sameDate = card.attendanceRecords.filter((item) => String(item.date || '') === date)
+    if (options.type === 'makeup' && sameDate.length > 1) throw badRequest('该日期有多个课次，请先选择具体课次')
+    existing = sameDate[0] || null
+  }
+  const time = String(existing?.time || '').trim().replace(/\s+/g, '') || requestedTime || checkedAt.slice(11, 16)
+  // 后台补签的网络重试返回原结果，不能再次扣减剩余次数；本人签到保留原有重复提示。
+  if (existing && existing.status === 'checked') {
+    if (options.type === 'makeup') return card
+    throw badRequest('本节课程已签到')
+  }
+  if (Number(card.remain || 0) <= 0) throw badRequest('计次卡剩余次数不足')
+  const cardSnapshot = clone(card)
+  const attendanceReference = card.attendanceRecords
+  const attendanceRecords = [...attendanceReference]
+  const attendanceSnapshots = attendanceRecords.map((record) => clone(record))
+  try {
+    const record = existing || {
+      id: sessionId || nextAttendanceId(card.attendanceRecords),
+      date,
+      time,
+      lesson: data.lesson || card.courseName || card.title,
+      teacher: data.teacher || card.teacher || '',
+      location: data.location || ''
+    }
+    record.date = date
+    record.time = time || record.time || ''
+    record.lesson = String(data.lesson || record.lesson || card.courseName || card.title || '')
+    record.teacher = String(data.teacher || record.teacher || card.teacher || '')
+    record.location = String(data.location || record.location || '')
+    record.status = 'checked'
+    record.checkedAt = checkedAt
+    record.checkinType = options.type || 'self'
+    record.memberName = String(data.memberName || '')
+    record.memberPhone = normalizePhone(data.memberPhone)
+    record.latitude = data.latitude === '' || data.latitude == null ? null : Number(data.latitude)
+    record.longitude = data.longitude === '' || data.longitude == null ? null : Number(data.longitude)
+    record.accuracy = data.accuracy === '' || data.accuracy == null ? null : Number(data.accuracy)
+    record.operator = String(data.operator || '')
+    record.makeupReason = String(data.reason || '').trim()
+    if (!existing) card.attendanceRecords.unshift(record)
+    card.remain = Math.max(0, Number(card.remain || 0) - 1)
+    save()
+    return card
+  } catch (error) {
+    restoreObject(card, cardSnapshot)
+    attendanceRecords.forEach((record, index) => restoreObject(record, attendanceSnapshots[index]))
+    attendanceReference.splice(0, attendanceReference.length, ...attendanceRecords)
+    card.attendanceRecords = attendanceReference
+    throw error
+  }
 }
 
 export function selfCheckInCard(cardId, userId, data = {}) {
   const customer = db.customers.find((item) => String(item.id) === String(userId))
-  if (!customer) throw new Error('会员不存在')
+  if (!customer) throw badRequest('会员不存在')
   const latitude = Number(data.latitude)
   const longitude = Number(data.longitude)
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw badRequest('请先获取签到位置')
@@ -4558,14 +5117,23 @@ export function selfCheckInCard(cardId, userId, data = {}) {
   }, { userId, type: 'self' })
 }
 
-export function makeupCheckInCard(cardId, data = {}) {
+export function makeupCheckInCard(cardId, data = {}, options = {}) {
+  if (!String(data.date || '').trim()) throw badRequest('请填写补签日期')
   const reason = String(data.reason || '').trim()
   if (!reason) throw badRequest('请填写补签原因')
-  return checkInCardRecord(cardId, {
+  if (reason.length > 100) throw badRequest('补签原因不能超过100个字符')
+  const card = db.cards.find((item) => String(item.id) === String(cardId))
+  if (!card) throw badRequest('计次卡不存在')
+  const customer = db.customers.find((item) => String(item.id) === String(card.userId))
+  if (!customer) throw badRequest('计次卡所属会员不存在')
+  const updated = checkInCardRecord(cardId, {
     ...data,
-    operator: data.operator || '后台管理员',
+    memberName: customer.name || '',
+    memberPhone: customer.phone || '',
+    operator: String(options.operator || '后台管理员'),
     location: data.location || '后台补签'
   }, { type: 'makeup' })
+  return cardOperationsView(updated)
 }
 
 // 兼容其他内部调用；管理后台使用独立的补签接口。

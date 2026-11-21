@@ -8,7 +8,7 @@
     <view class="form-card status-card">
       <view class="status-value {{application.status === '已拒绝' ? 'rejected' : (application.status === '已通过' ? 'approved' : '')}}">{{application.status}}</view>
       <view wx:if="{{application.status === '待审核'}}" class="status-tip">申请已提交，我们会尽快与您联系，请保持电话畅通。</view>
-      <view wx:if="{{application.status === '已通过'}}" class="status-tip">恭喜，您的服务商申请已通过，我们会尽快与您联系。</view>
+      <view wx:if="{{application.status === '已通过'}}" class="status-tip">{{application.merchantAccountId || application.loginUsername ? '商户账号已开通，请联系运营人员获取登录信息。' : '申请已通过，运营人员核实商户名称后会为您开通账号。'}}</view>
       <view wx:if="{{application.status === '已拒绝'}}" class="status-tip">{{application.rejectReason || '很抱歉，申请未通过审核。'}}</view>
       <button wx:if="{{application.status === '已拒绝'}}" class="btn btn-ink btn-pill" bindtap="reapply">修改后重新提交</button>
     </view>
@@ -34,8 +34,8 @@
     </view>
 
     <view class="field">
-      <view class="field-label">名称（联系人）<text>*</text></view>
-      <input class="field-control" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="请输入姓名或联系人名称" />
+      <view class="field-label">联系人姓名<text>*</text></view>
+      <input class="field-control" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="请输入方便联系的人员姓名" />
       <view wx:if="{{errors.name}}" class="error">{{errors.name}}</view>
     </view>
 

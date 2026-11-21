@@ -10,6 +10,7 @@ export default defineConfig(({ command }) => ({
   ],
   // 构建产物使用 /admin/ 子路径，本地开发使用根路径并代理到本机后端。
   base: command === "build" ? "/admin/" : "/",
+  resolve: { dedupe: ["vue", "@arco-design/web-vue"] },
   build: {
     rollupOptions: {
       output: {

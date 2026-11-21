@@ -1,11 +1,14 @@
 <script setup>
 import { computed } from "vue";
+import { isPlatformPublisher, isOrphanedMerchantPublisher, matchesPublisher } from "../utils/catalog-publisher.js";
 import { IconPlus } from "@arco-design/web-vue/es/icon";
 import { fmtMoney } from "../utils/presentation.js";
 
 const props = defineProps({
   products: { type: Array, default: () => [] },
   publisherOptions: { type: Array, default: () => [] },
+  publisherOptionsLoading: { type: Boolean, default: false },
+  publisherOptionsError: { type: String, default: "" },
   publisherName: { type: Function, required: true },
   categoryName: { type: Function, required: true },
   regionNames: { type: Function, required: true },
@@ -15,7 +18,12 @@ const publisherId = defineModel("publisherId", {
   type: [String, Number],
   default: "platform",
 });
-const emit = defineEmits(["edit", "remove"]);
+const emit = defineEmits(["edit", "remove", "retry-publishers"]);
+const selectedPublisher = computed(() =>
+  props.publisherOptions.find(
+    (option) => String(option.value) === String(publisherId.value),
+  ),
+);
 
 const columns = [
   { title: "ID", dataIndex: "id", width: 80 },
@@ -31,26 +39,21 @@ const columns = [
 ];
 
 const visibleProducts = computed(() =>
-  publisherId.value === "platform"
-    ? props.products.filter(
-        (item) => item.publisherType === "platform" || !item.managerId,
-      )
-    : props.products.filter(
-        (item) => String(item.managerId) === String(publisherId.value),
-      ),
+  props.products.filter(item => matchesPublisher(item, publisherId.value)),
 );
 </script>
 
 <template>
   <section>
     <a-card
-      title="第一步：选择发布归属"
+      title="选择发布归属"
       :bordered="false"
       class="merchant-scope-card"
     >
       <a-select
         v-model="publisherId"
         :options="publisherOptions"
+        :loading="publisherOptionsLoading"
         allow-search
         placeholder="请选择平台或商家"
         class="publisher-select"
@@ -58,11 +61,26 @@ const visibleProducts = computed(() =>
       <span class="muted">
         当前正在管理：{{
           publisherId === "platform"
-            ? "岁悦里平台"
+            ? "平台自营"
+            : publisherId === "orphaned"
+              ? "归属异常（待修复）"
             : publisherName({ managerId: publisherId })
         }}
       </span>
+      <a-button
+        v-if="publisherOptionsError"
+        type="text"
+        size="small"
+        status="warning"
+        @click="emit('retry-publishers')"
+      >{{ publisherOptionsError }} 点击重试</a-button>
     </a-card>
+    <div class="list-create-toolbar">
+      <a-button type="primary" shape="round" :disabled="selectedPublisher?.historical" @click="emit('edit', null)">
+        <template #icon><IconPlus /></template>
+        {{ selectedPublisher?.historical ? "该归属不可新建" : publisherId === "platform" ? "新建平台商品" : "为该商家新建商品" }}
+      </a-button>
+    </div>
     <a-card :bordered="false">
       <a-table
         :columns="columns"
@@ -79,9 +97,11 @@ const visibleProducts = computed(() =>
         <template #publisher="{ record }">
           <a-tag
             :color="
-              record.publisherType === 'platform' || !record.managerId
+              isPlatformPublisher(record)
                 ? 'purple'
-                : 'green'
+                : isOrphanedMerchantPublisher(record)
+                  ? 'orange'
+                  : 'green'
             "
           >
             {{ publisherName(record) }}
@@ -112,15 +132,6 @@ const visibleProducts = computed(() =>
         </template>
       </a-table>
     </a-card>
-    <a-button
-      type="primary"
-      shape="round"
-      class="fab"
-      @click="emit('edit', null)"
-    >
-      <template #icon><IconPlus /></template>
-      新建商品
-    </a-button>
   </section>
 </template>
 
@@ -139,12 +150,5 @@ const visibleProducts = computed(() =>
 .muted {
   color: var(--color-text-3);
   font-size: 13px;
-}
-.fab {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 20;
-  box-shadow: 0 6px 20px rgba(29, 27, 22, 0.16);
 }
 </style>

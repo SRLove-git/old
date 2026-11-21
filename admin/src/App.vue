@@ -9,6 +9,7 @@ import {
 } from '@arco-design/web-vue/es/icon'
 import { api, isAuthed, setToken, clearToken, getAccount, setAccount } from './api.js'
 import { NAV_ITEMS as nav } from './navigation.js'
+import { isPlatformPublisher, isOrphanedMerchantPublisher } from './utils/catalog-publisher.js'
 import {
   BRAND_COPY_FIELDS, copyForEditor, copyForStorage, createDefaultConfig as defaultConfig,
   replaceText, wechatNoteForEditor, wechatNoteForStorage
@@ -23,6 +24,9 @@ import {
   WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
 } from './options.js'
 import { areaChildrenByParent, areaName, provinceOptions, regionArea } from './utils/regions.js'
+import ParagraphImageInput from '../../shared/ParagraphImageInput.vue'
+import CourseDescriptionEditor from '../../shared/CourseDescriptionEditor.vue'
+import { insertImageBlock, editorBlockKey, hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
 import {
   fmtMoney, fuzzyMatch, isPaidPrice, notificationColor,
   notificationLabel, orderAddressText, orderChip, statusChip, transferStateText
@@ -52,7 +56,7 @@ const ApplicationsView = defineAsyncComponent(() => import('./views/Applications
 const ProvidersView = defineAsyncComponent(() => import('./views/ProvidersView.vue'))
 const ActivitiesView = defineAsyncComponent(() => import('./views/ActivitiesView.vue'))
 const ProductsView = defineAsyncComponent(() => import('./views/ProductsView.vue'))
-const VerifyView = defineAsyncComponent(() => import('./views/VerifyView.vue'))
+const VerifyPage = defineAsyncComponent(() => import('./views/VerifyPage.vue'))
 
 const view = ref(new URLSearchParams(window.location.search).get('view') || 'dashboard')
 const loading = ref(false)
@@ -93,6 +97,8 @@ const managerFinanceLoading = ref(false)
 const managerFinanceStatus = ref('')
 const unbindApplications = ref([])
 const managers = ref([])
+const publisherManagersLoading = ref(false)
+const publisherManagersError = ref('')
 const customers = ref([])
 const bindings = ref([])
 const commissions = ref([])
@@ -119,9 +125,12 @@ const contentPosts = ref([])
 const logs = ref([])
 const adminAccounts = ref([])
 const merchantAccounts = ref([])
+const merchantProviderCandidates = ref([])
 const merchantStatusFilter = ref('all')
 const permissionOptions = ref({ admin: [], merchant: [] })
 const adminAccountForm = ref(null)
+const merchantCreateForm = ref(null)
+const merchantCreateSubmitting = ref(false)
 const merchantPermissionForm = ref(null)
 const passwordForm = ref(null)
 const selfPasswordForm = ref(null)
@@ -146,19 +155,8 @@ watch(() => config.value.assistant?.wechat, (nextWechat, previousWechat) => {
 })
 const qrUploading = ref({ officialAccount: false, videoChannel: false, homeAssistant: false })
 
-const verifyCode = ref('')
-const verifyOrder = ref(null)
-const verifySearching = ref(false)
-
-const cardCustomerId = ref('')
-const cardProfile = ref(null)
-const cardList = ref([])
-const cardLoading = ref(false)
-const makeupTarget = ref(null)
-const makeupForm = ref({ date: '', time: '', reason: '' })
-
 const kw = ref('')
-const selectedMerchantId = ref('')
+const livePublisherId = ref('platform')
 const activityPublisherId = ref('platform')
 const productPublisherId = ref('platform')
 const activityCategoryFilter = ref('all')
@@ -229,18 +227,28 @@ const liveForm = ref(null)
 const liveCoverInput = ref(null)
 const liveCoverUploading = ref(false)
 const liveVideoUploading = ref({})
+const liveDetailUploading = ref(false)
 const regionForm = ref(null)
 const contentForm = ref(null)
 const contentBlocks = ref([])
 const contentCoverInput = ref(null)
 const contentCoverUploading = ref(false)
 const contentBlockUploading = ref({})
+const wechatContentLoading = ref({})
 const couponForm = ref(null)
 const reviewReplyTarget = ref(null)
 const reviewReplyText = ref('')
 const bannerForm = ref(null)
 const bannerMediaInput = ref(null)
 const bannerMediaUploading = ref(false)
+const bannerMediaRequired = ref(true)
+const bannerTargets = ref([])
+const bannerTargetsLoading = ref(false)
+const bannerTargetsError = ref('')
+const bannerLinkMode = ref('detail')
+const bannerTargetValue = ref('')
+const bannerCustomLink = ref('')
+const bannerLinkTouched = ref(false)
 const customerForm = ref(null)
 const customerDetail = ref(null)
 const customerDetailLoading = ref(false)
@@ -305,16 +313,45 @@ function inferRegionIds(record) {
 const managerOptions = computed(() =>
   managers.value.filter((m) => m.status !== 3).map((m) => ({ label: `${m.shopName || m.name}（${m.name}）`, value: String(m.id) }))
 )
+function managerOptionsWithCurrent(formRef) {
+  const options = managerOptions.value.slice()
+  const form = formRef.value
+  const managerId = form?.managerId == null ? '' : String(form.managerId)
+  if (managerId && !options.some((option) => String(option.value) === managerId)) {
+    options.push({ label: form.managerName || form.shopName || `历史商家 ${managerId}`, value: managerId })
+  }
+  return options
+}
+const activityManagerOptions = computed(() => managerOptionsWithCurrent(activityForm))
+const productManagerOptions = computed(() => managerOptionsWithCurrent(productForm))
+const liveManagerOptions = computed(() => managerOptionsWithCurrent(liveForm))
+const historicalPublisherOptions = computed(() => {
+  const activeIds = new Set(managerOptions.value.map((option) => String(option.value)))
+  const seen = new Set()
+  return [...activities.value, ...products.value, ...lives.value]
+    .filter((record) => !isPlatformPublisher(record) && record?.managerId != null && record.managerId !== '')
+    .map((record) => String(record.managerId))
+    .filter((managerId) => {
+      if (activeIds.has(managerId) || seen.has(managerId)) return false
+      seen.add(managerId)
+      return true
+    })
+    .map((managerId) => ({ label: `历史商家 ${managerId}（仅查看）`, value: managerId, historical: true }))
+})
 const activityPublisherOptions = computed(() => [
-  { label: '岁悦里平台', value: 'platform' },
-  ...managerOptions.value
+  { label: '平台自营', value: 'platform' },
+  ...managerOptions.value,
+  ...historicalPublisherOptions.value,
+  ...([...activities.value, ...products.value, ...lives.value].some(isOrphanedMerchantPublisher)
+    ? [{ label: '归属异常（待修复）', value: 'orphaned', historical: true }]
+    : [])
 ])
 const activityPublisherName = (record) => {
-  if (record.publisherType === 'platform' || !record.managerId) return '岁悦里平台'
+  if (isPlatformPublisher(record)) return '平台自营'
+  if (isOrphanedMerchantPublisher(record)) return '归属异常（缺少商家）'
   const manager = managers.value.find((item) => String(item.id) === String(record.managerId))
   return manager ? (manager.shopName || manager.name) : `商家 ${record.managerId}`
 }
-const selectedMerchant = computed(() => managers.value.find((m) => String(m.id) === String(selectedMerchantId.value)) || null)
 const customerOptions = computed(() =>
   customers.value.map((c) => ({
     label: `${c.name}（${c.phone || '无手机号'}）`,
@@ -348,6 +385,21 @@ function hasPermission(permission) {
 const visibleNav = computed(() => nav.filter((item) => hasPermission(item.permission)))
 const pageTitle = computed(() => nav.find((n) => n.key === view.value)?.name || '')
 const notificationCount = computed(() => notifications.value.length)
+const availableProviderApplications = computed(() => {
+  const linked = new Set(merchantAccounts.value.map((account) => String(account.providerApplicationId || '')).filter(Boolean))
+  return merchantProviderCandidates.value.filter((application) => !linked.has(String(application.id)))
+})
+const providerApplicationOptions = computed(() => availableProviderApplications.value.map((application) => ({
+  label: `${application.name || '未命名申请'}（${application.phone || '无手机号'} · ${application.id}）`,
+  value: String(application.id)
+})))
+const bannerTargetOptions = computed(() => {
+  const labels = { activity: '活动', product: '商品', course: '课程', content: '资讯/视频' }
+  return bannerTargets.value.map((target) => ({
+    label: `【${labels[target.type] || '内容'}】${target.title}`,
+    value: `${target.type}:${target.id}`
+  }))
+})
 
 const statItems = computed(() => {
   if (!stats.value) return []
@@ -428,14 +480,41 @@ const settlementColumns = [
   { title: '金额', slotName: 'amount', align: 'right', width: 120 },
   { title: '结算时间', dataIndex: 'settledAt', width: 160 }
 ]
+
+let publisherManagersLoadPromise = null
+function loadPublisherManagers(force = false) {
+  if (managers.value.length && !force) return Promise.resolve(managers.value)
+  if (publisherManagersLoadPromise) return publisherManagersLoadPromise
+  publisherManagersLoading.value = true
+  publisherManagersError.value = ''
+  publisherManagersLoadPromise = api.get('/managers')
+    .then((records) => {
+      managers.value = records
+      return records
+    })
+    .catch((requestError) => {
+      // 平台自营列表和发布不依赖商家资料接口；无权限或暂时失败时仍保持平台功能可用。
+      publisherManagersError.value = requestError?.status === 403
+        ? '当前账号没有读取商家资料的权限，仍可正常发布平台自营内容。'
+        : '商家资料暂时加载失败，仍可正常发布平台自营内容。'
+      return []
+    })
+    .finally(() => {
+      publisherManagersLoading.value = false
+      publisherManagersLoadPromise = null
+    })
+  return publisherManagersLoadPromise
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
+    if (view.value === 'verify') return
     categories.value = await api.get('/categories')
     regions.value = await api.get('/regions')
     if (view.value === 'dashboard') stats.value = await api.get('/stats/dashboard')
-    if (['activities', 'products', 'lives'].includes(view.value) && managers.value.length === 0) managers.value = await api.get('/managers')
+    if (['activities', 'products', 'lives'].includes(view.value)) void loadPublisherManagers()
     if (view.value === 'activities') activities.value = await api.get('/activities')
     if (view.value === 'products') products.value = await api.get('/products')
     if (view.value === 'pointsMall') {
@@ -449,7 +528,6 @@ async function load() {
       logisticsExceptions.value = exceptions
       logisticsConfig.value = provider
     }
-    if (view.value === 'verify') customers.value = await api.get('/customers')
     if (view.value === 'customers') {
       customers.value = await api.get('/customers')
       bindings.value = await api.get('/bindings')
@@ -487,12 +565,14 @@ async function load() {
     }
     if (view.value === 'logs') logs.value = await api.get('/logs')
     if (view.value === 'merchants') {
-      const [merchants, options] = await Promise.all([
+      const [merchants, options, candidates] = await Promise.all([
         api.get('/admin/merchant-accounts'),
-        api.get('/admin/permission-options')
+        api.get('/admin/permission-options'),
+        api.get('/admin/merchant-accounts/candidates')
       ])
       merchantAccounts.value = merchants
       permissionOptions.value = options
+      merchantProviderCandidates.value = candidates
     }
     if (view.value === 'permissions') {
       const [accounts, merchants, options] = await Promise.all([
@@ -666,6 +746,111 @@ function saveAdminAccount() {
   }, form.id ? '后台账号已更新' : '员工账号已新增')
 }
 
+function merchantCreateDefaults(application = null) {
+  const defaultPermissions = (permissionOptions.value.merchant || []).map((item) => item.key)
+  return {
+    providerApplicationId: application ? String(application.id) : '',
+    shopName: '',
+    contactName: application?.contactName || application?.name || '',
+    contactPhone: application?.contactPhone || application?.phone || '',
+    contactWechat: application?.contactWechat || '',
+    shopIntro: application?.intro || '',
+    address: application?.address || '',
+    cooperationMode: application?.cooperationMode || '',
+    cooperationContent: application?.cooperationContent || application?.intro || '',
+    cooperationStartAt: application?.cooperationStartAt || '',
+    cooperationEndAt: application?.cooperationEndAt || '',
+    cooperationRemark: application?.cooperationRemark || '',
+    username: '',
+    password: '',
+    permissions: defaultPermissions.length
+      ? defaultPermissions
+      : ['merchant.activities', 'merchant.products', 'merchant.courses'],
+    status: 1
+  }
+}
+
+async function openMerchantCreate(application = null) {
+  if (!hasPermission('accounts.manage')) return Message.warning('当前账号没有创建商户账号的权限')
+  if (application && (application.merchantAccountId || application.loginUsername)) {
+    return Message.warning('该申请已关联商户账号，不能重复开户')
+  }
+  try {
+    const [candidates, options] = await Promise.all([
+      (!merchantProviderCandidates.value.length || application)
+        ? api.get('/admin/merchant-accounts/candidates')
+        : Promise.resolve(merchantProviderCandidates.value),
+      permissionOptions.value.merchant?.length
+        ? Promise.resolve(permissionOptions.value)
+        : api.get('/admin/permission-options')
+    ])
+    merchantProviderCandidates.value = candidates
+    permissionOptions.value = options
+  } catch (error) {
+    return Message.error(error.message || '可关联申请加载失败')
+  }
+  const candidate = application
+    ? availableProviderApplications.value.find((item) => String(item.id) === String(application.id))
+    : null
+  if (application && !candidate) return Message.warning('该申请已开户或状态已变化，请刷新后重试')
+  merchantCreateForm.value = merchantCreateDefaults(candidate)
+  providerApproveTarget.value = null
+}
+
+function selectMerchantProvider(applicationId) {
+  const application = availableProviderApplications.value.find((item) => String(item.id) === String(applicationId))
+  if (!application) {
+    merchantCreateForm.value = { ...merchantCreateForm.value, providerApplicationId: '' }
+    return
+  }
+  const current = merchantCreateForm.value || {}
+  merchantCreateForm.value = {
+    ...merchantCreateDefaults(application),
+    // 正式商户名称必须由管理员核实后显式填写，切换申请时绝不自动带入申请人名称。
+    shopName: current.shopName || '',
+    username: current.username || '',
+    password: current.password || '',
+    permissions: Array.isArray(current.permissions) ? current.permissions : merchantCreateDefaults(application).permissions,
+    status: current.status ?? 1
+  }
+}
+
+async function saveMerchantAccount() {
+  const form = merchantCreateForm.value
+  if (!form || merchantCreateSubmitting.value) return
+  const shopName = String(form.shopName || '').trim()
+  const contactName = String(form.contactName || '').trim()
+  const contactPhone = String(form.contactPhone || '').replace(/\D/g, '')
+  const username = String(form.username || '').trim().toLowerCase()
+  const password = String(form.password || '')
+  if (!shopName) return Message.warning('请核实并填写正式商户名称，不能使用申请人姓名自动代替')
+  if (!contactName) return Message.warning('请填写商户联系人')
+  if (!/^1\d{10}$/.test(contactPhone)) return Message.warning('请填写正确的11位联系人手机号')
+  if (!/^[a-z0-9_]{4,24}$/.test(username)) return Message.warning('登录账号需为4-24位字母、数字或下划线')
+  if (password.length < 8) return Message.warning('临时密码至少8位')
+  if (form.providerApplicationId && !availableProviderApplications.value.some((item) => String(item.id) === String(form.providerApplicationId))) {
+    return Message.warning('所选服务商申请已开户或状态已变化，请刷新后重试')
+  }
+  merchantCreateSubmitting.value = true
+  try {
+    await doAction(async () => {
+      const payload = {
+        ...form,
+        shopName,
+        contactName,
+        contactPhone,
+        username,
+        password,
+        providerApplicationId: form.providerApplicationId || undefined
+      }
+      await api.post('/admin/merchant-accounts', payload)
+      merchantCreateForm.value = null
+    }, form.providerApplicationId ? '商户已创建并关联服务商申请' : '独立商户已创建')
+  } finally {
+    merchantCreateSubmitting.value = false
+  }
+}
+
 function openMerchantPermission(account) {
   merchantPermissionForm.value = { ...account, permissions: [...(account.permissions || [])] }
 }
@@ -734,9 +919,11 @@ async function doAction(fn, successMsg) {
     await load()
     await loadNotifications(true)
     if (successMsg) Message.success(successMsg)
+    return true
   } catch (e) {
     error.value = e.message
     Message.error(e.message)
+    return false
   }
 }
 
@@ -753,12 +940,14 @@ function confirmDanger(content, action) {
 
 const reasonModal = ref({ visible: false, title: '', placeholder: '' })
 const reasonValue = ref('')
+const reasonSubmitting = ref(false)
 let reasonOk = null
 
-function askReason(title, placeholder, onOk, okText = '确定') {
+function askReason(title, placeholder, onOk, { okText = '确定', confirmOnEnter = true } = {}) {
+  if (reasonSubmitting.value) return
   reasonValue.value = ''
   reasonOk = onOk
-  reasonModal.value = { visible: true, title, placeholder, okText }
+  reasonModal.value = { visible: true, title, placeholder, okText, confirmOnEnter }
 }
 
 function closeReason() {
@@ -766,12 +955,16 @@ function closeReason() {
   reasonOk = null
 }
 
-function submitReason() {
-  const cb = reasonOk
+async function submitReason() {
+  if (!reasonOk || reasonSubmitting.value) return
   const val = reasonValue.value.trim()
   if (!val) return Message.warning('请填写原因后再提交')
-  closeReason()
-  if (cb) cb(val)
+  reasonSubmitting.value = true
+  try {
+    if (await reasonOk(val)) closeReason()
+  } finally {
+    reasonSubmitting.value = false
+  }
 }
 
 const filteredOrders = computed(() => {
@@ -955,13 +1148,14 @@ function serializeActivitySchedules() {
 function openActivity(a) {
   const platformPublisher = activityPublisherId.value === 'platform'
   activityForm.value = a
-    ? { ...a, publisherType: a.publisherType || (a.managerId ? 'merchant' : 'platform'), regionIds: inferRegionIds(a), sellType: a.sellType || 'date', serviceMode: a.serviceMode || (a.category === 5 ? 'delivery' : (a.city === '线上' || a.address === '线上直播') ? 'online' : 'checkin'), serviceDescription: a.serviceDescription || '' }
-    : { title: '', coverImage: '', publisherType: platformPublisher ? 'platform' : 'merchant', managerId: platformPublisher ? null : Number(activityPublisherId.value), category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0.01, memberPrice: 0.01, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, soldCountMode: 'actual', manualSoldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', serviceMode: 'checkin', serviceDescription: '', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
+    ? { ...a, publisherType: a.publisherType || (a.managerId ? 'merchant' : 'platform'), managerId: a.managerId == null ? null : String(a.managerId), regionIds: inferRegionIds(a), sellType: a.sellType || 'date', serviceMode: a.serviceMode || (a.category === 5 ? 'delivery' : (a.city === '线上' || a.address === '线上直播') ? 'online' : 'checkin'), serviceDescription: a.serviceDescription || '' }
+    : { title: '', coverImage: '', publisherType: platformPublisher ? 'platform' : 'merchant', managerId: platformPublisher ? null : String(activityPublisherId.value), category: activityCategoryFilter.value === 'all' ? 1 : Number(activityCategoryFilter.value), city: '线上/全国', regionIds: [], address: '', price: 0.01, memberPrice: 0.01, originalPrice: 0, minGroup: 0, maxGroup: 40, soldCount: 0, soldCountMode: 'actual', manualSoldCount: 0, highlight: '', time: '', managerCommissionRate: null, status: 1, sellType: 'date', serviceMode: 'checkin', serviceDescription: '', hasSku: false, skuLabel: '', schedules: [], skus: [], points: [], detail: '' }
   activitySchedules.value = Array.isArray(a && a.schedules) ? a.schedules.map(scheduleEditorRow) : []
   activitySkus.value = Array.isArray(a && a.skus) ? a.skus.map((sku) => ({ ...sku })) : []
   activityDetailBlocks.value = Array.isArray(a && a.detailBlocks) && a.detailBlocks.length
     ? a.detailBlocks.map((block) => ({ ...block }))
     : [{ type: 'text', text: (a && a.detail) || '' }]
+  activityDetailUploading.value = {}
   const refundRule = (a && a.refundRule) || { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }
   activityForm.value.refundRule = {
     ...refundRule,
@@ -1012,6 +1206,11 @@ function moveActivityDetailBlock(index, direction) {
 }
 
 function saveActivity() {
+  if (Object.values(activityDetailUploading.value).some(Boolean)) {
+    Message.warning('详情图片或视频仍在上传，请稍候再保存')
+    return
+  }
+  if (activityDetailBlocks.value.some(incompleteImage)) return Message.warning('请上传正文图片，或删除空的图片块')
   const form = { ...activityForm.value }
   form.title = String(form.title || '').trim()
   if (!form.title) {
@@ -1050,6 +1249,7 @@ function saveActivity() {
     return
   }
   if (form.publisherType === 'platform') form.managerId = null
+  else form.managerId = Number(form.managerId)
   try {
     form.schedules = serializeActivitySchedules()
     form.skus = activitySkus.value
@@ -1063,7 +1263,7 @@ function saveActivity() {
   form.hasSku = form.sellType === 'sku' || (Array.isArray(form.skus) && form.skus.length > 0)
   form.detailBlocks = activityDetailBlocks.value
     .map((block) => ({ ...block }))
-    .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.url)
+    .filter(hasDetailContent)
   form.detail = form.detailBlocks.filter((block) => block.type === 'text').map((block) => block.text).join('\n\n')
   const refundType = form.refundRule?.type || 'never'
   if (refundType === 'day') {
@@ -1101,8 +1301,8 @@ function removeActivity(id) {
 function openProduct(p) {
   const platformPublisher = productPublisherId.value === 'platform'
   productForm.value = p
-    ? { ...p, publisherType: p.publisherType || (p.managerId ? 'merchant' : 'platform'), regionIds: inferRegionIds(p) }
-    : { title: '', publisherType: platformPublisher ? 'platform' : 'merchant', managerId: platformPublisher ? null : Number(productPublisherId.value), category: 5, city: '全国', regionIds: [], price: 0.01, memberPrice: 0.01, originalPrice: 0, soldCount: 0, soldCountMode: 'actual', manualSoldCount: 0, stock: 0, highlight: '', points: [], detail: '', cover: '🛍️', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', sellType: 'sku', hasSku: false, skus: [], status: 1 }
+    ? { ...p, publisherType: p.publisherType || (p.managerId ? 'merchant' : 'platform'), managerId: p.managerId == null ? null : String(p.managerId), regionIds: inferRegionIds(p) }
+    : { title: '', publisherType: platformPublisher ? 'platform' : 'merchant', managerId: platformPublisher ? null : String(productPublisherId.value), category: 5, city: '全国', regionIds: [], price: 0.01, memberPrice: 0.01, originalPrice: 0, soldCount: 0, soldCountMode: 'actual', manualSoldCount: 0, stock: 0, highlight: '', points: [], detail: '', cover: '🛍️', coverTone: 'linear-gradient(135deg,#7a5cae,#b39ddb)', sellType: 'sku', hasSku: false, skus: [], status: 1 }
   productSkus.value = Array.isArray(p && p.skus) ? p.skus.map((sku) => ({ ...sku })) : []
   const savedImages = Array.isArray(p && p.images)
     ? p.images.map((image, index) => ({
@@ -1117,6 +1317,7 @@ function openProduct(p) {
   productDetailBlocks.value = Array.isArray(p && p.detailBlocks) && p.detailBlocks.length
     ? p.detailBlocks.map((block) => ({ ...block }))
     : [{ type: 'text', text: (p && p.detail) || '' }]
+  productDetailUploading.value = {}
   productForm.value.serviceMode = productForm.value.serviceMode || 'delivery'
   productForm.value.serviceDescription = productForm.value.serviceDescription || ''
   const refundRule = productForm.value.refundRule || { type: 'day', fullDays: 7, partialDays: 0, partialRate: 0 }
@@ -1175,6 +1376,11 @@ function moveProductDetailBlock(index, direction) {
 }
 
 function saveProduct() {
+  if (Object.values(productDetailUploading.value).some(Boolean)) {
+    Message.warning('详情图片或视频仍在上传，请稍候再保存')
+    return
+  }
+  if (productDetailBlocks.value.some(incompleteImage)) return Message.warning('请上传正文图片，或删除空的图片块')
   const form = { ...productForm.value }
   form.title = String(form.title || '').trim()
   if (!form.title) {
@@ -1208,6 +1414,7 @@ function saveProduct() {
     return
   }
   if (form.publisherType === 'platform') form.managerId = null
+  else form.managerId = Number(form.managerId)
   form.images = productImages.value.slice(0, 9).map((image, index) => ({
     id: image.id || `product-image-${Date.now()}-${index + 1}`,
     src: image.src,
@@ -1220,7 +1427,7 @@ function saveProduct() {
   form.hasSku = Array.isArray(form.skus) && form.skus.length > 0
   form.detailBlocks = productDetailBlocks.value
     .map((block) => ({ ...block }))
-    .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.url)
+    .filter(hasDetailContent)
   form.detail = form.detailBlocks.filter((block) => block.type === 'text').map((block) => block.text).join('\n\n')
   const refundType = form.refundRule?.type || 'never'
   if (refundType === 'day') {
@@ -1282,17 +1489,25 @@ function completePointOrder(record) {
 }
 
 function openLive(item) {
-  if (!item && !selectedMerchantId.value) {
-    Message.warning('请先选择商家')
-    return
-  }
-  liveForm.value = item ? { ...JSON.parse(JSON.stringify(item)), lessons: Array.isArray(item.lessons) ? JSON.parse(JSON.stringify(item.lessons)) : [] } : {
-    title: '', managerId: Number(selectedMerchantId.value), hostName: '', category: '视频课程',
+  const platformPublisher = livePublisherId.value === 'platform'
+  liveForm.value = item ? {
+    ...JSON.parse(JSON.stringify(item)),
+    publisherType: item.publisherType || (item.managerId ? 'merchant' : 'platform'),
+    managerId: item.managerId == null ? null : String(item.managerId),
+    lessons: Array.isArray(item.lessons) ? JSON.parse(JSON.stringify(item.lessons)) : []
+  } : {
+    title: '', publisherType: platformPublisher ? 'platform' : 'merchant', managerId: platformPublisher ? null : String(livePublisherId.value), hostName: '', category: '视频课程',
     status: 'scheduled', startAt: '', endAt: '', streamUrl: '', replayUrl: '', description: '',
-    memberPrice: 0.01, originalPrice: 0, lessonCount: 1, lessons: [], duration: '', coverImage: '', activityId: ''
+    detailBlocks: [{ type: 'text', text: '' }], memberPrice: 0.01, originalPrice: 0, lessonCount: 1, lessons: [], duration: '', coverImage: '', activityId: ''
+  }
+  if (item) {
+    liveForm.value.detailBlocks = Array.isArray(item.detailBlocks) && item.detailBlocks.length
+      ? item.detailBlocks.map((block) => ({ ...block }))
+      : [{ type: 'text', text: String(item.description || '') }]
   }
   liveVideoUploading.value = {}
   liveCoverUploading.value = false
+  liveDetailUploading.value = false
 }
 
 function chooseLiveCover() {
@@ -1309,7 +1524,7 @@ async function uploadLiveCover(event) {
   if (file.size > 2 * 1024 * 1024) return Message.error('课程封面不能超过 2MB')
   liveCoverUploading.value = true
   try {
-    const result = await api.post('/uploads/image', { dataUrl: await fileDataUrl(file), fileName: file.name })
+    const result = await api.post('/uploads/image?scope=courses', { dataUrl: await fileDataUrl(file), fileName: file.name })
     liveForm.value.coverImage = result.url
     Message.success('课程封面上传成功，保存课程后生效')
   } catch (e) {
@@ -1317,6 +1532,14 @@ async function uploadLiveCover(event) {
   } finally {
     liveCoverUploading.value = false
   }
+}
+
+async function uploadLiveDetailImage(file) {
+  const validationError = imageUploadError(file, '课程介绍图片')
+  if (validationError) throw new Error(validationError)
+  const result = await api.post('/uploads/image?scope=courses', { dataUrl: await fileDataUrl(file), fileName: file.name })
+  Message.success('课程介绍图片上传成功，保存课程后生效')
+  return result.url
 }
 
 function addLiveLesson() {
@@ -1361,8 +1584,13 @@ async function uploadLiveLessonVideo(event, lesson, index) {
 }
 
 function saveLive() {
+  if (liveDetailUploading.value) {
+    Message.warning('课程介绍图片仍在上传，请稍候再保存')
+    return
+  }
+  if (liveForm.value.detailBlocks.some(incompleteImage)) return Message.warning('请上传正文图片，或删除空的图片块')
   const form = { ...liveForm.value }
-  if (!form.managerId) {
+  if (form.publisherType === 'merchant' && !form.managerId) {
     Message.error('请先选择商家')
     return
   }
@@ -1376,6 +1604,18 @@ function saveLive() {
   }
   const invalidLesson = (form.lessons || []).findIndex((lesson) => !String(lesson.title || '').trim())
   if (invalidLesson >= 0) return Message.error(`请填写第 ${invalidLesson + 1} 节标题`)
+  form.detailBlocks = Array.isArray(form.detailBlocks)
+    ? form.detailBlocks
+      .map((block) => ({ ...block }))
+      .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' && block.src)
+    : []
+  form.description = form.detailBlocks
+    .filter((block) => block.type === 'text')
+    .map((block) => String(block.text || '').trim())
+    .filter(Boolean)
+    .join('\n\n')
+  if (form.publisherType === 'platform') form.managerId = null
+  else form.managerId = Number(form.managerId)
   form.lessonCount = form.lessons?.length || Number(form.lessonCount || 1)
   doAction(async () => {
     if (form.id) await api.put(`/lives/${form.id}`, form)
@@ -1432,6 +1672,7 @@ function openContent(post) {
   contentBlocks.value = Array.isArray(post?.contentBlocks) && post.contentBlocks.length
     ? post.contentBlocks.map((block) => ({ ...block }))
     : (String(post?.content || '').trim() ? [{ type: 'text', text: post.content }] : [{ type: 'text', text: '' }])
+  contentBlockUploading.value = {}
 }
 
 function addContentBlock(type) {
@@ -1459,12 +1700,17 @@ function moveContentBlock(index, direction) {
 }
 
 function saveContent() {
+  if (Object.values(contentBlockUploading.value).some(Boolean)) {
+    Message.warning('正文图片仍在上传，请稍候再保存')
+    return
+  }
+  if (contentBlocks.value.some(incompleteImage)) return Message.warning('请上传正文图片，或删除空的图片块')
   const form = { ...contentForm.value, regionIds: (contentForm.value.regionIds || []).map(String) }
   if (!String(form.title || '').trim()) {
     Message.error('请输入标题')
     return
   }
-  if (!String(form.coverImage || '').trim()) return Message.error('请上传封面图片')
+  if (!form.wechat?.sourceVerification && !String(form.coverImage || '').trim()) return Message.error('请上传封面图片')
   form.contentBlocks = contentBlocks.value
     .map((block) => ({ ...block }))
     .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.type === 'video' ? block.url : block.title && block.url)
@@ -1480,6 +1726,62 @@ function removeContent(id) {
   confirmDanger('确定删除这条内容？删除后不可恢复。', () =>
     doAction(() => api.del(`/content-posts/${id}`), '内容已删除')
   )
+}
+
+async function runWechatContentAction(record, action, successMessage, body = {}) {
+  const key = `${record.id}:${action}`
+  if (wechatContentLoading.value[key]) return null
+  wechatContentLoading.value = { ...wechatContentLoading.value, [key]: true }
+  try {
+    const result = await api.post(`/content-posts/${record.id}/wechat-${action}`, body, { timeoutMs: 60000 })
+    await load()
+    Message.success(typeof successMessage === 'function' ? successMessage(result) : successMessage)
+    return result
+  } catch (e) {
+    await load()
+    error.value = e.message
+    Message.error(e.message)
+    return null
+  } finally {
+    wechatContentLoading.value = { ...wechatContentLoading.value, [key]: false }
+  }
+}
+
+function createWechatDraft(record, format = 'news') {
+  const run = () => runWechatContentAction(
+    record,
+    'draft',
+    '公众号草稿已生成，请先到公众号后台草稿箱预览，确认无误后再提交发布',
+    { format, replaceUncertainDraftId: record.wechat?.submissionPending ? record.wechat.draftMediaId : undefined }
+  )
+  if (!record.wechat?.draftMediaId) return run()
+  Modal.confirm({
+    title: '重新生成公众号草稿',
+    content: record.wechat?.submissionPending
+      ? '上次提交的结果待核实。请先查看微信后台发表记录，确认需要另建草稿后继续。上次提交信息会保留。'
+      : '这会创建新的公众号草稿。已有发表记录会保留。',
+    okText: '重新生成',
+    cancelText: '取消',
+    onOk: run
+  })
+}
+
+function publishWechatContent(record) {
+  Modal.confirm({
+    title: '确认提交公众号发布',
+    content: '请确认已经在公众号后台预览过当前草稿。提交后将进入微信审核和发布流程，不能在本后台直接撤回。',
+    okText: '确认发布',
+    cancelText: '取消',
+    onOk: () => runWechatContentAction(record, 'publish', '已提交公众号发布，请稍后点击“查询状态”确认结果', { draftMediaId: record.wechat.draftMediaId })
+  })
+}
+
+function syncWechatContentStatus(record) {
+  return runWechatContentAction(record, 'status', (result) => {
+    if (result.withdrawn && ![5, 6].includes(result.publishStatus)) return '该篇公众号文章已撤回'
+    const labels = { 0: '公众号文章已发布', 1: '公众号仍在发布中', 2: '原创校验失败', 3: '公众号发布失败', 4: '平台审核未通过', 5: '文章已由发表者删除', 6: '文章已被微信封禁' }
+    return labels[Number(result.publishStatus)] || '公众号发布状态已更新'
+  })
 }
 
 function orderAction(id, action, body) {
@@ -1573,115 +1875,8 @@ function approveRefund(id) {
 
 function rejectRefund(record) {
   askReason('拒绝退款申请', '请输入拒绝原因', (reason) =>
-    doAction(() => api.post(`/orders/${record.id}/refund-audit`, { approve: false, reason }), '已拒绝退款')
-  )
-}
-
-async function searchVerify() {
-  const digits = verifyCode.value.replace(/\s+/g, '')
-  if (!digits) {
-    Message.warning('请输入核销码')
-    return
-  }
-  error.value = ''
-  verifySearching.value = true
-  try {
-    verifyOrder.value = await api.get('/orders/code/' + encodeURIComponent(digits))
-  } catch (e) {
-    verifyOrder.value = null
-    Message.error(e.message)
-  } finally {
-    verifySearching.value = false
-  }
-}
-
-function confirmVerify() {
-  if (!verifyOrder.value) return
-  const isCheckin = verifyOrder.value.serviceMode === 'checkin' || verifyOrder.value.status === '待签到'
-  const actionLabel = isCheckin ? '签到' : '核销'
-  Modal.confirm({
-    title: `确认${actionLabel}`,
-    content: `确认订单「${verifyOrder.value.title}」已完成${actionLabel}（凭证码 ${verifyOrder.value.code}）？`,
-    okText: '确定',
-    cancelText: '取消',
-    onOk: () => doVerify()
-  })
-}
-
-async function doVerify() {
-  error.value = ''
-  try {
-    const isCheckin = verifyOrder.value.serviceMode === 'checkin' || verifyOrder.value.status === '待签到'
-    verifyOrder.value = await api.post(`/orders/${verifyOrder.value.id}/verify`)
-    Message.success(isCheckin ? '签到成功' : '核销成功')
-  } catch (e) {
-    error.value = e.message
-    Message.error(e.message)
-  }
-}
-
-async function loadCardCustomer(id) {
-  const value = id ? String(id) : ''
-  cardCustomerId.value = value
-  if (!value) {
-    cardProfile.value = null
-    cardList.value = []
-    return
-  }
-  cardLoading.value = true
-  try {
-    const profile = await api.get('/users/' + encodeURIComponent(value))
-    cardProfile.value = profile
-    cardList.value = Array.isArray(profile.cards) ? profile.cards : []
-  } catch (e) {
-    cardProfile.value = null
-    cardList.value = []
-    Message.error(e.message)
-  } finally {
-    cardLoading.value = false
-  }
-}
-
-function openMakeup(card) {
-  const remain = Number(card.remain || 0)
-  if (remain <= 0) {
-    Message.warning('该计次卡已无剩余次数')
-    return
-  }
-  const now = new Date()
-  const pad = (value) => String(value).padStart(2, '0')
-  makeupTarget.value = card
-  makeupForm.value = {
-    date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
-    time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
-    reason: ''
-  }
-}
-
-async function submitMakeup() {
-  const card = makeupTarget.value
-  const form = makeupForm.value
-  if (!card) return
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(form.date || ''))) return Message.warning('请填写正确的补签日期')
-  if (!String(form.reason || '').trim()) return Message.warning('请填写补签原因')
-  error.value = ''
-  try {
-    const updated = await api.post(`/cards/${card.id}/makeup-checkin`, {
-      date: form.date,
-      time: form.time,
-      reason: String(form.reason).trim(),
-      memberName: cardProfile.value?.user?.name || '',
-      memberPhone: cardProfile.value?.user?.phone || '',
-      operator: '后台管理员'
-    })
-    const idx = cardList.value.findIndex((c) => String(c.id) === String(card.id))
-    if (idx >= 0) cardList.value[idx] = updated
-    makeupTarget.value = null
-    Message.success('补签成功')
-  } catch (e) {
-    error.value = e.message
-    Message.error(e.message)
-  }
+    doAction(() => api.post(`/orders/${record.id}/refund-audit`, { approve: false, reason }), '已拒绝退款'),
+    { okText: '确认拒绝退款', confirmOnEnter: false })
 }
 
 function openCustomer(c) {
@@ -1782,15 +1977,62 @@ function removeCategory(id) {
 }
 
 function openBanner(b) {
+  bannerMediaRequired.value = !b || Boolean(b.mediaUrl || b.imageUrl)
   bannerForm.value = b
     ? { ...b, mediaType: b.mediaType === 'video' ? 'video' : 'image', status: b.status === 0 ? 0 : 1, sort: Number(b.sort || 0) }
-    : { title: '', sub: '', mediaType: 'image', mediaUrl: '', linkUrl: '/pages/list/list', status: 1, sort: 0, emoji: '🎁', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', cat: 0 }
+    : { title: '', sub: '', mediaType: 'image', mediaUrl: '', linkUrl: '', status: 1, sort: 0, emoji: '🎁', tone: 'linear-gradient(135deg,#c25e3d,#e19a6d)', cat: 0 }
+  bannerTargetValue.value = ''
+  bannerTargets.value = []
+  bannerCustomLink.value = String(b?.linkUrl || '')
+  bannerLinkMode.value = b ? (bannerCustomLink.value ? 'custom' : 'display') : 'detail'
+  bannerLinkTouched.value = false
+  loadBannerTargets(bannerForm.value)
+}
+
+function bannerTargetKey(target) {
+  return `${target.type}:${target.id}`
+}
+
+async function loadBannerTargets(openedForm = bannerForm.value) {
+  bannerTargetsLoading.value = true
+  bannerTargetsError.value = ''
+  try {
+    const rows = await api.get('/banners/targets')
+    if (bannerForm.value !== openedForm || !openedForm) return
+    bannerTargets.value = (Array.isArray(rows) ? rows : []).filter((target) => target?.id != null && target.title && target.linkUrl)
+    const currentLink = String(openedForm.linkUrl || '')
+    const matched = bannerTargets.value.find((target) => String(target.linkUrl) === currentLink)
+    if (matched && !bannerLinkTouched.value) {
+      bannerLinkMode.value = 'detail'
+      bannerTargetValue.value = bannerTargetKey(matched)
+    }
+  } catch (error) {
+    if (bannerForm.value === openedForm) bannerTargetsError.value = error.message || '跳转目标加载失败'
+  } finally {
+    if (bannerForm.value === openedForm) bannerTargetsLoading.value = false
+  }
+}
+
+function markBannerLinkTouched() {
+  bannerLinkTouched.value = true
 }
 
 function saveBanner() {
   const form = { ...bannerForm.value }
   if (!String(form.title || '').trim()) return Message.warning('请填写 Banner 标题')
-  if (!String(form.mediaUrl || '').trim()) return Message.warning('请上传 Banner 图片或视频')
+  if (!String(form.mediaUrl || '').trim() && bannerMediaRequired.value) return Message.warning('请上传 Banner 图片或视频')
+  if (bannerLinkMode.value === 'detail') {
+    const target = bannerTargets.value.find((item) => bannerTargetKey(item) === bannerTargetValue.value)
+    if (!target) return Message.warning('请选择要跳转的已发布内容')
+    form.linkUrl = String(target.linkUrl)
+  } else if (bannerLinkMode.value === 'custom') {
+    const link = String(bannerCustomLink.value || '').trim()
+    if (!link) return Message.warning('请填写自定义小程序路径或 HTTPS 链接；无需跳转请选择“纯展示”')
+    if (!/^(\/pages\/|https:\/\/)/.test(link)) return Message.warning('自定义链接应为 /pages/ 开头的小程序路径或 HTTPS 链接')
+    form.linkUrl = link
+  } else {
+    form.linkUrl = ''
+  }
   doAction(async () => {
     if (form.id) await api.put(`/banners/${form.id}`, form)
     else await api.post('/banners', form)
@@ -1916,7 +2158,6 @@ function submitManagerReject() {
 }
 
 function approveProvider(record) {
-  const phoneSuffix = String(record.phone || '').slice(-6)
   providerApproveTarget.value = record
   providerAccountForm.value = {
     name: record.name || '',
@@ -1924,7 +2165,6 @@ function approveProvider(record) {
     type: record.type === 'company' ? 'company' : 'personal',
     intro: record.intro || '',
     address: record.address || '',
-    shopName: record.shopName || record.name || '',
     contactName: record.contactName || record.name || '',
     contactPhone: record.contactPhone || record.phone || '',
     contactWechat: record.contactWechat || '',
@@ -1932,9 +2172,7 @@ function approveProvider(record) {
     cooperationContent: record.cooperationContent || record.intro || '',
     cooperationStartAt: record.cooperationStartAt || '',
     cooperationEndAt: record.cooperationEndAt || '',
-    cooperationRemark: record.cooperationRemark || '',
-    username: record.loginUsername || `shop_${phoneSuffix}`,
-    password: record.status === '待审核' ? `Syl${phoneSuffix}!` : ''
+    cooperationRemark: record.cooperationRemark || ''
   }
 }
 
@@ -1944,17 +2182,22 @@ function submitProviderApproval() {
   if (!target || !form) return
   if (!String(form.name || '').trim() || !/^1\d{10}$/.test(String(form.phone || '').replace(/\D/g, ''))) return Message.warning('请填写正确的申请人和手机号')
   if (!String(form.intro || '').trim() || !String(form.address || '').trim()) return Message.warning('请填写主营服务和联系地址')
-  if (!String(form.shopName || '').trim() || !String(form.contactName || '').trim()) return Message.warning('请填写商户名称和合作联系人')
+  if (!String(form.contactName || '').trim()) return Message.warning('请填写合作联系人')
   if (!/^1\d{10}$/.test(String(form.contactPhone || '').replace(/\D/g, ''))) return Message.warning('请填写正确的合作联系电话')
   if (!String(form.cooperationMode || '').trim() || !String(form.cooperationContent || '').trim()) return Message.warning('请填写合作方式和合作内容')
   doAction(async () => {
     await api.post(`/provider-applications/${target.id}/approve`, {
-      ...form,
-      phone: String(form.phone || '').replace(/\D/g, ''),
-      contactPhone: String(form.contactPhone || '').replace(/\D/g, '')
+      contactName: String(form.contactName || '').trim(),
+      contactPhone: String(form.contactPhone || '').replace(/\D/g, ''),
+      contactWechat: String(form.contactWechat || '').trim(),
+      cooperationMode: String(form.cooperationMode || '').trim(),
+      cooperationContent: String(form.cooperationContent || '').trim(),
+      cooperationStartAt: String(form.cooperationStartAt || '').trim(),
+      cooperationEndAt: String(form.cooperationEndAt || '').trim(),
+      cooperationRemark: String(form.cooperationRemark || '').trim()
     })
     providerApproveTarget.value = null
-  }, '已通过并开通商户账号')
+  }, '服务商申请已审核通过，尚未创建商户账号')
 }
 
 function rejectProvider(id) {
@@ -1963,7 +2206,7 @@ function rejectProvider(id) {
       await api.post(`/provider-applications/${id}/reject`, { reason })
       providerApproveTarget.value = null
     }, '服务商申请已拒绝'),
-  '提交拒绝')
+  { okText: '提交拒绝' })
 }
 
 function setManagerStatus(id, status) {
@@ -2345,23 +2588,47 @@ async function uploadContentCover(event) {
   }
 }
 
-async function uploadContentBlockImage(event, index) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  if (!file) return
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return Message.error('正文图片仅支持 PNG、JPG 或 WebP')
-  if (file.size > 2 * 1024 * 1024) return Message.error('正文图片不能超过2MB')
-  contentBlockUploading.value = { ...contentBlockUploading.value, [index]: true }
+function imageUploadError(file, label) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file?.type)) return `${label}仅支持 PNG、JPG 或 WebP`
+  if (file.size > 2 * 1024 * 1024) return `${label}不能超过2MB`
+  return ''
+}
+
+async function uploadEditorImage(file, block, blocksRef, formRef, uploadingRef, label, successMessage, scope = '') {
+  if (!file || !block) return
+  const validationError = imageUploadError(file, label)
+  if (validationError) {
+    Message.error(validationError)
+    return
+  }
+  const key = editorBlockKey(block)
+  if (uploadingRef.value[key]) return
+  const owner = formRef.value
+  uploadingRef.value = { ...uploadingRef.value, [key]: true }
   try {
     const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
-    contentBlocks.value[index].src = result.url
-    Message.success('正文图片上传成功，保存内容后生效')
+    const endpoint = scope ? `/uploads/image?scope=${scope}` : '/uploads/image'
+    const result = await api.post(endpoint, { dataUrl, fileName: file.name })
+    if (formRef.value !== owner || !blocksRef.value.includes(block)) return
+    if (!result?.url) throw new Error('上传未返回图片地址，请重试')
+    block.src = result.url
+    Message.success(successMessage)
   } catch (e) {
-    Message.error(e.message || '上传失败')
+    if (formRef.value === owner && blocksRef.value.includes(block)) Message.error(e.message || '上传失败')
   } finally {
-    contentBlockUploading.value = { ...contentBlockUploading.value, [index]: false }
+    if (formRef.value === owner) uploadingRef.value = { ...uploadingRef.value, [key]: false }
   }
+}
+
+function insertContentParagraphImage(block, file, offset) {
+  const imageBlock = insertImageBlock(contentBlocks.value, block, offset)
+  if (imageBlock) uploadEditorImage(file, imageBlock, contentBlocks, contentForm, contentBlockUploading, '正文图片', '正文图片上传成功，保存内容后生效')
+}
+
+function uploadContentBlockImage(event, block) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  return uploadEditorImage(file, block, contentBlocks, contentForm, contentBlockUploading, '正文图片', '正文图片上传成功，保存内容后生效')
 }
 
 async function uploadPointCover(event) {
@@ -2404,7 +2671,7 @@ async function uploadActivityCover(event) {
   activityCoverUploading.value = true
   try {
     const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    const result = await api.post('/uploads/image?scope=activities', { dataUrl, fileName: file.name })
     activityForm.value.coverImage = result.url
     Message.success('活动封面上传成功，保存活动后生效')
   } catch (e) {
@@ -2428,7 +2695,7 @@ async function uploadProductImages(event) {
     const uploaded = []
     for (const file of files) {
       const dataUrl = await fileDataUrl(file)
-      const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+      const result = await api.post('/uploads/image?scope=products', { dataUrl, fileName: file.name })
       uploaded.push({ id: `product-image-${Date.now()}-${uploaded.length}`, src: result.url, label: '' })
     }
     productImages.value = [...productImages.value, ...uploaded]
@@ -2440,75 +2707,51 @@ async function uploadProductImages(event) {
   }
 }
 
-async function uploadDetailVideo(event, type, index) {
+async function uploadDetailVideo(event, type, block) {
   const file = event.target.files && event.target.files[0]
   event.target.value = ''
   if (!file) return
   if (!['video/mp4', 'video/webm'].includes(file.type)) return Message.error('视频仅支持 MP4 或 WebM 格式')
   if (file.size > 15 * 1024 * 1024) return Message.error('详情视频不能超过15MB')
   const uploading = type === 'activity' ? activityDetailUploading : productDetailUploading
-  uploading.value = { ...uploading.value, [index]: true }
+  const blocks = type === 'activity' ? activityDetailBlocks : productDetailBlocks
+  const formRef = type === 'activity' ? activityForm : productForm
+  const owner = formRef.value
+  const key = editorBlockKey(block)
+  uploading.value = { ...uploading.value, [key]: true }
   try {
     const dataUrl = await fileDataUrl(file)
     const result = await api.post('/uploads/video', { dataUrl, fileName: file.name })
-    const blocks = type === 'activity' ? activityDetailBlocks : productDetailBlocks
-    blocks.value[index].url = result.url
+    if (formRef.value !== owner || !blocks.value.includes(block)) return
+    block.url = result.url
     Message.success('详情视频上传成功，保存后生效')
   } catch (e) {
-    Message.error(e.message || '视频上传失败')
+    if (formRef.value === owner && blocks.value.includes(block)) Message.error(e.message || '视频上传失败')
   } finally {
-    uploading.value = { ...uploading.value, [index]: false }
+    if (formRef.value === owner) uploading.value = { ...uploading.value, [key]: false }
   }
 }
 
-async function uploadActivityDetailImage(event, index) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  if (!file) return
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-    Message.error('仅支持 PNG、JPG 或 WebP 图片')
-    return
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    Message.error('详情图片不能超过2MB')
-    return
-  }
-  activityDetailUploading.value = { ...activityDetailUploading.value, [index]: true }
-  try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
-    activityDetailBlocks.value[index].src = result.url
-    Message.success('详情图片上传成功，保存活动后生效')
-  } catch (e) {
-    Message.error(e.message || '上传失败')
-  } finally {
-    activityDetailUploading.value = { ...activityDetailUploading.value, [index]: false }
-  }
+function insertActivityParagraphImage(block, file, offset) {
+  const imageBlock = insertImageBlock(activityDetailBlocks.value, block, offset)
+  if (imageBlock) uploadEditorImage(file, imageBlock, activityDetailBlocks, activityForm, activityDetailUploading, '详情图片', '详情图片上传成功，保存活动后生效', 'activities')
 }
 
-async function uploadProductDetailImage(event, index) {
+function uploadActivityDetailImage(event, block) {
   const file = event.target.files && event.target.files[0]
   event.target.value = ''
-  if (!file) return
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-    Message.error('仅支持 PNG、JPG 或 WebP 图片')
-    return
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    Message.error('详情图片不能超过2MB')
-    return
-  }
-  productDetailUploading.value = { ...productDetailUploading.value, [index]: true }
-  try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
-    productDetailBlocks.value[index].src = result.url
-    Message.success('详情图片上传成功，保存商品后生效')
-  } catch (e) {
-    Message.error(e.message || '上传失败')
-  } finally {
-    productDetailUploading.value = { ...productDetailUploading.value, [index]: false }
-  }
+  return uploadEditorImage(file, block, activityDetailBlocks, activityForm, activityDetailUploading, '详情图片', '详情图片上传成功，保存活动后生效', 'activities')
+}
+
+function insertProductParagraphImage(block, file, offset) {
+  const imageBlock = insertImageBlock(productDetailBlocks.value, block, offset)
+  if (imageBlock) uploadEditorImage(file, imageBlock, productDetailBlocks, productForm, productDetailUploading, '详情图片', '详情图片上传成功，保存商品后生效', 'products')
+}
+
+function uploadProductDetailImage(event, block) {
+  const file = event.target.files && event.target.files[0]
+  event.target.value = ''
+  return uploadEditorImage(file, block, productDetailBlocks, productForm, productDetailUploading, '详情图片', '详情图片上传成功，保存商品后生效', 'products')
 }
 
 function exportCsv(filename, rows) {
@@ -2548,7 +2791,7 @@ function exportCsv(filename, rows) {
   <a-layout v-else class="layout">
     <a-layout-sider
       collapsible
-      :collapsed="collapsed"
+      v-model:collapsed="collapsed"
       :width="240"
       :collapsed-width="64"
       breakpoint="lg"
@@ -2643,11 +2886,14 @@ function exportCsv(filename, rows) {
             :activities="activities"
             :categories="categoryList"
             :publisher-options="activityPublisherOptions"
+            :publisher-options-loading="publisherManagersLoading"
+            :publisher-options-error="publisherManagersError"
             :publisher-name="activityPublisherName"
             :category-name="catName"
             :region-names="regionNames"
             @edit="openActivity"
             @remove="removeActivity"
+            @retry-publishers="loadPublisherManagers(true)"
           />
 
           <ProductsView
@@ -2655,21 +2901,27 @@ function exportCsv(filename, rows) {
             v-model:publisher-id="productPublisherId"
             :products="products"
             :publisher-options="activityPublisherOptions"
+            :publisher-options-loading="publisherManagersLoading"
+            :publisher-options-error="publisherManagersError"
             :publisher-name="activityPublisherName"
             :category-name="catName"
             :region-names="regionNames"
             @edit="openProduct"
             @remove="removeProduct"
+            @retry-publishers="loadPublisherManagers(true)"
           />
 
           <LivesView
             v-if="view === 'lives'"
-            v-model:merchant-id="selectedMerchantId"
+            v-model:publisher-id="livePublisherId"
             :lives="lives"
-            :merchant="selectedMerchant"
-            :merchant-options="managerOptions"
+            :publisher-options="activityPublisherOptions"
+            :publisher-options-loading="publisherManagersLoading"
+            :publisher-options-error="publisherManagersError"
+            :publisher-name="activityPublisherName"
             @edit="openLive"
             @remove="removeLive"
+            @retry-publishers="loadPublisherManagers(true)"
           />
 
           <PointsMallView
@@ -2689,20 +2941,7 @@ function exportCsv(filename, rows) {
 
           <LogisticsView v-if="view === 'logistics'" :config="logisticsConfig" :exceptions="logisticsExceptions" :loading="logisticsQueryLoading" v-model:query-form="logisticsQueryForm" :result="logisticsQueryResult" @query="queryLogistics" @refresh="refreshLogistics" />
 
-          <VerifyView
-            v-if="view === 'verify'"
-            v-model:code="verifyCode"
-            v-model:customer-id="cardCustomerId"
-            :order="verifyOrder"
-            :searching="verifySearching"
-            :customer-options="customerOptions"
-            :cards="cardList"
-            :card-loading="cardLoading"
-            @search="searchVerify"
-            @confirm="confirmVerify"
-            @load-customer="loadCardCustomer"
-            @makeup="openMakeup"
-          />
+          <VerifyPage v-if="view === 'verify'" />
 
           <CustomersView v-if="view === 'customers'" v-model:keyword="kw" :customers="filteredCustomers" :managers="managers" :loading="customerDetailLoading" @detail="openCustomerDetail" @edit="openCustomer" @rebind="openRebind" @unbind="unbindCustomer" />
 
@@ -2729,8 +2968,13 @@ function exportCsv(filename, rows) {
           <ContentView
             v-if="view === 'content'"
             :posts="contentPosts"
+            :wechat-loading="wechatContentLoading"
+            @refresh="load"
             @edit="openContent"
             @remove="removeContent"
+            @wechat-draft="createWechatDraft"
+            @wechat-publish="publishWechatContent"
+            @wechat-status="syncWechatContentStatus"
           />
 
           <ApplicationsView
@@ -2751,6 +2995,7 @@ function exportCsv(filename, rows) {
             v-model:status="merchantStatusFilter"
             :accounts="merchantAccounts"
             :permission-name="permissionNames"
+            @create="openMerchantCreate()"
             @edit="openMerchantPermission"
             @reset-password="record => openPasswordReset('merchant', record)"
           />
@@ -2818,6 +3063,50 @@ function exportCsv(filename, rows) {
     <template #footer><a-button @click="adminAccountForm = null">取消</a-button><a-button type="primary" @click="saveAdminAccount">保存账号</a-button></template>
   </a-modal>
 
+  <a-modal v-if="merchantCreateForm" :visible="true" title="新建商户" :width="760" class="admin-editor-modal merchant-create-modal" @cancel="merchantCreateForm = null">
+    <a-form :model="merchantCreateForm" layout="vertical">
+      <a-alert type="warning" style="margin-bottom: 16px">
+        正式商户名称必须由管理员核实后填写，不会自动复制申请人姓名。
+      </a-alert>
+      <a-form-item label="关联已通过的服务商申请（可选）">
+        <a-select
+          v-model="merchantCreateForm.providerApplicationId"
+          :options="providerApplicationOptions"
+          allow-clear
+          allow-search
+          popup-container=".merchant-create-modal .arco-modal-body"
+          placeholder="不选择即独立创建商户"
+          @change="selectMerchantProvider"
+        />
+        <template #extra>仅显示已审核通过且尚未开户的申请；关联后会保留申请与商户账号的追溯关系。</template>
+      </a-form-item>
+      <a-row :gutter="12">
+        <a-col :xs="24" :sm="12"><a-form-item label="正式商户名称" required><a-input v-model="merchantCreateForm.shopName" placeholder="请按营业执照或已核实名称填写" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="联系人" required><a-input v-model="merchantCreateForm.contactName" /></a-form-item></a-col>
+      </a-row>
+      <a-row :gutter="12">
+        <a-col :xs="24" :sm="12"><a-form-item label="联系人手机号" required><a-input v-model="merchantCreateForm.contactPhone" maxlength="11" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="联系微信"><a-input v-model="merchantCreateForm.contactWechat" /></a-form-item></a-col>
+      </a-row>
+      <a-form-item label="商户简介"><a-textarea v-model="merchantCreateForm.shopIntro" :auto-size="{ minRows: 2, maxRows: 4 }" /></a-form-item>
+      <a-form-item label="联系地址"><a-input v-model="merchantCreateForm.address" /></a-form-item>
+      <a-divider orientation="left">商户后台账号</a-divider>
+      <a-row :gutter="12">
+        <a-col :xs="24" :sm="12"><a-form-item label="登录账号" required><a-input v-model="merchantCreateForm.username" placeholder="4-24位字母、数字或下划线" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="临时密码" required><a-input-password v-model="merchantCreateForm.password" placeholder="至少8位" /></a-form-item></a-col>
+      </a-row>
+      <a-row :gutter="12">
+        <a-col :xs="24" :sm="12"><a-form-item label="账号状态"><a-radio-group v-model="merchantCreateForm.status" type="button"><a-radio :value="1">启用</a-radio><a-radio :value="0">停用</a-radio></a-radio-group></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="允许发布"><a-checkbox-group v-model="merchantCreateForm.permissions" direction="vertical" :options="permissionOptions.merchant.map((item) => ({ label: item.name, value: item.key }))" /></a-form-item></a-col>
+      </a-row>
+      <a-alert type="info">创建成功后请通过安全渠道将登录账号和临时密码交付商户；后台不会再次显示该临时密码。</a-alert>
+    </a-form>
+    <template #footer>
+      <a-button :disabled="merchantCreateSubmitting" @click="merchantCreateForm = null">取消</a-button>
+      <a-button type="primary" :loading="merchantCreateSubmitting" @click="saveMerchantAccount">确认创建</a-button>
+    </template>
+  </a-modal>
+
   <a-modal v-if="merchantPermissionForm" :visible="true" :title="`${merchantPermissionForm.shopName || merchantPermissionForm.username} · 发布权限`" :width="560" class="admin-editor-modal" @cancel="merchantPermissionForm = null">
     <a-form :model="merchantPermissionForm" layout="vertical">
       <a-form-item label="账号状态"><a-radio-group v-model="merchantPermissionForm.status" type="button"><a-radio :value="1">启用</a-radio><a-radio :value="0">停用</a-radio></a-radio-group></a-form-item>
@@ -2838,28 +3127,6 @@ function exportCsv(filename, rows) {
       <a-form-item label="确认新密码" required><a-input-password v-model="selfPasswordForm.confirmPassword" /></a-form-item>
     </a-form>
     <template #footer><a-button @click="selfPasswordForm = null">取消</a-button><a-button type="primary" @click="submitSelfPassword">修改密码</a-button></template>
-  </a-modal>
-
-  <a-modal
-    v-if="makeupTarget"
-    :visible="true"
-    class="admin-editor-modal"
-    title="课程补签"
-    :width="480"
-    @cancel="makeupTarget = null"
-  >
-    <a-alert type="warning" style="margin-bottom: 16px">
-      补签会核销 1 次课程，并保留操作人、补签日期和原因。
-    </a-alert>
-    <a-form :model="makeupForm" layout="vertical">
-      <a-form-item label="课程"><a-input :model-value="makeupTarget.title" disabled /></a-form-item>
-      <a-row :gutter="12">
-        <a-col :span="12"><a-form-item label="补签日期" required><a-input v-model="makeupForm.date" placeholder="YYYY-MM-DD" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="课程时间"><a-input v-model="makeupForm.time" placeholder="如 14:00-15:30" /></a-form-item></a-col>
-      </a-row>
-      <a-form-item label="补签原因" required><a-textarea v-model="makeupForm.reason" :max-length="100" show-word-limit placeholder="例如：会员现场签到失败，经工作人员核实到场" /></a-form-item>
-    </a-form>
-    <template #footer><a-button @click="makeupTarget = null">取消</a-button><a-button type="primary" @click="submitMakeup">确认补签</a-button></template>
   </a-modal>
 
   <a-modal
@@ -3117,48 +3384,52 @@ function exportCsv(filename, rows) {
     @cancel="providerApproveTarget = null"
   >
     <a-alert v-if="providerApproveTarget.status === '已拒绝'" type="error" style="margin-bottom: 16px">拒绝原因：{{ providerApproveTarget.rejectReason }}</a-alert>
-    <a-alert v-else-if="providerApproveTarget.status === '已通过'" type="success" style="margin-bottom: 16px">已于 {{ providerApproveTarget.auditedAt || '—' }} 审核通过，商户账号：{{ providerApproveTarget.loginUsername }}</a-alert>
+    <a-alert v-else-if="providerApproveTarget.status === '已通过' && (providerApproveTarget.merchantAccountId || providerApproveTarget.loginUsername)" type="success" style="margin-bottom: 16px">已关联商户账号 {{ providerApproveTarget.loginUsername || providerApproveTarget.merchantAccountId }}。</a-alert>
+    <a-alert v-else-if="providerApproveTarget.status === '已通过'" type="success" style="margin-bottom: 16px">
+      审核已通过，尚未创建商户账号。
+    </a-alert>
+    <a-alert v-else type="info" style="margin-bottom: 16px">
+      审核通过后，请到商户管理创建账号。
+    </a-alert>
     <a-form :model="providerAccountForm" layout="vertical" :disabled="providerApproveTarget.status !== '待审核'">
       <a-divider orientation="left">用户提交内容</a-divider>
       <a-row :gutter="12">
-        <a-col :span="8"><a-form-item label="主体类型"><a-select v-model="providerAccountForm.type" :options="providerTypeOptions" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="名称/联系人" required><a-input v-model="providerAccountForm.name" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="申请手机号" required><a-input v-model="providerAccountForm.phone" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="主体类型"><a-select v-model="providerAccountForm.type" :options="providerTypeOptions" disabled /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="名称/联系人"><a-input v-model="providerAccountForm.name" disabled /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="申请手机号"><a-input v-model="providerAccountForm.phone" disabled /></a-form-item></a-col>
       </a-row>
-      <a-form-item label="联系地址" required><a-textarea v-model="providerAccountForm.address" :auto-size="{ minRows: 2, maxRows: 4 }" /></a-form-item>
-      <a-form-item label="主营产品/服务" required><a-textarea v-model="providerAccountForm.intro" :auto-size="{ minRows: 3, maxRows: 6 }" /></a-form-item>
+      <a-form-item label="联系地址"><a-textarea v-model="providerAccountForm.address" :auto-size="{ minRows: 2, maxRows: 4 }" disabled /></a-form-item>
+      <a-form-item label="主营产品/服务"><a-textarea v-model="providerAccountForm.intro" :auto-size="{ minRows: 3, maxRows: 6 }" disabled /></a-form-item>
       <a-alert type="info" style="margin: 6px 0 16px">申请编号：{{ providerApproveTarget.id }} 提交时间：{{ providerApproveTarget.submittedAt || '—' }}</a-alert>
 
-      <a-divider orientation="left">合作资料</a-divider>
+      <a-divider orientation="left">待核实的合作资料</a-divider>
       <a-row :gutter="12">
-        <a-col :span="12"><a-form-item label="商户名称" required><a-input v-model="providerAccountForm.shopName" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="合作方式" required><a-input v-model="providerAccountForm.cooperationMode" placeholder="例如：平台代运营、商家自营、佣金合作" /></a-form-item></a-col>
+        <a-col :span="24"><a-form-item label="合作方式" required><a-input v-model="providerAccountForm.cooperationMode" placeholder="例如：平台代运营、商家自营、佣金合作" /></a-form-item></a-col>
       </a-row>
       <a-row :gutter="12">
-        <a-col :span="8"><a-form-item label="合作联系人" required><a-input v-model="providerAccountForm.contactName" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="联系电话" required><a-input v-model="providerAccountForm.contactPhone" /></a-form-item></a-col>
-        <a-col :span="8"><a-form-item label="联系微信"><a-input v-model="providerAccountForm.contactWechat" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="合作联系人" required><a-input v-model="providerAccountForm.contactName" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="联系电话" required><a-input v-model="providerAccountForm.contactPhone" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="8"><a-form-item label="联系微信"><a-input v-model="providerAccountForm.contactWechat" /></a-form-item></a-col>
       </a-row>
       <a-row :gutter="12">
-        <a-col :span="12"><a-form-item label="合作开始日期"><a-input v-model="providerAccountForm.cooperationStartAt" placeholder="YYYY-MM-DD" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="合作结束日期"><a-input v-model="providerAccountForm.cooperationEndAt" placeholder="YYYY-MM-DD或长期" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="合作开始日期"><a-input v-model="providerAccountForm.cooperationStartAt" placeholder="YYYY-MM-DD" /></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="合作结束日期"><a-input v-model="providerAccountForm.cooperationEndAt" placeholder="YYYY-MM-DD或长期" /></a-form-item></a-col>
       </a-row>
       <a-form-item label="合作内容" required><a-textarea v-model="providerAccountForm.cooperationContent" :auto-size="{ minRows: 3, maxRows: 6 }" placeholder="记录合作商品、活动、课程、结算方式等内容" /></a-form-item>
       <a-form-item label="合作备注"><a-textarea v-model="providerAccountForm.cooperationRemark" :auto-size="{ minRows: 2, maxRows: 4 }" /></a-form-item>
 
-      <a-divider orientation="left">商户后台账号</a-divider>
-      <a-row :gutter="12">
-        <a-col :span="12"><a-form-item label="登录账号" required><a-input v-model="providerAccountForm.username" placeholder="4-24位字母、数字或下划线" /></a-form-item></a-col>
-        <a-col :span="12"><a-form-item label="临时密码" required><a-input v-model="providerAccountForm.password" /></a-form-item></a-col>
-      </a-row>
-      <a-alert v-if="providerApproveTarget.status === '待审核'" type="warning">通过后请将登录账号和临时密码告知申请人。服务端只保存加盐后的密码摘要。</a-alert>
     </a-form>
     <template #footer>
       <a-button @click="providerApproveTarget = null">关闭</a-button>
       <template v-if="providerApproveTarget.status === '待审核'">
         <a-button status="danger" @click="rejectProvider(providerApproveTarget.id)">拒绝</a-button>
-        <a-button type="primary" @click="submitProviderApproval">确认通过并开通</a-button>
+        <a-button type="primary" @click="submitProviderApproval">确认审核通过</a-button>
       </template>
+      <a-button
+        v-else-if="providerApproveTarget.status === '已通过' && !(providerApproveTarget.merchantAccountId || providerApproveTarget.loginUsername) && hasPermission('accounts.manage')"
+        type="primary"
+        @click="openMerchantCreate(providerApproveTarget)"
+      >以此申请新建商户</a-button>
     </template>
   </a-modal>
 
@@ -3189,12 +3460,12 @@ function exportCsv(filename, rows) {
             <div class="listing-section-head"><div><span class="listing-section-index">01</span><strong>基础信息</strong></div><p>设置用户第一眼看到的标题、图片和活动分类</p></div>
       <a-form-item label="发布归属">
         <a-radio-group v-model="activityForm.publisherType" type="button">
-          <a-radio value="platform">岁悦里平台</a-radio>
-          <a-radio value="merchant">商家</a-radio>
+          <a-radio value="platform">平台自营</a-radio>
+          <a-radio value="merchant" :disabled="!managerOptions.length && activityForm.publisherType !== 'merchant'">商家发布</a-radio>
         </a-radio-group>
       </a-form-item>
       <a-form-item v-if="activityForm.publisherType === 'merchant'" label="所属商家">
-        <a-select v-model="activityForm.managerId" :options="managerOptions" allow-search placeholder="请选择商家" />
+        <a-select v-model="activityForm.managerId" :options="activityManagerOptions" allow-search placeholder="请选择商家" />
       </a-form-item>
       <a-form-item label="标题" required><a-input v-model="activityForm.title" :max-length="60" show-word-limit placeholder="建议填写品类、核心卖点与适用人群" /></a-form-item>
       <a-form-item label="活动封面图片">
@@ -3328,7 +3599,7 @@ function exportCsv(filename, rows) {
       <a-form-item label="活动详情编辑器">
         <div class="detail-block-editor">
           <div v-if="!activityDetailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div>
-          <div v-for="(block, index) in activityDetailBlocks" :key="index" class="detail-block-row">
+          <div v-for="(block, index) in activityDetailBlocks" :key="editorBlockKey(block)" class="detail-block-row">
             <div class="detail-block-head">
               <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">
                 {{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}
@@ -3339,14 +3610,20 @@ function exportCsv(filename, rows) {
                 <a-button type="text" size="mini" status="danger" @click="removeActivityDetailBlock(index)">删除</a-button>
               </a-space>
             </div>
-            <a-textarea v-if="block.type === 'text'" v-model="block.text" :auto-size="{ minRows: 3, maxRows: 10 }" placeholder="输入活动介绍文字" />
+            <ParagraphImageInput
+              v-if="block.type === 'text'"
+              v-model="block.text"
+              :auto-size="{ minRows: 3, maxRows: 10 }"
+              placeholder="输入活动介绍文字"
+              @insert-image="({ file, offset }) => insertActivityParagraphImage(block, file, offset)"
+            />
             <template v-else-if="block.type === 'image'">
               <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="详情图片预览" />
               <a-input v-model="block.src" placeholder="图片地址，或使用下方按钮上传" />
               <a-input v-model="block.caption" placeholder="图片说明（可选）" />
               <label class="detail-upload-button">
-                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadActivityDetailImage($event, index)" />
-                <a-button type="outline" size="small" :loading="activityDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadActivityDetailImage($event, block)" />
+                <a-button type="outline" size="small" :loading="activityDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
               </label>
             </template>
             <template v-else>
@@ -3354,8 +3631,8 @@ function exportCsv(filename, rows) {
               <a-input v-model="block.url" placeholder="视频地址，或使用下方按钮上传本地视频" />
               <a-input v-model="block.caption" placeholder="视频说明（可选）" />
               <label class="detail-upload-button">
-                <input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'activity', index)" />
-                <a-button type="outline" size="small" :loading="activityDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button>
+                <input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'activity', block)" />
+                <a-button type="outline" size="small" :loading="activityDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button>
               </label>
             </template>
           </div>
@@ -3402,9 +3679,9 @@ function exportCsv(filename, rows) {
           <section id="product-editor-basic" class="listing-section">
             <div class="listing-section-head"><div><span class="listing-section-index">01</span><strong>基础信息</strong></div><p>设置商品标题、主图、分类和销售区域</p></div>
       <a-form-item label="发布归属">
-        <a-radio-group v-model="productForm.publisherType" type="button"><a-radio value="platform">岁悦里平台</a-radio><a-radio value="merchant">商家</a-radio></a-radio-group>
+        <a-radio-group v-model="productForm.publisherType" type="button"><a-radio value="platform">平台自营</a-radio><a-radio value="merchant" :disabled="!managerOptions.length && productForm.publisherType !== 'merchant'">商家发布</a-radio></a-radio-group>
       </a-form-item>
-      <a-form-item v-if="productForm.publisherType === 'merchant'" label="所属商家"><a-select v-model="productForm.managerId" :options="managerOptions" allow-search placeholder="请选择商家" /></a-form-item>
+      <a-form-item v-if="productForm.publisherType === 'merchant'" label="所属商家"><a-select v-model="productForm.managerId" :options="productManagerOptions" allow-search placeholder="请选择商家" /></a-form-item>
       <a-form-item label="标题" required><a-input v-model="productForm.title" :max-length="60" show-word-limit placeholder="建议填写品牌、品名、规格与核心卖点" /></a-form-item>
       <a-form-item label="商品展示图" required>
         <div class="product-gallery-uploader">
@@ -3506,22 +3783,28 @@ function exportCsv(filename, rows) {
       <a-form-item label="商品详情编辑器">
         <div class="detail-block-editor">
           <div v-if="!productDetailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div>
-          <div v-for="(block, index) in productDetailBlocks" :key="index" class="detail-block-row">
+          <div v-for="(block, index) in productDetailBlocks" :key="editorBlockKey(block)" class="detail-block-row">
             <div class="detail-block-head">
               <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">{{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}</a-tag>
               <a-space :size="4"><a-button type="text" size="mini" :disabled="index === 0" @click="moveProductDetailBlock(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === productDetailBlocks.length - 1" @click="moveProductDetailBlock(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeProductDetailBlock(index)">删除</a-button></a-space>
             </div>
-            <a-textarea v-if="block.type === 'text'" v-model="block.text" :auto-size="{ minRows: 3, maxRows: 10 }" placeholder="输入商品详情文字" />
+            <ParagraphImageInput
+              v-if="block.type === 'text'"
+              v-model="block.text"
+              :auto-size="{ minRows: 3, maxRows: 10 }"
+              placeholder="输入商品详情文字"
+              @insert-image="({ file, offset }) => insertProductParagraphImage(block, file, offset)"
+            />
             <template v-else-if="block.type === 'image'">
               <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="详情图片预览" />
               <a-input v-model="block.src" placeholder="图片地址，或使用下方按钮上传" /><a-input v-model="block.caption" placeholder="图片说明（可选）" />
-              <label class="detail-upload-button"><input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadProductDetailImage($event, index)" /><a-button type="outline" size="small" :loading="productDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button></label>
+              <label class="detail-upload-button"><input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadProductDetailImage($event, block)" /><a-button type="outline" size="small" :loading="productDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button></label>
             </template>
             <template v-else>
               <video v-if="block.url" class="detail-block-video" :src="qrPreviewUrl(block.url)" controls preload="metadata"></video>
               <a-input v-model="block.url" placeholder="视频地址，或使用下方按钮上传本地视频" />
               <a-input v-model="block.caption" placeholder="视频说明（可选）" />
-              <label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'product', index)" /><a-button type="outline" size="small" :loading="productDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label>
+              <label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'product', block)" /><a-button type="outline" size="small" :loading="productDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label>
             </template>
           </div>
           <a-space><a-button type="outline" @click="addProductDetailBlock('text')">添加文字</a-button><a-button type="outline" @click="addProductDetailBlock('image')">添加图片</a-button><a-button type="outline" @click="addProductDetailBlock('video')">添加视频</a-button></a-space>
@@ -3562,7 +3845,15 @@ function exportCsv(filename, rows) {
 
   <a-modal v-if="liveForm" :visible="true" :title="liveForm.id ? '编辑学堂课程' : '新建学堂课程'" :width="860" class="admin-editor-modal" @cancel="liveForm = null">
     <a-form :model="liveForm" layout="vertical">
-      <a-form-item label="所属商家"><a-input :model-value="selectedMerchant ? (selectedMerchant.shopName || selectedMerchant.name) : liveForm.managerId" disabled /></a-form-item>
+      <a-form-item label="发布归属">
+        <a-radio-group v-model="liveForm.publisherType" type="button">
+          <a-radio value="platform">平台自营</a-radio>
+          <a-radio value="merchant" :disabled="!managerOptions.length && liveForm.publisherType !== 'merchant'">商家发布</a-radio>
+        </a-radio-group>
+      </a-form-item>
+      <a-form-item v-if="liveForm.publisherType === 'merchant'" label="所属商家" required>
+        <a-select v-model="liveForm.managerId" :options="liveManagerOptions" allow-search placeholder="请选择商家" />
+      </a-form-item>
       <a-form-item label="课程名称"><a-input v-model="liveForm.title" /></a-form-item>
       <a-row :gutter="12">
         <a-col :span="12"><a-form-item label="讲师"><a-input v-model="liveForm.hostName" /></a-form-item></a-col>
@@ -3626,7 +3917,14 @@ function exportCsv(filename, rows) {
           <a-button type="outline" long @click="addLiveLesson">新增课节</a-button>
         </div>
       </a-form-item>
-      <a-form-item label="课程介绍"><a-textarea v-model="liveForm.description" :auto-size="{minRows:3,maxRows:8}" /></a-form-item>
+      <a-form-item label="课程介绍">
+        <CourseDescriptionEditor
+          v-model="liveForm.detailBlocks"
+          :upload-image="uploadLiveDetailImage"
+          :preview-url="qrPreviewUrl"
+          @uploading="liveDetailUploading = $event"
+        />
+      </a-form-item>
     </a-form>
     <template #footer><a-button @click="liveForm = null">取消</a-button><a-button type="primary" @click="saveLive">保存</a-button></template>
   </a-modal>
@@ -3894,7 +4192,7 @@ function exportCsv(filename, rows) {
       <a-form-item label="图文内容编辑器">
         <div class="detail-block-editor">
           <div v-if="!contentBlocks.length" class="schedule-empty">暂无正文内容，请添加文字、图片、视频或链接。</div>
-          <div v-for="(block, index) in contentBlocks" :key="index" class="detail-block-row">
+          <div v-for="(block, index) in contentBlocks" :key="editorBlockKey(block)" class="detail-block-row">
             <div class="detail-block-head">
               <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : block.type === 'video' ? 'purple' : 'orange'">
                 {{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : block.type === 'video' ? '视频' : '链接' }}
@@ -3905,14 +4203,20 @@ function exportCsv(filename, rows) {
                 <a-button type="text" size="mini" status="danger" @click="removeContentBlock(index)">删除</a-button>
               </a-space>
             </div>
-            <a-textarea v-if="block.type === 'text'" v-model="block.text" :auto-size="{ minRows: 4, maxRows: 14 }" placeholder="输入文章正文，每个文字区块可作为一个段落" />
+            <ParagraphImageInput
+              v-if="block.type === 'text'"
+              v-model="block.text"
+              :auto-size="{ minRows: 4, maxRows: 14 }"
+              placeholder="输入文章正文，每个文字区块可作为一个段落"
+              @insert-image="({ file, offset }) => insertContentParagraphImage(block, file, offset)"
+            />
             <template v-else-if="block.type === 'image'">
               <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="正文图片预览" />
               <a-input v-model="block.src" placeholder="图片地址，或点击上传图片" />
               <a-input v-model="block.caption" placeholder="图片说明（可选）" />
               <label class="detail-upload-button">
-                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadContentBlockImage($event, index)" />
-                <a-button type="outline" size="small" :loading="contentBlockUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadContentBlockImage($event, block)" />
+                <a-button type="outline" size="small" :loading="contentBlockUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
               </label>
             </template>
             <template v-else-if="block.type === 'video'">
@@ -3945,7 +4249,7 @@ function exportCsv(filename, rows) {
   <a-modal
     v-if="bannerForm"
     :visible="true"
-    class="admin-editor-modal"
+    class="admin-editor-modal banner-editor-modal"
     :title="bannerForm.id ? '编辑 Banner' : '发布 Banner'"
     :width="680"
     @cancel="bannerForm = null"
@@ -3959,7 +4263,7 @@ function exportCsv(filename, rows) {
           <a-radio value="video">视频</a-radio>
         </a-radio-group>
       </a-form-item>
-      <a-form-item label="Banner 媒体" required>
+      <a-form-item label="Banner 媒体" :required="bannerMediaRequired">
         <input ref="bannerMediaInput" type="file" :accept="bannerForm.mediaType === 'video' ? 'video/mp4,video/webm' : 'image/png,image/jpeg,image/webp'" hidden @change="uploadBannerMedia" />
         <div v-if="bannerForm.mediaUrl" class="banner-media-preview">
           <video v-if="bannerForm.mediaType === 'video'" :src="qrPreviewUrl(bannerForm.mediaUrl)" controls muted />
@@ -3971,8 +4275,31 @@ function exportCsv(filename, rows) {
         </a-space>
         <div class="muted">图片支持 PNG/JPG/WebP，最大2MB；视频支持 MP4/WebM，最大15MB。</div>
       </a-form-item>
-      <a-form-item label="跳转链接">
-        <a-input v-model="bannerForm.linkUrl" placeholder="小程序路径 /pages/detail/detail?id=1 或 HTTPS 链接" />
+      <a-form-item label="点击后的行为" required>
+        <a-radio-group v-model="bannerLinkMode" type="button" @change="markBannerLinkTouched">
+          <a-radio value="detail">跳转内容详情</a-radio>
+          <a-radio value="display">纯展示，不跳转</a-radio>
+          <a-radio value="custom">自定义链接</a-radio>
+        </a-radio-group>
+      </a-form-item>
+      <a-form-item v-if="bannerLinkMode === 'detail'" label="选择已发布内容" required>
+        <a-alert v-if="bannerTargetsError" type="error" style="margin-bottom: 10px">
+          {{ bannerTargetsError }}
+          <a-button type="text" size="small" :loading="bannerTargetsLoading" @click="loadBannerTargets()">重试</a-button>
+        </a-alert>
+        <a-select
+          v-model="bannerTargetValue"
+          :options="bannerTargetOptions"
+          :loading="bannerTargetsLoading"
+          popup-container=".banner-editor-modal .arco-modal-body"
+          allow-search
+          placeholder="搜索活动、商品、课程或资讯/视频"
+          @change="markBannerLinkTouched"
+        />
+      </a-form-item>
+      <a-form-item v-else-if="bannerLinkMode === 'custom'" label="自定义小程序路径或 HTTPS 链接" required>
+        <a-input v-model="bannerCustomLink" placeholder="例如 /pages/profile/profile 或 https://example.com" @input="markBannerLinkTouched" />
+        <template #extra>打开 HTTPS 网页时，请先在小程序后台配置业务域名。</template>
       </a-form-item>
       <a-row :gutter="12">
         <a-col :span="12"><a-form-item label="排序"><a-input-number v-model="bannerForm.sort" :min="0" style="width: 100%" /></a-form-item></a-col>
@@ -4052,17 +4379,20 @@ function exportCsv(filename, rows) {
     class="admin-editor-modal"
     :title="reasonModal.title"
     :width="440"
-    :footer="false"
+    :closable="!reasonSubmitting"
+    :mask-closable="!reasonSubmitting"
+    :esc-to-close="!reasonSubmitting"
     @cancel="closeReason"
   >
     <a-input
       v-model="reasonValue"
       :placeholder="reasonModal.placeholder"
-      @press-enter="submitReason"
+      :disabled="reasonSubmitting"
+      @press-enter="reasonModal.confirmOnEnter && submitReason()"
     />
     <template #footer>
-      <a-button @click="closeReason">取消</a-button>
-      <a-button type="primary" @click="submitReason">{{ reasonModal.okText || '确定' }}</a-button>
+      <a-button :disabled="reasonSubmitting" @click="closeReason">取消</a-button>
+      <a-button type="primary" :disabled="!reasonValue.trim()" :loading="reasonSubmitting" @click="submitReason">{{ reasonModal.okText }}</a-button>
     </template>
   </a-modal>
 </template>
@@ -4184,6 +4514,12 @@ function exportCsv(filename, rows) {
 .topbar-user {
   color: var(--color-text-2);
   font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .topbar { height: auto; }
+  .topbar-inner { min-height: 48px; height: auto; flex-wrap: wrap; gap: 2px 4px; padding: 4px 10px; }
+  .topbar-title, .topbar-user { white-space: nowrap; }
 }
 
 .avatar {

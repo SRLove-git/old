@@ -9,10 +9,10 @@ export function adminTokenConfigured() {
   return Boolean(ADMIN_TOKEN)
 }
 
-export function isAdminRequest(req) {
+export function isAdminRequest(req, permission = permissionForRequest(req)) {
   const identity = adminSession(req)
   if (!identity) return false
-  return hasAdminPermission(identity, permissionForRequest(req))
+  return hasAdminPermission(identity, permission)
 }
 
 export function adminSession(req) {
@@ -36,8 +36,8 @@ export function adminSession(req) {
 }
 
 export function hasAdminPermission(identity, permission) {
-  if (!permission) return true
-  return Boolean(identity && (identity.role === 'super_admin' || identity.permissions?.includes('*') || identity.permissions?.includes(permission)))
+  if (!identity || !permission) return false
+  return permission === 'admin.self' || identity.role === 'super_admin' || identity.permissions?.includes('*') || Boolean(identity.permissions?.includes(permission))
 }
 
 export function adminAuth(req, res, next) {
@@ -76,10 +76,8 @@ export function merchantAuth(req, res, next) {
   if (!session) return res.status(401).json({ code: 401, message: '请先登录商户账号' })
   const account = store.get().merchantAccounts.find((item) => String(item.id) === String(session.userId))
   if (!account || Number(account.status) !== 1) return res.status(401).json({ code: 401, message: '商户账号已停用' })
-  const path = String(req.originalUrl || '')
-  const permission = path.includes('/activities') ? 'merchant.activities'
-    : path.includes('/products') ? 'merchant.products'
-      : path.includes('/courses') ? 'merchant.courses' : null
+  const resource = req.route.path.split('/')[1]
+  const permission = ['activities', 'products', 'courses'].includes(resource) ? `merchant.${resource}` : null
   if (permission && !(account.permissions || []).includes(permission)) return res.status(403).json({ code: 403, message: '当前商户账号没有此发布权限' })
   next()
 }
@@ -87,10 +85,11 @@ export function merchantAuth(req, res, next) {
 export function requireMerchantResource(req, collection, id) {
   const session = merchantSession(req)
   if (!session) throw httpError(401, '请先登录商户账号')
-  const row = (store.get()[collection] || []).find((item) => String(item.id) === String(id))
-  if (!row) throw httpError(404, '内容不存在')
-  if (String(row.managerId) !== String(session.merchantId)) throw httpError(403, '无权管理其他商户的内容')
-  return row
+  const rows = (store.get()[collection] || []).filter((item) => String(item.id) === String(id))
+  if (!rows.length) throw httpError(404, '内容不存在')
+  const owned = rows.find((item) => item.publisherType === 'merchant' && String(item.managerId) === String(session.merchantId))
+  if (!owned) throw httpError(403, '无权管理其他商户的内容')
+  return owned
 }
 
 // 默认只认签名会话。旧身份参数必须显式开启开发联调，不能因 NODE_ENV 缺省而放行。

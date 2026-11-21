@@ -22,6 +22,8 @@ router.put('/accounts/:id', requireAdminPermission('accounts.manage'), wrap((req
 router.put('/accounts/:id/password', requireAdminPermission('accounts.manage'), wrap((req) => store.changeAdminPassword(req.params.id, '', req.body?.newPassword, { force: true })))
 
 router.get('/merchant-accounts', requireAdminPermission('accounts.manage'), wrap(() => store.listMerchantAccounts()))
+router.get('/merchant-accounts/candidates', requireAdminPermission('accounts.manage'), wrap(() => store.listMerchantAccountCandidates()))
+router.post('/merchant-accounts', requireAdminPermission('accounts.manage'), wrap((req) => store.createMerchantAccount(req.body)))
 router.put('/merchant-accounts/:id', requireAdminPermission('accounts.manage'), wrap((req) => store.updateMerchantAccount(req.params.id, req.body)))
 router.put('/merchant-accounts/:id/password', requireAdminPermission('accounts.manage'), wrap((req) => store.resetMerchantPassword(req.params.id, req.body?.newPassword)))
 

@@ -18,6 +18,11 @@ const columns = [
     <a-alert type="info" class="toolbar"
       >停用地区后，前台不再显示该地区筛选，新发布内容也不能选择；历史活动、商品和订单关联会保留。</a-alert
     >
+    <div class="list-create-toolbar">
+      <a-button type="primary" shape="round" @click="emit('edit', null)"
+        ><template #icon><IconPlus /></template>新增地区</a-button
+      >
+    </div>
     <a-card :bordered="false"
       ><a-table
         :columns="columns"
@@ -56,24 +61,10 @@ const columns = [
         >
       </a-table></a-card
     >
-    <a-button
-      type="primary"
-      shape="round"
-      class="fab"
-      @click="emit('edit', null)"
-      ><template #icon><IconPlus /></template>新增地区</a-button
-    >
   </section>
 </template>
 <style scoped>
 .toolbar {
   margin-bottom: 16px;
-}
-.fab {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 20;
-  box-shadow: 0 6px 20px rgba(29, 27, 22, 0.16);
 }
 </style>

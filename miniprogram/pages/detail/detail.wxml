@@ -16,7 +16,7 @@
     <view class="price-line"><text class="currency">¥</text><text class="price">{{activity.memberPrice}}</text><text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text></view>
     <view class="member-banner" bindtap="goProfile"><view><text class="member-mark">会员</text><text>{{copy.detailMemberOffer}}</text><text class="member-save">¥{{memberSaving}}</text></view><text class="member-link">立即入会 ›</text></view>
     <view class="title-share-row"><view class="product-title">{{activity.title}}</view><view class="share-slot"><button class="share-button" open-type="share" aria-label="分享{{contentName}}"><view class="detail-share-circle"><view class="detail-share-mark"><text class="detail-share-node detail-node-top"></text><text class="detail-share-node detail-node-left"></text><text class="detail-share-node detail-node-right"></text></view></view></button></view></view>
-    <view class="product-sub"><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
+    <view class="product-sub"><text wx:if="{{activity.publisherType === 'platform'}}">平台自营 · </text><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
     <view wx:if="{{refundText}}" class="info-row"><text class="info-label">退改</text><text class="info-value">{{refundText}}</text></view>
@@ -74,7 +74,7 @@
   <view class="fixed-bottom product-bottom">
     <view class="quick-actions">
       <button class="bottom-icon" bindtap="showService"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>客服</text></button>
-      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
+      <button wx:if="{{merchant}}" class="bottom-icon" bindtap="goShop"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
       <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
     </view>
     <view class="purchase-actions">

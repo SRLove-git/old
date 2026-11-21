@@ -188,6 +188,7 @@ function decorateLive(live) {
   }))
   return {
     ...live,
+    publisherType: live.publisherType || (live.managerId ? 'merchant' : 'platform'),
     coverImage: apiAssetUrl(live.coverImage),
     streamUrl: apiAssetUrl(live.streamUrl),
     replayUrl: apiAssetUrl(live.replayUrl),
@@ -506,7 +507,8 @@ function getContentPosts() {
 }
 
 function getContentPost(id) {
-  return (cache.contentPosts || []).find((item) => String(item.id) === String(id)) || null
+  return (cache.contentPosts || []).find((item) => String(item.id) === String(id) ||
+    (item.aliasIds || []).includes(String(id))) || null
 }
 
 function getOfferings(managerId) {

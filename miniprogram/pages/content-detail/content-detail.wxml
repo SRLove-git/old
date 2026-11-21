@@ -7,6 +7,10 @@
   <image webp="{{true}}" wx:elif="{{post.coverImage}}" class="content-cover" src="{{post.coverImage}}" mode="aspectFill" />
 
   <view wx:if="{{post.summary}}" class="content-summary">{{post.summary}}</view>
+  <view wx:if="{{post.officialArticleUrl}}" class="article-link" data-url="{{post.officialArticleUrl}}" bindtap="openContentLink">
+    <text>阅读公众号原文</text><text>›</text>
+  </view>
+  <view wx:elif="{{post.officialLinkPending}}" class="source-note">公众号原文链接待核对</view>
   <view class="article-body">
     <block wx:for="{{post.contentBlocks}}" wx:key="_key" wx:for-item="block">
       <text wx:if="{{block.type === 'text'}}" class="content-body" user-select>{{block.text}}</text>

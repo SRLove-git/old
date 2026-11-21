@@ -20,19 +20,25 @@ export const MERCHANT_PERMISSION_GROUPS = [
 ]
 
 export function permissionForRequest(req) {
-  const path = String(req.originalUrl || req.path || '').split('?')[0]
-  if (path === '/api/admin/me' || path === '/api/admin/password') return null
-  if (path.startsWith('/api/admin/accounts') || path.startsWith('/api/admin/merchant-accounts') || path === '/api/admin/permission-options') return 'accounts.manage'
-  if (path.startsWith('/api/stats') || path.startsWith('/api/admin/notifications')) return 'dashboard.view'
-  if (path.startsWith('/api/activities')) return 'activities.manage'
-  if (path.startsWith('/api/products') || path.startsWith('/api/point-products') || path.startsWith('/api/point-orders')) return 'products.manage'
-  if (path.startsWith('/api/lives')) return 'courses.manage'
-  if (path.startsWith('/api/categories') || path.startsWith('/api/regions') || path.startsWith('/api/content-posts') || path.startsWith('/api/banners') || path.startsWith('/api/config') || path.startsWith('/api/uploads')) return 'content.manage'
-  if (path.startsWith('/api/orders') || path.startsWith('/api/cards') || path.startsWith('/api/participants') || path.startsWith('/api/logistics')) return 'orders.manage'
-  if (path.startsWith('/api/customers') || path.startsWith('/api/users') || path.startsWith('/api/addresses') || path.startsWith('/api/members') || path.startsWith('/api/bindings') || path.startsWith('/api/unbind-applications')) return 'customers.manage'
-  if (path.startsWith('/api/coupons') || path.startsWith('/api/reviews')) return 'marketing.manage'
-  if (path.startsWith('/api/manager-applications') || path.startsWith('/api/provider-applications') || path.startsWith('/api/managers')) return 'merchants.manage'
-  if (path.startsWith('/api/commissions') || path.startsWith('/api/commission-settlements') || path.startsWith('/api/withdraws')) return 'finance.manage'
-  if (path.startsWith('/api/logs')) return 'logs.view'
+  const path = String(req.originalUrl || req.path || '').split('?')[0].toLowerCase().replace(/\/+$/, '')
+  const under = prefix => path === prefix || path.startsWith(prefix + '/')
+  if ((path === '/api/admin/me' && ['GET', 'HEAD'].includes(req.method)) ||
+      (path === '/api/admin/password' && req.method === 'PUT')) return 'admin.self'
+  if (under('/api/admin/accounts') || under('/api/admin/merchant-accounts') || path === '/api/admin/permission-options') return 'accounts.manage'
+  if (under('/api/stats') || under('/api/admin/notifications')) return 'dashboard.view'
+  if (under('/api/activities')) return 'activities.manage'
+  if (under('/api/products') || under('/api/point-products') || under('/api/point-orders')) return 'products.manage'
+  if (under('/api/lives')) return 'courses.manage'
+  if (path === '/api/uploads/image') {
+    const scope = req.query?.scope
+    if (['activities', 'products', 'courses'].includes(scope)) return `${scope}.manage`
+  }
+  if (under('/api/categories') || under('/api/regions') || under('/api/content-posts') || under('/api/banners') || under('/api/config') || under('/api/uploads')) return 'content.manage'
+  if (under('/api/orders') || under('/api/cards') || under('/api/participants') || under('/api/logistics')) return 'orders.manage'
+  if (under('/api/customers') || under('/api/users') || under('/api/addresses') || under('/api/members') || under('/api/bindings') || under('/api/unbind-applications')) return 'customers.manage'
+  if (under('/api/coupons') || under('/api/reviews')) return 'marketing.manage'
+  if (under('/api/manager-applications') || under('/api/provider-applications') || under('/api/managers')) return 'merchants.manage'
+  if (under('/api/commissions') || under('/api/commission-settlements') || under('/api/withdraws') || path === '/api/transfers/config') return 'finance.manage'
+  if (under('/api/logs')) return 'logs.view'
   return null
 }
