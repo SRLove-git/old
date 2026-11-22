@@ -37,14 +37,19 @@ async function optimizeImage(buffer) {
 }
 
 export async function saveImageDataUrl(dataUrl, filenamePrefix = 'image') {
-  const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/)
-  if (!match) throw httpError(400, '仅支持 PNG、JPG 或 WebP 图片')
+  const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg|webp|gif|tiff|avif));base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) throw httpError(400, '仅支持 PNG、JPG、WebP、GIF、TIFF 或 AVIF 图片')
 
   const buffer = Buffer.from(match[2], 'base64')
   if (!buffer.length || buffer.length > MAX_IMAGE_INPUT_BYTES) throw httpError(400, '图片大小不能超过2MB')
 
   let optimized
   try {
+    const metadata = await sharp(buffer).metadata()
+    if (!['jpeg', 'png', 'webp', 'gif', 'tiff'].includes(metadata.format) &&
+        !(metadata.format === 'heif' && metadata.compression === 'av1')) {
+      throw httpError(400, '不支持该图片的实际编码')
+    }
     optimized = await optimizeImage(buffer)
   } catch (error) {
     if (error?.status) throw error

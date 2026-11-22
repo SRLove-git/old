@@ -76,7 +76,8 @@ export function merchantAuth(req, res, next) {
   if (!session) return res.status(401).json({ code: 401, message: '请先登录商户账号' })
   const account = store.get().merchantAccounts.find((item) => String(item.id) === String(session.userId))
   if (!account || Number(account.status) !== 1) return res.status(401).json({ code: 401, message: '商户账号已停用' })
-  const resource = req.route.path.split('/')[1]
+  // 大文件上传在解析请求体前先验证账号，此时 Express 尚未匹配具体路由。
+  const resource = req.route?.path.split('/')[1]
   const permission = ['activities', 'products', 'courses'].includes(resource) ? `merchant.${resource}` : null
   if (permission && !(account.permissions || []).includes(permission)) return res.status(403).json({ code: 403, message: '当前商户账号没有此发布权限' })
   next()

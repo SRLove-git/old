@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
+import sharp from 'sharp'
+import { passwordRecord } from '../src/lib/session.js'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -169,6 +171,30 @@ test('管理端按链接导入后，小程序首页接口可读取原文，重�
     assert.equal((await server.request(`/api/content-posts/${id}`, { headers: staff('staff-dashboard') })).body.data.wechat, undefined)
     assert.equal(server.calls().length, 0)
   } finally { await server.close() }
+})
+
+test('商户登录后可上传活动封面和新增栅格格式，返回可读取的静态 WebP', async t => {
+  const data = fixture()
+  const password = 'upload-fixture-only'
+  data.merchantAccounts = [{ id: 'upload-test-account', merchantId: 'upload-test', username: 'cover-test', status: 1,
+    permissions: ['merchant.activities'], ...passwordRecord(password) }]
+  const server = await startServer({}, data)
+  t.after(() => server.close())
+  const login = ok(await server.request('/api/merchant/login', { method: 'POST', body: { username: 'cover-test', password } }))
+  const headers = { authorization: 'Bearer ' + login.token }
+  const upload = (dataUrl, auth) => server.request('/api/merchant/uploads/image', { method: 'POST', headers: auth, body: { dataUrl } })
+  assert.equal((await upload('', {})).status, 401)
+  const invalid = await upload('data:image/gif;base64,YWJj', headers)
+  assert.equal(invalid.status, 400)
+  for (const type of ['png', 'jpeg', 'webp', 'gif', 'tiff', 'avif']) {
+    const input = await sharp({ create: { width: 12, height: 8, channels: 3, background: 'green' } }).toFormat(type).toBuffer()
+    const result = ok(await upload(`data:image/${type};base64,${input.toString('base64')}`, headers))
+    assert.match(result.url, /^\/api\/uploads\/files\/merchant-upload-test-[\w-]+\.webp$/)
+    const output = path.join(serverRoot, 'uploads', path.basename(result.url))
+    t.after(() => fs.rmSync(output, { force: true }))
+    const info = await sharp(output).metadata()
+    assert.deepEqual([info.format, info.width, info.height, info.pages || 1], ['webp', 12, 8, 1])
+  }
 })
 
 test('a course editor can upload course images but cannot use another publishing permission', async () => {

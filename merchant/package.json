@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.58.0",
+    "heic-to": "1.6.7",
     "vue": "^3.4.38"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import Message from '@arco-design/web-vue/es/message'
 import Modal from '@arco-design/web-vue/es/modal'
 import { IconArchive, IconCalendar, IconFile, IconMenuFold, IconMenuUnfold, IconPlus } from '@arco-design/web-vue/es/icon'
 import { api, setToken, token } from './api.js'
+import { imageAccept, imageFormats, prepareUploadImage, uploadImageType } from './upload-image.js'
 import ParagraphImageInput from '../../shared/ParagraphImageInput.vue'
 import CourseDescriptionEditor from '../../shared/CourseDescriptionEditor.vue'
 import { editorBlockKey, hasDetailContent, incompleteImage, insertImageBlock } from '../../shared/editor-blocks.js'
@@ -247,16 +248,15 @@ function moveDetailBlock(index, direction) {
   form.value.detailBlocks = blocks
 }
 
-function validateAsset(file, type) {
-  const video = type === 'video'
-  const formats = video ? ['video/mp4', 'video/webm'] : ['image/png', 'image/jpeg', 'image/webp']
-  if (!formats.includes(file.type)) throw new Error(video ? '视频仅支持 MP4 或 WebM' : '图片仅支持 PNG、JPG 或 WebP')
-  if (file.size > (video ? 15 : 2) * 1024 * 1024) throw new Error(video ? '视频不能超过15MB' : '图片不能超过2MB')
-}
-
 async function uploadAsset(file, type = 'image') {
-  validateAsset(file, type)
-  const result = await api.post(`/merchant/uploads/${type}`, { dataUrl: await fileDataUrl(file), fileName: file.name })
+  let upload = file
+  if (type === 'image') {
+    upload = await prepareUploadImage(file)
+  } else {
+    if (!['video/mp4', 'video/webm'].includes(file.type)) throw new Error('视频仅支持 MP4 或 WebM')
+    if (file.size > 15 * 1024 * 1024) throw new Error('视频不能超过15MB')
+  }
+  const result = await api.post(`/merchant/uploads/${type}`, { dataUrl: await fileDataUrl(upload), fileName: file.name })
   if (!result?.url) throw new Error('上传未返回文件地址，请重试')
   return result.url
 }
@@ -282,7 +282,7 @@ function changeDetailAsset(event, block) {
 }
 
 function insertDetailImage(paragraph, { offset, file }) {
-  try { validateAsset(file, 'image') } catch (e) { return Message.warning(e.message) }
+  try { uploadImageType(file) } catch (e) { return Message.warning(e.message) }
   const image = insertImageBlock(form.value.detailBlocks, paragraph, offset)
   if (image) return uploadDetailAsset(file, image)
 }
@@ -471,7 +471,7 @@ onMounted(restore)
             <section id="merchant-editor-basic" class="listing-section">
               <div class="listing-section-head"><div><span class="listing-section-index">01</span><strong>基础信息</strong></div><p>设置用户第一眼看到的标题、封面与分类</p></div>
               <a-form-item :label="`${current.singular}名称`" required><a-input v-model="form.title" :max-length="60" show-word-limit :placeholder="view === 'products' ? '建议填写品牌、品名、规格与核心卖点' : '建议填写活动主题、亮点与适用人群'" /></a-form-item>
-              <a-form-item label="封面图片" required><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadCover" /><a-space><a-button type="primary" :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 PNG、JPG、WebP，最大 2MB；建议使用 4:3 横图</div></div></a-form-item>
+              <a-form-item label="封面图片" required><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" :accept="imageAccept" hidden @change="uploadCover" /><a-space><a-button type="primary" :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 {{ imageFormats }}，每张最大 2MB。建议使用 4:3 横图，动图取首帧。</div></div></a-form-item>
               <a-row :gutter="12">
                 <a-col :span="12"><a-form-item label="分类"><a-select v-model="form.category" :options="categoryOptions" /></a-form-item></a-col>
                 <a-col v-if="view === 'activities'" :span="12"><a-form-item label="适用地区（可多选）"><a-select v-model="form.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示线上/全国" /></a-form-item></a-col>
@@ -531,7 +531,7 @@ onMounted(restore)
                       </template>
                       <a-input v-model="block.caption" placeholder="说明（可选）" />
                       <label class="detail-upload-button">
-                        <input type="file" :accept="block.type === 'image' ? 'image/png,image/jpeg,image/webp' : 'video/mp4,video/webm'" hidden :disabled="detailUploading.has(block)" @change="changeDetailAsset($event, block)" />
+                        <input type="file" :accept="block.type === 'image' ? imageAccept : 'video/mp4,video/webm'" hidden :disabled="detailUploading.has(block)" @change="changeDetailAsset($event, block)" />
                         <a-button type="outline" size="small" :loading="detailUploading.has(block)" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">{{ block.type === 'image' ? '上传图片' : '上传本地视频' }}</a-button>
                       </label>
                       <span v-if="detailUploadErrors.has(block)" role="alert">{{ detailUploadErrors.get(block) }}</span>
@@ -550,7 +550,7 @@ onMounted(restore)
 
         <template v-if="view === 'courses'">
           <a-form-item :label="`${current.singular}名称`" required><a-input v-model="form.title" /></a-form-item>
-          <a-form-item label="封面图片"><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadCover" /><a-space><a-button :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" type="text" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 PNG、JPG、WebP，最大 2MB</div></div></a-form-item>
+          <a-form-item label="封面图片"><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" :accept="imageAccept" hidden @change="uploadCover" /><a-space><a-button :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" type="text" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 {{ imageFormats }}，每张最大 2MB。动图取首帧。</div></div></a-form-item>
           <a-row :gutter="12"><a-col :span="12"><a-form-item label="讲师"><a-input v-model="form.hostName" /></a-form-item></a-col><a-col :span="12"><a-form-item label="课程分类"><a-input v-model="form.category" /></a-form-item></a-col></a-row>
           <a-row :gutter="12"><a-col :span="8"><a-form-item label="会员价"><a-input-number v-model="form.memberPrice" :min="0.01" :step="0.01" :precision="2" style="width: 100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="开始时间" required><a-date-picker v-model="form.startAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择开始日期和时间" style="width:100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="结束时间" required><a-date-picker v-model="form.endAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束日期和时间" style="width:100%" /></a-form-item></a-col></a-row>
           <a-form-item label="直播地址"><a-input v-model="form.streamUrl" placeholder="https://" /></a-form-item><a-form-item label="回放地址"><a-input v-model="form.replayUrl" placeholder="https://" /></a-form-item>
