@@ -9,6 +9,16 @@ const mimeTypes = new Set(Object.values(mimeByExtension))
 export const imageAccept = [...mimeTypes, ...Object.keys(mimeByExtension).map(ext => '.' + ext)].join(',')
 const maxBytes = 2 * 1024 * 1024
 
+// Finder and Explorer may supply an extension without a MIME type.
+export function transferredImages(data) {
+  const files = Array.from(data?.files || [])
+  const candidates = files.length ? files : Array.from(data?.items || [])
+    .filter(item => item.kind === 'file')
+    .map(item => item.getAsFile())
+  return candidates.filter(file => file && (file.type.startsWith('image/') ||
+    Object.hasOwn(mimeByExtension, file.name.split('.').pop().toLowerCase())))
+}
+
 async function bitmapBlob(bitmap) {
   try {
     const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
@@ -26,9 +36,9 @@ export function uploadImageType(file) {
   if (!file.size) throw new Error('图片文件为空，请重新选择')
   if (file.size > maxBytes) throw new Error('图片不能超过2MB')
   const extension = file.name.split('.').pop().toLowerCase()
-  const mime = mimeTypes.has(file.type) ? file.type : mimeByExtension[extension]
-  if (!mime) throw new Error('可上传的图片格式为 ' + imageFormats)
-  return mime
+  if (mimeTypes.has(file.type)) return file.type
+  if (Object.hasOwn(mimeByExtension, extension)) return mimeByExtension[extension]
+  throw new Error('可上传的图片格式为 ' + imageFormats)
 }
 
 export async function prepareUploadImage(file) {

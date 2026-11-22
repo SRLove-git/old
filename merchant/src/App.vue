@@ -4,7 +4,7 @@ import Message from '@arco-design/web-vue/es/message'
 import Modal from '@arco-design/web-vue/es/modal'
 import { IconArchive, IconCalendar, IconFile, IconMenuFold, IconMenuUnfold, IconPlus } from '@arco-design/web-vue/es/icon'
 import { api, setToken, token } from './api.js'
-import { imageAccept, imageFormats, prepareUploadImage } from './upload-image.js'
+import { imageAccept, imageFormats, prepareUploadImage } from '@suiyueli/rich-editor/upload-image'
 import { hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
 
 const ArticleEditor = defineAsyncComponent(() => import('@suiyueli/rich-editor'))
@@ -468,7 +468,7 @@ onMounted(restore)
             <section id="merchant-editor-detail" class="listing-section">
               <div class="listing-section-head"><div><span class="listing-section-index">04</span><strong>{{ current.singular }}详情</strong></div><p>补充亮点、适用人群、使用方法和注意事项</p></div>
               <a-form-item :label="`${current.singular}详情编辑器`">
-            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :image-accept="imageAccept" :preview-url="coverUrl" @uploading="detailBusy = $event" :upload-video="file => uploadAsset(file, 'video')" />
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :preview-url="coverUrl" @uploading="detailBusy = $event" :upload-video="file => uploadAsset(file, 'video')" />
           </a-form-item>
             </section>
           </main>
@@ -482,7 +482,7 @@ onMounted(restore)
           <a-form-item label="直播地址"><a-input v-model="form.streamUrl" placeholder="https://" /></a-form-item><a-form-item label="回放地址"><a-input v-model="form.replayUrl" placeholder="https://" /></a-form-item>
           <a-form-item label="课程章节"><div class="lesson-editor"><div class="lesson-editor-head"><span class="muted">按顺序编排每一节课，可填写外链或上传本地视频</span><a-button type="outline" size="small" @click="addLesson"><template #icon><IconPlus /></template>新增课节</a-button></div><a-empty v-if="!form.lessons.length" description="暂无章节" /><div v-for="(lesson, index) in form.lessons" :key="lesson.id || index" class="lesson-row"><div class="lesson-row-head"><strong>第 {{ index + 1 }} 节</strong><a-space :size="0"><a-button type="text" size="mini" :disabled="index === 0" @click="moveLesson(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === form.lessons.length - 1" @click="moveLesson(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeLesson(index)">删除</a-button></a-space></div><a-row :gutter="10"><a-col :span="16"><a-input v-model="lesson.title" placeholder="课节标题" /></a-col><a-col :span="8"><a-input v-model="lesson.duration" placeholder="时长，如 18:40" /></a-col></a-row><video v-if="lesson.videoUrl" class="detail-block-video" :src="coverUrl(lesson.videoUrl)" controls preload="metadata"></video><a-input v-model="lesson.videoUrl" placeholder="HTTPS 视频、MP4、WebM、MOV、M4V 或 M3U8 地址" /><div class="lesson-video-actions"><label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov,.m4v" hidden @change="uploadCourseVideo($event, lesson, index)" /><a-button type="outline" size="small" :loading="courseVideoUploading.has(lesson)" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label><a-button v-if="lesson.videoUrl" type="text" size="small" status="danger" @click="lesson.videoUrl = ''">移除视频</a-button><span class="muted">支持 MP4、WebM、MOV、M4V，暂不限制文件大小</span></div><div class="lesson-options"><a-checkbox v-model="lesson.isPreview">允许试看</a-checkbox><a-switch v-model="lesson.status" :checked-value="1" :unchecked-value="0" checked-text="上架" unchecked-text="下架" /></div></div></div></a-form-item>
           <a-form-item label="课程介绍">
-            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :image-accept="imageAccept" :preview-url="coverUrl" @uploading="detailBusy = $event" :allow-video="false" />
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :preview-url="coverUrl" @uploading="detailBusy = $event" :allow-video="false" />
           </a-form-item>
         </template>
       </a-form>

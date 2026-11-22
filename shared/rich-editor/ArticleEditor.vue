@@ -8,6 +8,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import BubbleMenu from '@tiptap/extension-bubble-menu'
 import { Message } from '@arco-design/web-vue'
 import { IconAlignCenter, IconUnorderedList } from '@arco-design/web-vue/es/icon'
+import { imageAccept, transferredImages } from './upload-image.js'
 import ArticleFontTools from './ArticleFontTools.vue'
 import { formatAroundArticleMedia, prepareParagraphSelection } from './article-selection.js'
 import {
@@ -25,7 +26,6 @@ const props = defineProps({
   allowVideo: { type: Boolean, default: true },
   allowCards: { type: Boolean, default: true },
   uploadVideo: Function,
-  imageAccept: { type: String, default: 'image/png,image/jpeg,image/webp' },
   title: String,
   source: String,
   publishedAt: String,
@@ -284,7 +284,7 @@ async function withUpload(bookmark, insert, afterMedia = false) {
   e.setEditable(false, false)
   try {
     const content = await insert()
-    if (disposed) return
+    if (disposed || !content) return
     insertContent(e, bookmark.resolve(e.state.doc), content, afterMedia)
   } catch (error) {
     if (!disposed) Message.error(error.message || '素材上传失败，请重试')
@@ -298,20 +298,47 @@ async function withUpload(bookmark, insert, afterMedia = false) {
 }
 
 function insertFiles(files, selection, existingImage, afterMedia = false) {
-  return withUpload(
-    selection,
-    async () => {
-      const images = []
-      for (const file of files) {
-        images.push({
-          type: 'articleMedia',
-          attrs: { ...existingImage, kind: 'image', src: await props.uploadImage(file) }
-        })
+  return withUpload(selection, () => uploadImageNodes(files, existingImage), afterMedia)
+}
+
+async function uploadImageNodes(files, existingImage) {
+  const nodes = []
+  for (const file of files) {
+    const src = await props.uploadImage(file)
+    nodes.push({ type: 'articleMedia', attrs: { ...existingImage, kind: 'image', src } })
+  }
+  return nodes
+}
+
+const pasteShortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V'
+
+async function pasteImage() {
+  if (!finishPanel()) return
+  const selection = editor.value.state.selection.getBookmark()
+  const keyboardHint = () => Message.info('请在正文中按 ' + pasteShortcut + ' 粘贴图片')
+  editor.value.view.focus()
+  if (!navigator.clipboard?.read) return keyboardHint()
+  await withUpload(selection, async () => {
+    const files = []
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const type = item.types.includes('image/png') ? 'image/png' : item.types.find(t => t.startsWith('image/'))
+        if (!type) continue
+        const blob = await item.getType(type)
+        files.push(new File([blob], 'clipboard.' + type.split('/')[1], { type }))
       }
-      return images
-    },
-    afterMedia
-  )
+    } catch {
+      keyboardHint()
+      return
+    }
+    if (!files.length) {
+      Message.info('未读取到图片，请复制图片或截图后在正文中按 ' + pasteShortcut)
+      return
+    }
+    return uploadImageNodes(files)
+  }, true)
+  if (!disposed && !preview.value) editor.value.view.focus()
 }
 
 function chooseVideo() {
@@ -337,20 +364,21 @@ function picked(event) {
 function paste(view, event) {
   const data = event.clipboardData
   if (!data) return false
-  const files = Array.from(data.files).filter((file) => file.type.startsWith('image/'))
+  const files = transferredImages(data)
   const html = data.getData('text/html')
   const selection = view.state.selection.getBookmark()
-  if (files.length && !data.getData('text/plain').trim() && !html.replace(/<[^>]*>/g, '').trim()) {
-    void insertFiles(files, selection)
+  const template = document.createElement('template')
+  template.innerHTML = html
+  // A copied file can include a filename or path as its plain-text representation.
+  if (files.length && !template.content.textContent.trim()) {
+    void insertFiles(files, selection, null, true)
     return true
   }
   if (!html) return false
-  // 浏览器复制的行内图片有时是 data URL，须在插入文档前转换成后台素材。
-  const template = document.createElement('template')
-  template.innerHTML = html
-  const embedded = [...template.content.querySelectorAll('img')].filter((img) =>
-    /^data:image\//i.test(img.getAttribute('src') || '')
-  )
+  const embedded = [...template.content.querySelectorAll('img')].filter(img => {
+    const src = img.getAttribute('src') || ''
+    return /^data:image\//i.test(src) || (files.length && /^(?:file:|blob:|cid:|$)/i.test(src))
+  })
   if (!embedded.length) {
     // 整段粘贴时保留来源段落的对齐、行距等属性；行内粘贴仍由编辑器按光标合并。
     if (
@@ -363,13 +391,19 @@ function paste(view, event) {
     return false
   }
   void withUpload(selection, async () => {
+    let fileIndex = 0
     for (const img of embedded) {
-      const blob = await (await fetch(img.getAttribute('src'))).blob()
+      const src = img.getAttribute('src') || ''
+      let file
+      if (/^data:image\//i.test(src)) {
+        const blob = await (await fetch(src)).blob()
+        file = new File([blob], 'clipboard-image', { type: blob.type })
+      } else {
+        file = files[fileIndex++]
+        if (!file) throw new Error('未能读取文档中的图片，请单独复制图片后粘贴')
+      }
       img.removeAttribute('data-src')
-      img.setAttribute(
-        'src',
-        await props.uploadImage(new File([blob], 'clipboard-image', { type: blob.type }))
-      )
+      img.setAttribute('src', await props.uploadImage(file))
     }
     return preparePastedHtml(template.innerHTML)
   })
@@ -463,9 +497,7 @@ onMounted(() => {
       transformPastedHTML: preparePastedHtml,
       handlePaste: paste,
       handleDrop(view, event, slice, moved) {
-        const files = Array.from(event.dataTransfer?.files || []).filter((file) =>
-          file.type.startsWith('image/')
-        )
+        const files = transferredImages(event.dataTransfer)
         if (moved || !files.length) return false
         const at = view.posAtCoords({ left: event.clientX, top: event.clientY })
         if (at) editor.value.commands.setTextSelection(at.pos)
@@ -613,7 +645,8 @@ onBeforeUnmount(() => {
         <span class="group-label">插入</span>
         <div class="ribbon-controls">
           <button type="button" @mousedown.prevent @click="run('setHorizontalRule')">分隔线</button>
-          <button type="button" @mousedown.prevent @click="chooseFile()">插入图片</button>
+          <button type="button" @mousedown.prevent @click="chooseFile()" title="从文件管理器选择一张或多张图片">从文件上传图片</button>
+          <button type="button" @mousedown.prevent @click="pasteImage" :title="'也可在正文中按 ' + pasteShortcut">粘贴图片</button>
           <button type="button" @mousedown.prevent @click="editMedia('image')">图片地址</button>
           <button type="button" @mousedown.prevent @click="editMedia('inlineLink')">文字链接</button>
           <button v-if="allowCards" type="button" @mousedown.prevent @click="editMedia('link')">链接卡片</button>

@@ -24,6 +24,7 @@ import {
   WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
 } from './options.js'
 import { areaChildrenByParent, areaName, provinceOptions, regionArea } from './utils/regions.js'
+import { prepareUploadImage } from '@suiyueli/rich-editor/upload-image'
 import { hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
 import {
   fmtMoney, fuzzyMatch, isPaidPrice, notificationColor,
@@ -2533,12 +2534,6 @@ async function uploadContentCover(event) {
   }
 }
 
-function imageUploadError(file, label) {
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file?.type)) return `${label}仅支持 PNG、JPG 或 WebP`
-  if (file.size > 2 * 1024 * 1024) return `${label}不能超过2MB`
-  return ''
-}
-
 async function uploadBodyMedia(file, kind, scope) {
   if (kind === 'image') return uploadArticleImage(file, scope)
   if (!['video/mp4', 'video/webm'].includes(file.type) || file.size > 15 * 1024 * 1024) throw new Error('请选择 15MB 以内的 MP4 或 WebM 视频')
@@ -2548,9 +2543,7 @@ async function uploadBodyMedia(file, kind, scope) {
 }
 
 async function uploadArticleImage(file, scope) {
-  const error = imageUploadError(file, '正文图片')
-  if (error) throw new Error(error)
-  const dataUrl = await fileDataUrl(file)
+  const dataUrl = await fileDataUrl(await prepareUploadImage(file))
   const result = await api.post(scope ? '/uploads/image?scope=' + scope : '/uploads/image', { dataUrl, fileName: file.name })
   if (!result?.url) throw new Error('上传未返回图片地址，请重试')
   return result.url
