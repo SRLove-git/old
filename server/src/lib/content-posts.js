@@ -1,3 +1,4 @@
+import { articleLayout } from './article-layout.js'
 import { badRequest } from './domain-values.js'
 
 export function contentMediaUrl(value, label) {
@@ -9,18 +10,22 @@ export function contentMediaUrl(value, label) {
   return url
 }
 
-export function normalizeContentBlocks(blocks, fallbackText = '') {
+export function normalizeContentBlocks(blocks, fallbackText = '', richText = false) {
   const source = Array.isArray(blocks) ? blocks : []
   if (source.length > 100) throw badRequest('正文内容不能超过100个区块')
   const normalized = source
     .map((block) => {
       const type = String(block?.type || '')
+      if (type === 'text' && richText && block.html) return articleLayout(block.html)
       if (type === 'text') return { type, text: String(block.text || '').trim() }
       if (type === 'image') {
+        const width = Number(block.width)
         return {
           type,
           src: contentMediaUrl(block.src, '正文图片'),
-          caption: String(block.caption || '').trim()
+          caption: String(block.caption || '').trim(),
+          ...(richText && Number.isInteger(width) && width >= 1 && width <= 100 ? {width} : {}),
+          ...(richText && ['left','center','right'].includes(block.align) ? {align: block.align} : {})
         }
       }
       if (type === 'video') {
@@ -45,7 +50,7 @@ export function normalizeContentBlocks(blocks, fallbackText = '') {
       throw badRequest('正文包含不支持的内容类型')
     })
     .filter((block) => {
-      if (block.type === 'text') return block.text
+      if (block.type === 'text') return block.text || block.html?.includes('<hr')
       if (block.type === 'image') return block.src
       if (block.type === 'video') return block.url
       return block.title && block.url
@@ -63,7 +68,7 @@ export function normalizeContentPost(post) {
   if (!post.title) throw badRequest('标题不能为空')
   post.coverImage = contentMediaUrl(post.coverImage, '封面图片')
   post.videoUrl = contentMediaUrl(post.videoUrl, '视频')
-  post.contentBlocks = normalizeContentBlocks(post.contentBlocks, post.content)
+  post.contentBlocks = normalizeContentBlocks(post.contentBlocks, post.content, true)
   post.content = post.contentBlocks
     .filter((block) => block.type === 'text')
     .map((block) => block.text)

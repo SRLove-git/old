@@ -6,19 +6,11 @@ import * as store from '../store.js'
 import { httpError } from '../lib/http.js'
 import { UPLOAD_DIR } from '../lib/uploads.js'
 import { wechatMp } from '../lib/wechat-mp.js'
+import { articleLayout, escapeArticleText as escapeHtml } from '../lib/article-layout.js'
 import { isImported } from '../lib/wechat-publication-state.js'
 
 const BODY_IMAGE_LIMIT = 950_000
 const SOURCE_FIELDS = ['title', 'summary', 'source', 'originalUrl', 'coverImage', 'contentBlocks']
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 function httpsUrl(value, label) {
   const raw = String(value || '').trim()
@@ -126,14 +118,17 @@ async function articleContent(post, client, uploadDir) {
   const parts = []
   for (const [index, block] of (post.contentBlocks || []).entries()) {
     if (block.type === 'text') {
-      parts.push(textHtml(block.text))
+      parts.push(block.html ? articleLayout(block.html).html : textHtml(block.text))
       continue
     }
     if (block.type === 'image') {
       const image = await jpegForWechat(block.src, `正文第${index + 1}张图片`, uploadDir)
       const uploaded = await client.uploadArticleImage({ buffer: image, filename: `content-${index + 1}.jpg` })
-      parts.push(`<p style="margin:16px 0;text-align:center;"><img src="${escapeHtml(uploaded.url)}" style="max-width:100%;height:auto;"/></p>`)
-      if (block.caption) parts.push(`<p style="font-size:13px;line-height:1.6;color:#888888;text-align:center;margin:0 0 16px;">${escapeHtml(block.caption)}</p>`)
+      const align = ['left', 'right'].includes(block.align) ? block.align : 'center'
+      const width = Number(block.width)
+      const size = Number.isInteger(width) && width >= 1 && width <= 100 ? `width:${width}%;` : ''
+      parts.push(`<p style="margin:16px 0;text-align:${align};"><img src="${escapeHtml(uploaded.url)}" style="${size}max-width:100%;height:auto;"/></p>`)
+      if (block.caption) parts.push(`<p style="font-size:13px;line-height:1.6;color:#888888;text-align:${align};margin:0 0 16px;">${escapeHtml(block.caption)}</p>`)
       continue
     }
     if (block.type === 'link') {
@@ -149,7 +144,7 @@ async function articleContent(post, client, uploadDir) {
   if (post.source) {
     parts.push(`<p style="font-size:13px;line-height:1.6;color:#888888;margin-top:24px;">来源：${escapeHtml(post.source)}</p>`)
   }
-  return `<section>${parts.join('')}</section>`
+  return `<section style="font-size:16px;line-height:1.8;color:#333;white-space:pre-wrap">${parts.join('')}</section>`
 }
 
 export function createWechatContentPublisher({

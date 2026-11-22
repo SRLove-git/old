@@ -45,13 +45,7 @@
 
     <view class="section-card">
       <view wx:if="{{live.detailBlocks.length}}" class="section-title">课程介绍</view>
-      <block wx:for="{{live.detailBlocks}}" wx:for-item="block" wx:key="_key">
-        <text wx:if="{{block.type === 'text'}}" class="info-desc">{{block.text}}</text>
-        <view wx:elif="{{block.type === 'image'}}" class="info-picture">
-          <image webp="{{true}}" class="info-image" src="{{block.src}}" mode="widthFix" show-menu-by-longpress />
-          <text wx:if="{{block.caption}}" class="info-caption">{{block.caption}}</text>
-        </view>
-      </block>
+      <rich-body blocks="{{live.detailBlocks}}" />
       <view class="teacher-row"><view class="teacher-avatar">师</view><view><view class="teacher-name">{{live.hostName}}</view><view class="teacher-desc">{{copy.courseTeacherDescription}}</view></view></view>
     </view>
 

@@ -58,11 +58,7 @@
   <view wx:elif="{{tab === 'detail'}}" class="tab-panel detail-rich">
     <view class="section-heading"><text class="heading-cn">{{detailTitle}}</text></view>
     <view wx:if="{{merchant}}" class="merchant-card" bindtap="goShop"><view class="merchant-logo">岁</view><view class="merchant-copy"><view class="merchant-name">{{merchant.shopName || merchant.name}}</view><view class="merchant-cert">企业认证</view></view><button class="merchant-enter btn btn-secondary btn-pill">进店逛逛</button></view>
-    <block wx:for="{{activity.detailBlocks}}" wx:key="_key" wx:for-item="block">
-      <text wx:if="{{block.type === 'text'}}" class="detail-text">{{block.text}}</text>
-      <view wx:elif="{{block.type === 'image'}}" class="detail-media detail-image-media"><image webp="{{true}}" class="detail-rich-image" src="{{block.src || activity.art}}" mode="widthFix" /><text wx:if="{{block.caption}}" class="detail-media-caption">{{block.caption}}</text></view>
-      <view wx:elif="{{block.type === 'video'}}" class="detail-media detail-video"><video wx:if="{{block.url}}" src="{{block.url}}" class="detail-video-player" controls></video><view wx:else class="video-placeholder"><text class="video-play">▶</text><text>{{block.caption}}</text></view></view>
-    </block>
+    <rich-body blocks="{{activity.detailBlocks}}" fallback-image="{{activity.art}}" />
   </view>
 
   <view wx:else class="tab-panel recommend-panel">

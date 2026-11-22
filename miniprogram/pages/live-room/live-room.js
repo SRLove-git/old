@@ -9,7 +9,7 @@ function decorateCourse(course) {
     ? data.detailBlocks
     : [{ type: 'text', text: data.description }]
   const detailBlocks = blocks
-    .filter(block => block && (block.type === 'text' && block.text || block.type === 'image' && block.src))
+    .filter(block => block && (block.type === 'text' && (block.text || block.html) || block.type === 'image' && block.src))
     .map((block, index) => ({
       ...block, _key: `${block.type}-${index}`,
       ...(block.type === 'image' ? { src: store.assetUrl(block.src) } : {})

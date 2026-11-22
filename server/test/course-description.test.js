@@ -108,3 +108,32 @@ test('invalid rich updates cannot partially overwrite a course introduction', ()
     assert.notEqual(unchanged.title, '不得生效')
   }
 })
+
+test('all catalog editors preserve selected formatting, legacy plain text and ordered media after restart', async () => {
+  const markup = '<p>前<strong>选中</strong>后</p><script>discard()</script>'
+  const data = { title: '排版验收', coverImage: '/assets/cover.jpg', memberPrice: 1, price: 2, pointsCost: 10 }
+  const cases = [
+    [store.createActivity, store.updateActivity, 'activities', 'detail'],
+    [store.createProduct, store.updateProduct, 'products', 'detail'],
+    [store.createLive, store.updateLive, 'lives', 'description'],
+    [store.createPointProduct, store.updatePointProduct, 'pointProducts', 'description']
+  ]
+  const expected = []
+  for (const [create, update, collection, field] of cases) {
+    const record = create({ ...data, publisherType: 'platform', [field]: '旧介绍' })
+    assert.equal(record.detailBlocks[0].text, '旧介绍')
+    const media = { ...image, align: 'right', width: 55 }
+    const blocks = [{ type: 'text', html: markup }, media]
+    if (field === 'detail') blocks.push({ type: 'video', url: 'https://example.test/demo.mp4', caption: '课程片段' })
+    const saved = update(record.id, { detailBlocks: blocks })
+    assert.equal(saved[field], '前选中后')
+    assert.match(saved.detailBlocks[0].html, /前<strong>选中<\/strong>后/)
+    assert.doesNotMatch(saved.detailBlocks[0].html, /script|discard/)
+    assert.deepEqual(saved.detailBlocks[1], media)
+    expected.push([collection, saved.id, saved.detailBlocks])
+  }
+  const reloaded = (await import('../src/store.js?all-editors-roundtrip')).init()
+  for (const [collection, id, saved] of expected) {
+    assert.deepEqual(reloaded[collection].find(entry => entry.id === id).detailBlocks, saved)
+  }
+})

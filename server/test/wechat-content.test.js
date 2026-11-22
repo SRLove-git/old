@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import sharp from 'sharp'
+import { normalizeContentPost } from '../src/lib/content-posts.js'
 import { createWechatContentPublisher } from '../src/services/wechat-content.js'
 
 async function fixture(t) {
@@ -91,6 +92,26 @@ test('政策资讯生成公众号草稿时转换本地 WebP、正文图片和安
   assert.match(article.content, /https:\/\/mmbiz\.qpic\.cn\/body-image/)
   assert.match(article.content, /&lt;安全&gt;/)
   assert.doesNotMatch(article.content, /<安全>/)
+})
+
+test('图文草稿保留正文与图片版式，贴图使用纯文本，排版修改会使旧草稿失效', async t => {
+  const { post, calls, publisher } = await fixture(t)
+  Object.assign(post.contentBlocks[0], {html: '<h2 style="text-align:center">服务安排</h2><p><em>星期三  上午</em></p>'})
+  Object.assign(post.contentBlocks[1], {width: 60, align: 'right'})
+  normalizeContentPost(post)
+  await publisher.createDraft(post.id)
+  const body = calls.find(call => call.type === 'draft').article.content
+  assert.ok(body.includes(post.contentBlocks[0].html))
+  assert.match(body, /white-space:pre-wrap/)
+  assert.ok(body.includes('星期三  上午'))
+  assert.match(body, /text-align:right;"><img[^>]*width:60%/)
+  post.contentBlocks[0].html = post.contentBlocks[0].html.replace('text-align:center', 'text-align:left')
+  await assert.rejects(publisher.publishDraft(post.id, 'draft-media'), /重新生成草稿/)
+  await publisher.createDraft(post.id, 'newspic')
+  const picture = calls.find(call => call.type === 'picture').article
+  assert.ok(picture.content.includes('服务安排\n星期三  上午'))
+  assert.match(picture.content, /办理流程图/)
+  assert.doesNotMatch(picture.content, /<h2|<em|text-align/)
 })
 
 test('只发布已生成且内容未变化的草稿，并可同步最终文章地址', async (t) => {

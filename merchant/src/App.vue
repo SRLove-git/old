@@ -1,13 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Message from '@arco-design/web-vue/es/message'
 import Modal from '@arco-design/web-vue/es/modal'
 import { IconArchive, IconCalendar, IconFile, IconMenuFold, IconMenuUnfold, IconPlus } from '@arco-design/web-vue/es/icon'
 import { api, setToken, token } from './api.js'
-import { imageAccept, imageFormats, prepareUploadImage, uploadImageType } from './upload-image.js'
-import ParagraphImageInput from '../../shared/ParagraphImageInput.vue'
-import CourseDescriptionEditor from '../../shared/CourseDescriptionEditor.vue'
-import { editorBlockKey, hasDetailContent, incompleteImage, insertImageBlock } from '../../shared/editor-blocks.js'
+import { imageAccept, imageFormats, prepareUploadImage } from './upload-image.js'
+import { hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
+
+const ArticleEditor = defineAsyncComponent(() => import('@suiyueli/rich-editor'))
 
 const auth = ref({ username: '', password: '' })
 const merchant = ref(null)
@@ -26,12 +26,10 @@ const regions = ref([])
 const activitySchedules = ref([])
 const activitySkus = ref([])
 const activityRefundLadder = ref([])
-const detailUploading = ref(new Set())
-const detailUploadErrors = ref(new WeakMap())
-const courseDetailUploading = ref(false)
+const detailEditor = ref(null)
+const detailBusy = ref(false)
 const courseVideoUploading = ref(new Set())
-const hasPendingUploads = computed(() => uploading.value || courseDetailUploading.value
-  || form.value?.detailBlocks.some(block => detailUploading.value.has(block))
+const hasPendingUploads = computed(() => uploading.value || detailBusy.value
   || form.value?.lessons?.some(lesson => courseVideoUploading.value.has(lesson)))
 const isPaidPrice = (value) => Number.isFinite(Number(value)) && Number(value) >= 0.01
 
@@ -128,7 +126,7 @@ function emptyForm() {
 
 function openEditor(item = null) {
   form.value = item ? JSON.parse(JSON.stringify(item)) : emptyForm()
-  courseDetailUploading.value = false
+  detailBusy.value = false
   const legacyText = view.value === 'courses' ? form.value.description : form.value.detail
   if (!Array.isArray(form.value.detailBlocks) || !form.value.detailBlocks.length) {
     form.value.detailBlocks = [{ type: 'text', text: legacyText || '' }]
@@ -236,17 +234,6 @@ function addActivitySku() { activitySkus.value.push({ id: `sku-${Date.now()}`, n
 function removeActivitySku(index) { activitySkus.value.splice(index, 1) }
 function addRefundLadderRow() { activityRefundLadder.value.push({ days: 0, ratePercent: 0 }) }
 function removeRefundLadderRow(index) { activityRefundLadder.value.splice(index, 1) }
-function addDetailBlock(type) {
-  form.value.detailBlocks.push(type === 'text' ? { type, text: '' } : type === 'image' ? { type, src: '', caption: '' } : { type, url: '', caption: '' })
-}
-function removeDetailBlock(index) { form.value.detailBlocks.splice(index, 1) }
-function moveDetailBlock(index, direction) {
-  const target = index + direction
-  if (target < 0 || target >= form.value.detailBlocks.length) return
-  const blocks = [...form.value.detailBlocks]
-  ;[blocks[index], blocks[target]] = [blocks[target], blocks[index]]
-  form.value.detailBlocks = blocks
-}
 
 async function uploadAsset(file, type = 'image') {
   let upload = file
@@ -259,32 +246,6 @@ async function uploadAsset(file, type = 'image') {
   const result = await api.post(`/merchant/uploads/${type}`, { dataUrl: await fileDataUrl(upload), fileName: file.name })
   if (!result?.url) throw new Error('上传未返回文件地址，请重试')
   return result.url
-}
-
-async function uploadDetailAsset(file, block) {
-  if (!file || detailUploading.value.has(block)) return
-  detailUploading.value.add(block)
-  detailUploadErrors.value.delete(block)
-  try {
-    const url = await uploadAsset(file, block.type)
-    if (!form.value?.detailBlocks.includes(block)) return
-    if (block.type === 'video') block.url = url
-    else block.src = url
-  } catch (e) {
-    if (form.value?.detailBlocks.includes(block)) detailUploadErrors.value.set(block, e.message || '上传失败，请重试')
-  } finally { detailUploading.value.delete(block) }
-}
-
-function changeDetailAsset(event, block) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  return uploadDetailAsset(file, block)
-}
-
-function insertDetailImage(paragraph, { offset, file }) {
-  try { uploadImageType(file) } catch (e) { return Message.warning(e.message) }
-  const image = insertImageBlock(form.value.detailBlocks, paragraph, offset)
-  if (image) return uploadDetailAsset(file, image)
 }
 
 function serializeDetails(payload, textField) {
@@ -311,11 +272,10 @@ function prepareActivityPayload() {
 }
 
 async function save() {
+  if (!detailEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!detailEditor.value.finishPanel()) return
   if (hasPendingUploads.value) return Message.warning('请等待文件上传完成后再保存')
   if (form.value.detailBlocks.some(incompleteImage)) return Message.warning('请上传详情图片，或删除空图片块')
-  if (form.value.detailBlocks.some(block => detailUploadErrors.value.has(block) && !hasDetailContent(block))) {
-    return Message.warning('请重新上传失败的文件或删除对应内容块')
-  }
   if (!String(form.value.title || '').trim()) return Message.warning(`请填写${current.value.singular}名称`)
   if (!isPaidPrice(form.value.memberPrice)) return Message.warning(`${current.value.singular}会员价最低为0.01元，不能为0元`)
   if (view.value !== 'courses' && !isPaidPrice(form.value.price)) return Message.warning(`${current.value.singular}非会员价最低为0.01元，不能为0元`)
@@ -508,42 +468,8 @@ onMounted(restore)
             <section id="merchant-editor-detail" class="listing-section">
               <div class="listing-section-head"><div><span class="listing-section-index">04</span><strong>{{ current.singular }}详情</strong></div><p>补充亮点、适用人群、使用方法和注意事项</p></div>
               <a-form-item :label="`${current.singular}详情编辑器`">
-                <div class="detail-block-editor">
-                  <div v-if="!form.detailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div>
-                  <div v-for="(block, index) in form.detailBlocks" :key="editorBlockKey(block)" class="detail-block-row">
-                    <div class="detail-block-head">
-                      <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">{{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}</a-tag>
-                      <a-space :size="4">
-                        <a-button type="text" size="mini" :disabled="index === 0" @click="moveDetailBlock(index, -1)">上移</a-button>
-                        <a-button type="text" size="mini" :disabled="index === form.detailBlocks.length - 1" @click="moveDetailBlock(index, 1)">下移</a-button>
-                        <a-button type="text" size="mini" status="danger" @click="removeDetailBlock(index)">删除</a-button>
-                      </a-space>
-                    </div>
-                    <ParagraphImageInput v-if="block.type === 'text'" v-model="block.text" :auto-size="{ minRows: 3, maxRows: 10 }" :placeholder="`输入${current.singular}介绍文字`" @insert-image="insertDetailImage(block, $event)" />
-                    <template v-else>
-                      <template v-if="block.type === 'image'">
-                        <img v-if="block.src" class="detail-block-image" :src="coverUrl(block.src)" alt="详情图片预览" />
-                        <a-input v-model="block.src" :disabled="detailUploading.has(block)" placeholder="图片地址，或使用下方按钮上传" />
-                      </template>
-                      <template v-else>
-                        <video v-if="block.url" class="detail-block-video" :src="coverUrl(block.url)" controls preload="metadata"></video>
-                        <a-input v-model="block.url" :disabled="detailUploading.has(block)" placeholder="视频地址，或上传本地视频" />
-                      </template>
-                      <a-input v-model="block.caption" placeholder="说明（可选）" />
-                      <label class="detail-upload-button">
-                        <input type="file" :accept="block.type === 'image' ? imageAccept : 'video/mp4,video/webm'" hidden :disabled="detailUploading.has(block)" @change="changeDetailAsset($event, block)" />
-                        <a-button type="outline" size="small" :loading="detailUploading.has(block)" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">{{ block.type === 'image' ? '上传图片' : '上传本地视频' }}</a-button>
-                      </label>
-                      <span v-if="detailUploadErrors.has(block)" role="alert">{{ detailUploadErrors.get(block) }}</span>
-                    </template>
-                  </div>
-                  <a-space>
-                    <a-button type="outline" @click="addDetailBlock('text')">添加文字</a-button>
-                    <a-button type="outline" @click="addDetailBlock('image')">添加图片</a-button>
-                    <a-button type="outline" @click="addDetailBlock('video')">添加视频</a-button>
-                  </a-space>
-                </div>
-              </a-form-item>
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :image-accept="imageAccept" :preview-url="coverUrl" @uploading="detailBusy = $event" :upload-video="file => uploadAsset(file, 'video')" />
+          </a-form-item>
             </section>
           </main>
         </div>
@@ -555,7 +481,9 @@ onMounted(restore)
           <a-row :gutter="12"><a-col :span="8"><a-form-item label="会员价"><a-input-number v-model="form.memberPrice" :min="0.01" :step="0.01" :precision="2" style="width: 100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="开始时间" required><a-date-picker v-model="form.startAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择开始日期和时间" style="width:100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="结束时间" required><a-date-picker v-model="form.endAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束日期和时间" style="width:100%" /></a-form-item></a-col></a-row>
           <a-form-item label="直播地址"><a-input v-model="form.streamUrl" placeholder="https://" /></a-form-item><a-form-item label="回放地址"><a-input v-model="form.replayUrl" placeholder="https://" /></a-form-item>
           <a-form-item label="课程章节"><div class="lesson-editor"><div class="lesson-editor-head"><span class="muted">按顺序编排每一节课，可填写外链或上传本地视频</span><a-button type="outline" size="small" @click="addLesson"><template #icon><IconPlus /></template>新增课节</a-button></div><a-empty v-if="!form.lessons.length" description="暂无章节" /><div v-for="(lesson, index) in form.lessons" :key="lesson.id || index" class="lesson-row"><div class="lesson-row-head"><strong>第 {{ index + 1 }} 节</strong><a-space :size="0"><a-button type="text" size="mini" :disabled="index === 0" @click="moveLesson(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === form.lessons.length - 1" @click="moveLesson(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeLesson(index)">删除</a-button></a-space></div><a-row :gutter="10"><a-col :span="16"><a-input v-model="lesson.title" placeholder="课节标题" /></a-col><a-col :span="8"><a-input v-model="lesson.duration" placeholder="时长，如 18:40" /></a-col></a-row><video v-if="lesson.videoUrl" class="detail-block-video" :src="coverUrl(lesson.videoUrl)" controls preload="metadata"></video><a-input v-model="lesson.videoUrl" placeholder="HTTPS 视频、MP4、WebM、MOV、M4V 或 M3U8 地址" /><div class="lesson-video-actions"><label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov,.m4v" hidden @change="uploadCourseVideo($event, lesson, index)" /><a-button type="outline" size="small" :loading="courseVideoUploading.has(lesson)" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label><a-button v-if="lesson.videoUrl" type="text" size="small" status="danger" @click="lesson.videoUrl = ''">移除视频</a-button><span class="muted">支持 MP4、WebM、MOV、M4V，暂不限制文件大小</span></div><div class="lesson-options"><a-checkbox v-model="lesson.isPreview">允许试看</a-checkbox><a-switch v-model="lesson.status" :checked-value="1" :unchecked-value="0" checked-text="上架" unchecked-text="下架" /></div></div></div></a-form-item>
-          <a-form-item label="课程介绍"><CourseDescriptionEditor v-model="form.detailBlocks" :upload-image="uploadAsset" :preview-url="coverUrl" @uploading="courseDetailUploading = $event" /></a-form-item>
+          <a-form-item label="课程介绍">
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :image-accept="imageAccept" :preview-url="coverUrl" @uploading="detailBusy = $event" :allow-video="false" />
+          </a-form-item>
         </template>
       </a-form>
       <template #footer><a-button @click="form = null">取消</a-button><a-button type="primary" :loading="loading" :disabled="hasPendingUploads" @click="save">保存并发布</a-button></template>

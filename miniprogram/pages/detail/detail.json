@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "活动详情",
   "usingComponents": {
-    "contact-sheet": "/components/contact-sheet/contact-sheet"
+    "contact-sheet": "/components/contact-sheet/contact-sheet",
+    "rich-body": "/components/rich-body/index"
   }
 }

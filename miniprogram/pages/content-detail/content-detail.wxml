@@ -11,23 +11,7 @@
     <text>阅读公众号原文</text><text>›</text>
   </view>
   <view wx:elif="{{post.officialLinkPending}}" class="source-note">公众号原文链接待核对</view>
-  <view class="article-body">
-    <block wx:for="{{post.contentBlocks}}" wx:key="_key" wx:for-item="block">
-      <text wx:if="{{block.type === 'text'}}" class="content-body" user-select>{{block.text}}</text>
-      <view wx:elif="{{block.type === 'image'}}" class="article-media-block">
-        <image webp="{{true}}" class="article-image" src="{{block.src}}" mode="widthFix" show-menu-by-longpress />
-        <view wx:if="{{block.caption}}" class="article-caption">{{block.caption}}</view>
-      </view>
-      <view wx:elif="{{block.type === 'video'}}" class="article-media-block">
-        <video class="article-video" src="{{block.url}}" controls enable-play-gesture show-center-play-btn></video>
-        <view wx:if="{{block.caption}}" class="article-caption">{{block.caption}}</view>
-      </view>
-      <view wx:elif="{{block.type === 'link'}}" class="article-link" data-url="{{block.url}}" bindtap="openContentLink">
-        <view class="article-link-copy"><view class="article-link-title">{{block.title}}</view><view wx:if="{{block.description}}" class="article-link-description">{{block.description}}</view></view>
-        <text class="article-link-arrow">›</text>
-      </view>
-    </block>
-  </view>
+  <rich-body blocks="{{post.contentBlocks}}" />
 
   <view wx:if="{{post.type === 'news'}}" class="source-note">政策、申报和办事要求请以政府主管部门最新原文为准。</view>
   <button wx:if="{{post.originalUrl}}" class="original-button" bindtap="copyOriginal">复制政府原文链接</button>

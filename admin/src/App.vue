@@ -24,9 +24,7 @@ import {
   WITHDRAW_STATUS_OPTIONS as withdrawStatusOptions
 } from './options.js'
 import { areaChildrenByParent, areaName, provinceOptions, regionArea } from './utils/regions.js'
-import ParagraphImageInput from '../../shared/ParagraphImageInput.vue'
-import CourseDescriptionEditor from '../../shared/CourseDescriptionEditor.vue'
-import { insertImageBlock, editorBlockKey, hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
+import { hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
 import {
   fmtMoney, fuzzyMatch, isPaidPrice, notificationColor,
   notificationLabel, orderAddressText, orderChip, statusChip, transferStateText
@@ -51,6 +49,7 @@ const LivesView = defineAsyncComponent(() => import('./views/LivesView.vue'))
 const PointsMallView = defineAsyncComponent(() => import('./views/PointsMallView.vue'))
 const CouponsView = defineAsyncComponent(() => import('./views/CouponsView.vue'))
 const BannersView = defineAsyncComponent(() => import('./views/BannersView.vue'))
+const ArticleEditor = defineAsyncComponent(() => import('@suiyueli/rich-editor'))
 const ContentView = defineAsyncComponent(() => import('./views/ContentView.vue'))
 const ApplicationsView = defineAsyncComponent(() => import('./views/ApplicationsView.vue'))
 const ProvidersView = defineAsyncComponent(() => import('./views/ProvidersView.vue'))
@@ -171,12 +170,14 @@ const productImages = ref([])
 const activitySchedules = ref([])
 const activitySkus = ref([])
 const activityDetailBlocks = ref([])
-const activityDetailUploading = ref({})
+const activityBodyEditor = ref(null)
+const activityBodyEditorBusy = ref(false)
 const activityRefundLadder = ref([])
 const productForm = ref(null)
 const productSkus = ref([])
 const productDetailBlocks = ref([])
-const productDetailUploading = ref({})
+const productBodyEditor = ref(null)
+const productBodyEditorBusy = ref(false)
 const productRefundLadder = ref([])
 
 const activityEditorSections = [
@@ -221,19 +222,23 @@ function scrollEditorSection(type, key) {
   document.getElementById(`${type}-editor-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 const pointProductForm = ref(null)
+const pointProductBodyEditor = ref(null)
+const pointProductBodyEditorBusy = ref(false)
 const pointCoverInput = ref(null)
 const pointCoverUploading = ref(false)
 const liveForm = ref(null)
 const liveCoverInput = ref(null)
 const liveCoverUploading = ref(false)
 const liveVideoUploading = ref({})
-const liveDetailUploading = ref(false)
+const liveBodyEditor = ref(null)
+const liveBodyEditorBusy = ref(false)
 const regionForm = ref(null)
 const contentForm = ref(null)
 const contentBlocks = ref([])
 const contentCoverInput = ref(null)
 const contentCoverUploading = ref(false)
-const contentBlockUploading = ref({})
+const contentImageUploading = ref(false)
+const articleEditor = ref(null)
 const wechatContentLoading = ref({})
 const couponForm = ref(null)
 const reviewReplyTarget = ref(null)
@@ -1155,7 +1160,7 @@ function openActivity(a) {
   activityDetailBlocks.value = Array.isArray(a && a.detailBlocks) && a.detailBlocks.length
     ? a.detailBlocks.map((block) => ({ ...block }))
     : [{ type: 'text', text: (a && a.detail) || '' }]
-  activityDetailUploading.value = {}
+  activityBodyEditorBusy.value = false
   const refundRule = (a && a.refundRule) || { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }
   activityForm.value.refundRule = {
     ...refundRule,
@@ -1183,30 +1188,10 @@ function removeActivitySku(index) {
   activitySkus.value.splice(index, 1)
 }
 
-function addActivityDetailBlock(type) {
-  const block = type === 'text'
-    ? { type: 'text', text: '' }
-    : type === 'image'
-      ? { type: 'image', src: '', caption: '' }
-      : { type: 'video', url: '', caption: '' }
-  activityDetailBlocks.value.push(block)
-}
-
-function removeActivityDetailBlock(index) {
-  activityDetailBlocks.value.splice(index, 1)
-}
-
-function moveActivityDetailBlock(index, direction) {
-  const target = index + direction
-  if (target < 0 || target >= activityDetailBlocks.value.length) return
-  const blocks = activityDetailBlocks.value.slice()
-  const [block] = blocks.splice(index, 1)
-  blocks.splice(target, 0, block)
-  activityDetailBlocks.value = blocks
-}
-
 function saveActivity() {
-  if (Object.values(activityDetailUploading.value).some(Boolean)) {
+  if (!activityBodyEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!activityBodyEditor.value.finishPanel()) return
+  if (activityBodyEditorBusy.value) {
     Message.warning('详情图片或视频仍在上传，请稍候再保存')
     return
   }
@@ -1317,7 +1302,7 @@ function openProduct(p) {
   productDetailBlocks.value = Array.isArray(p && p.detailBlocks) && p.detailBlocks.length
     ? p.detailBlocks.map((block) => ({ ...block }))
     : [{ type: 'text', text: (p && p.detail) || '' }]
-  productDetailUploading.value = {}
+  productBodyEditorBusy.value = false
   productForm.value.serviceMode = productForm.value.serviceMode || 'delivery'
   productForm.value.serviceDescription = productForm.value.serviceDescription || ''
   const refundRule = productForm.value.refundRule || { type: 'day', fullDays: 7, partialDays: 0, partialRate: 0 }
@@ -1346,17 +1331,7 @@ function moveProductImage(index, direction) {
   productImages.value = images
 }
 
-function addProductDetailBlock(type) {
-  productDetailBlocks.value.push(type === 'text'
-    ? { type: 'text', text: '' }
-    : type === 'image'
-      ? { type: 'image', src: '', caption: '' }
-      : { type: 'video', url: '', caption: '' })
-}
 
-function removeProductDetailBlock(index) {
-  productDetailBlocks.value.splice(index, 1)
-}
 
 function addProductRefundLadderRow() {
   productRefundLadder.value.push({ days: 0, ratePercent: 0 })
@@ -1366,17 +1341,10 @@ function removeProductRefundLadderRow(index) {
   productRefundLadder.value.splice(index, 1)
 }
 
-function moveProductDetailBlock(index, direction) {
-  const target = index + direction
-  if (target < 0 || target >= productDetailBlocks.value.length) return
-  const blocks = productDetailBlocks.value.slice()
-  const [block] = blocks.splice(index, 1)
-  blocks.splice(target, 0, block)
-  productDetailBlocks.value = blocks
-}
-
 function saveProduct() {
-  if (Object.values(productDetailUploading.value).some(Boolean)) {
+  if (!productBodyEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!productBodyEditor.value.finishPanel()) return
+  if (productBodyEditorBusy.value) {
     Message.warning('详情图片或视频仍在上传，请稍候再保存')
     return
   }
@@ -1460,13 +1428,18 @@ function openRegion(region) {
 }
 
 function openPointProduct(product) {
+  pointProductBodyEditorBusy.value = false
   pointProductForm.value = product
-    ? { ...product }
-    : { title: '', coverImage: '', description: '', pointsCost: 100, stock: 0, limitPerUser: 1, status: 1 }
+    ? { ...product, detailBlocks: product.detailBlocks?.length ? product.detailBlocks : [{ type: 'text', text: product.description || '' }] }
+    : { title: '', coverImage: '', description: '', detailBlocks: [], pointsCost: 100, stock: 0, limitPerUser: 1, status: 1 }
 }
 
 function savePointProduct() {
+  if (!pointProductBodyEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!pointProductBodyEditor.value.finishPanel()) return
+  if (pointProductBodyEditorBusy.value) return Message.warning('请等待图片上传完成')
   const form = { ...pointProductForm.value }
+  form.description = form.detailBlocks.filter(block => block.type === 'text').map(block => block.text).join('\n\n')
   if (!String(form.title || '').trim()) {
     Message.warning('请填写商品名称')
     return
@@ -1507,7 +1480,7 @@ function openLive(item) {
   }
   liveVideoUploading.value = {}
   liveCoverUploading.value = false
-  liveDetailUploading.value = false
+  liveBodyEditorBusy.value = false
 }
 
 function chooseLiveCover() {
@@ -1534,13 +1507,6 @@ async function uploadLiveCover(event) {
   }
 }
 
-async function uploadLiveDetailImage(file) {
-  const validationError = imageUploadError(file, '课程介绍图片')
-  if (validationError) throw new Error(validationError)
-  const result = await api.post('/uploads/image?scope=courses', { dataUrl: await fileDataUrl(file), fileName: file.name })
-  Message.success('课程介绍图片上传成功，保存课程后生效')
-  return result.url
-}
 
 function addLiveLesson() {
   liveForm.value.lessons ||= []
@@ -1584,7 +1550,9 @@ async function uploadLiveLessonVideo(event, lesson, index) {
 }
 
 function saveLive() {
-  if (liveDetailUploading.value) {
+  if (!liveBodyEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!liveBodyEditor.value.finishPanel()) return
+  if (liveBodyEditorBusy.value) {
     Message.warning('课程介绍图片仍在上传，请稍候再保存')
     return
   }
@@ -1607,7 +1575,7 @@ function saveLive() {
   form.detailBlocks = Array.isArray(form.detailBlocks)
     ? form.detailBlocks
       .map((block) => ({ ...block }))
-      .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' && block.src)
+      .filter(hasDetailContent)
     : []
   form.description = form.detailBlocks
     .filter((block) => block.type === 'text')
@@ -1672,36 +1640,12 @@ function openContent(post) {
   contentBlocks.value = Array.isArray(post?.contentBlocks) && post.contentBlocks.length
     ? post.contentBlocks.map((block) => ({ ...block }))
     : (String(post?.content || '').trim() ? [{ type: 'text', text: post.content }] : [{ type: 'text', text: '' }])
-  contentBlockUploading.value = {}
-}
-
-function addContentBlock(type) {
-  const block = type === 'text'
-    ? { type: 'text', text: '' }
-    : type === 'image'
-      ? { type: 'image', src: '', caption: '' }
-      : type === 'video'
-        ? { type: 'video', url: '', caption: '' }
-        : { type: 'link', title: '', description: '', url: '' }
-  contentBlocks.value.push(block)
-}
-
-function removeContentBlock(index) {
-  contentBlocks.value.splice(index, 1)
-}
-
-function moveContentBlock(index, direction) {
-  const target = index + direction
-  if (target < 0 || target >= contentBlocks.value.length) return
-  const blocks = contentBlocks.value.slice()
-  const [block] = blocks.splice(index, 1)
-  blocks.splice(target, 0, block)
-  contentBlocks.value = blocks
+  contentImageUploading.value = false
 }
 
 function saveContent() {
-  if (Object.values(contentBlockUploading.value).some(Boolean)) {
-    Message.warning('正文图片仍在上传，请稍候再保存')
+  if (contentImageUploading.value || contentCoverUploading.value) {
+    Message.warning('图片仍在上传，请稍候再保存')
     return
   }
   if (contentBlocks.value.some(incompleteImage)) return Message.warning('请上传正文图片，或删除空的图片块')
@@ -1711,9 +1655,10 @@ function saveContent() {
     return
   }
   if (!form.wechat?.sourceVerification && !String(form.coverImage || '').trim()) return Message.error('请上传封面图片')
+  if (articleEditor.value && !articleEditor.value.finishPanel()) return
   form.contentBlocks = contentBlocks.value
     .map((block) => ({ ...block }))
-    .filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.type === 'video' ? block.url : block.title && block.url)
+    .filter((block) => block.type === 'text' ? block.html || String(block.text || '').trim() : block.type === 'image' ? block.src : block.type === 'video' ? block.url : block.title && block.url)
   form.content = form.contentBlocks.filter((block) => block.type === 'text').map((block) => block.text).join('\n\n')
   doAction(async () => {
     if (form.id) await api.put(`/content-posts/${form.id}`, form)
@@ -2594,41 +2539,21 @@ function imageUploadError(file, label) {
   return ''
 }
 
-async function uploadEditorImage(file, block, blocksRef, formRef, uploadingRef, label, successMessage, scope = '') {
-  if (!file || !block) return
-  const validationError = imageUploadError(file, label)
-  if (validationError) {
-    Message.error(validationError)
-    return
-  }
-  const key = editorBlockKey(block)
-  if (uploadingRef.value[key]) return
-  const owner = formRef.value
-  uploadingRef.value = { ...uploadingRef.value, [key]: true }
-  try {
-    const dataUrl = await fileDataUrl(file)
-    const endpoint = scope ? `/uploads/image?scope=${scope}` : '/uploads/image'
-    const result = await api.post(endpoint, { dataUrl, fileName: file.name })
-    if (formRef.value !== owner || !blocksRef.value.includes(block)) return
-    if (!result?.url) throw new Error('上传未返回图片地址，请重试')
-    block.src = result.url
-    Message.success(successMessage)
-  } catch (e) {
-    if (formRef.value === owner && blocksRef.value.includes(block)) Message.error(e.message || '上传失败')
-  } finally {
-    if (formRef.value === owner) uploadingRef.value = { ...uploadingRef.value, [key]: false }
-  }
+async function uploadBodyMedia(file, kind, scope) {
+  if (kind === 'image') return uploadArticleImage(file, scope)
+  if (!['video/mp4', 'video/webm'].includes(file.type) || file.size > 15 * 1024 * 1024) throw new Error('请选择 15MB 以内的 MP4 或 WebM 视频')
+  const result = await api.post('/uploads/video?scope=' + scope, { dataUrl: await fileDataUrl(file), fileName: file.name })
+  if (!result?.url) throw new Error('上传未返回视频地址，请重试')
+  return result.url
 }
 
-function insertContentParagraphImage(block, file, offset) {
-  const imageBlock = insertImageBlock(contentBlocks.value, block, offset)
-  if (imageBlock) uploadEditorImage(file, imageBlock, contentBlocks, contentForm, contentBlockUploading, '正文图片', '正文图片上传成功，保存内容后生效')
-}
-
-function uploadContentBlockImage(event, block) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  return uploadEditorImage(file, block, contentBlocks, contentForm, contentBlockUploading, '正文图片', '正文图片上传成功，保存内容后生效')
+async function uploadArticleImage(file, scope) {
+  const error = imageUploadError(file, '正文图片')
+  if (error) throw new Error(error)
+  const dataUrl = await fileDataUrl(file)
+  const result = await api.post(scope ? '/uploads/image?scope=' + scope : '/uploads/image', { dataUrl, fileName: file.name })
+  if (!result?.url) throw new Error('上传未返回图片地址，请重试')
+  return result.url
 }
 
 async function uploadPointCover(event) {
@@ -2707,52 +2632,10 @@ async function uploadProductImages(event) {
   }
 }
 
-async function uploadDetailVideo(event, type, block) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  if (!file) return
-  if (!['video/mp4', 'video/webm'].includes(file.type)) return Message.error('视频仅支持 MP4 或 WebM 格式')
-  if (file.size > 15 * 1024 * 1024) return Message.error('详情视频不能超过15MB')
-  const uploading = type === 'activity' ? activityDetailUploading : productDetailUploading
-  const blocks = type === 'activity' ? activityDetailBlocks : productDetailBlocks
-  const formRef = type === 'activity' ? activityForm : productForm
-  const owner = formRef.value
-  const key = editorBlockKey(block)
-  uploading.value = { ...uploading.value, [key]: true }
-  try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/video', { dataUrl, fileName: file.name })
-    if (formRef.value !== owner || !blocks.value.includes(block)) return
-    block.url = result.url
-    Message.success('详情视频上传成功，保存后生效')
-  } catch (e) {
-    if (formRef.value === owner && blocks.value.includes(block)) Message.error(e.message || '视频上传失败')
-  } finally {
-    if (formRef.value === owner) uploading.value = { ...uploading.value, [key]: false }
-  }
-}
 
-function insertActivityParagraphImage(block, file, offset) {
-  const imageBlock = insertImageBlock(activityDetailBlocks.value, block, offset)
-  if (imageBlock) uploadEditorImage(file, imageBlock, activityDetailBlocks, activityForm, activityDetailUploading, '详情图片', '详情图片上传成功，保存活动后生效', 'activities')
-}
 
-function uploadActivityDetailImage(event, block) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  return uploadEditorImage(file, block, activityDetailBlocks, activityForm, activityDetailUploading, '详情图片', '详情图片上传成功，保存活动后生效', 'activities')
-}
 
-function insertProductParagraphImage(block, file, offset) {
-  const imageBlock = insertImageBlock(productDetailBlocks.value, block, offset)
-  if (imageBlock) uploadEditorImage(file, imageBlock, productDetailBlocks, productForm, productDetailUploading, '详情图片', '详情图片上传成功，保存商品后生效', 'products')
-}
 
-function uploadProductDetailImage(event, block) {
-  const file = event.target.files && event.target.files[0]
-  event.target.value = ''
-  return uploadEditorImage(file, block, productDetailBlocks, productForm, productDetailUploading, '详情图片', '详情图片上传成功，保存商品后生效', 'products')
-}
 
 function exportCsv(filename, rows) {
   if (!rows.length) {
@@ -3597,52 +3480,8 @@ function exportCsv(filename, rows) {
           <section id="activity-editor-detail" class="listing-section">
             <div class="listing-section-head"><div><span class="listing-section-index">04</span><strong>活动详情</strong></div><p>按展示顺序添加文字、图片和视频内容</p></div>
       <a-form-item label="活动详情编辑器">
-        <div class="detail-block-editor">
-          <div v-if="!activityDetailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div>
-          <div v-for="(block, index) in activityDetailBlocks" :key="editorBlockKey(block)" class="detail-block-row">
-            <div class="detail-block-head">
-              <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">
-                {{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}
-              </a-tag>
-              <a-space :size="4">
-                <a-button type="text" size="mini" :disabled="index === 0" @click="moveActivityDetailBlock(index, -1)">上移</a-button>
-                <a-button type="text" size="mini" :disabled="index === activityDetailBlocks.length - 1" @click="moveActivityDetailBlock(index, 1)">下移</a-button>
-                <a-button type="text" size="mini" status="danger" @click="removeActivityDetailBlock(index)">删除</a-button>
-              </a-space>
-            </div>
-            <ParagraphImageInput
-              v-if="block.type === 'text'"
-              v-model="block.text"
-              :auto-size="{ minRows: 3, maxRows: 10 }"
-              placeholder="输入活动介绍文字"
-              @insert-image="({ file, offset }) => insertActivityParagraphImage(block, file, offset)"
-            />
-            <template v-else-if="block.type === 'image'">
-              <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="详情图片预览" />
-              <a-input v-model="block.src" placeholder="图片地址，或使用下方按钮上传" />
-              <a-input v-model="block.caption" placeholder="图片说明（可选）" />
-              <label class="detail-upload-button">
-                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadActivityDetailImage($event, block)" />
-                <a-button type="outline" size="small" :loading="activityDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
-              </label>
-            </template>
-            <template v-else>
-              <video v-if="block.url" class="detail-block-video" :src="qrPreviewUrl(block.url)" controls preload="metadata"></video>
-              <a-input v-model="block.url" placeholder="视频地址，或使用下方按钮上传本地视频" />
-              <a-input v-model="block.caption" placeholder="视频说明（可选）" />
-              <label class="detail-upload-button">
-                <input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'activity', block)" />
-                <a-button type="outline" size="small" :loading="activityDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button>
-              </label>
-            </template>
-          </div>
-          <a-space>
-            <a-button type="outline" @click="addActivityDetailBlock('text')">添加文字</a-button>
-            <a-button type="outline" @click="addActivityDetailBlock('image')">添加图片</a-button>
-            <a-button type="outline" @click="addActivityDetailBlock('video')">添加视频</a-button>
-          </a-space>
-        </div>
-      </a-form-item>
+            <ArticleEditor ref="activityBodyEditor" v-model="activityDetailBlocks" :title="activityForm.title" :allow-cards="false" :upload-image="file => uploadBodyMedia(file, 'image', 'activities')" :preview-url="qrPreviewUrl" @uploading="activityBodyEditorBusy = $event" :upload-video="file => uploadBodyMedia(file, 'video', 'activities')" />
+          </a-form-item>
           </section>
         </main>
       </div>
@@ -3781,35 +3620,8 @@ function exportCsv(filename, rows) {
           <section id="product-editor-detail" class="listing-section">
             <div class="listing-section-head"><div><span class="listing-section-index">05</span><strong>商品详情</strong></div><p>按展示顺序组合文字、图片和视频内容</p></div>
       <a-form-item label="商品详情编辑器">
-        <div class="detail-block-editor">
-          <div v-if="!productDetailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div>
-          <div v-for="(block, index) in productDetailBlocks" :key="editorBlockKey(block)" class="detail-block-row">
-            <div class="detail-block-head">
-              <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">{{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}</a-tag>
-              <a-space :size="4"><a-button type="text" size="mini" :disabled="index === 0" @click="moveProductDetailBlock(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === productDetailBlocks.length - 1" @click="moveProductDetailBlock(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeProductDetailBlock(index)">删除</a-button></a-space>
-            </div>
-            <ParagraphImageInput
-              v-if="block.type === 'text'"
-              v-model="block.text"
-              :auto-size="{ minRows: 3, maxRows: 10 }"
-              placeholder="输入商品详情文字"
-              @insert-image="({ file, offset }) => insertProductParagraphImage(block, file, offset)"
-            />
-            <template v-else-if="block.type === 'image'">
-              <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="详情图片预览" />
-              <a-input v-model="block.src" placeholder="图片地址，或使用下方按钮上传" /><a-input v-model="block.caption" placeholder="图片说明（可选）" />
-              <label class="detail-upload-button"><input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadProductDetailImage($event, block)" /><a-button type="outline" size="small" :loading="productDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button></label>
-            </template>
-            <template v-else>
-              <video v-if="block.url" class="detail-block-video" :src="qrPreviewUrl(block.url)" controls preload="metadata"></video>
-              <a-input v-model="block.url" placeholder="视频地址，或使用下方按钮上传本地视频" />
-              <a-input v-model="block.caption" placeholder="视频说明（可选）" />
-              <label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm" hidden @change="uploadDetailVideo($event, 'product', block)" /><a-button type="outline" size="small" :loading="productDetailUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label>
-            </template>
-          </div>
-          <a-space><a-button type="outline" @click="addProductDetailBlock('text')">添加文字</a-button><a-button type="outline" @click="addProductDetailBlock('image')">添加图片</a-button><a-button type="outline" @click="addProductDetailBlock('video')">添加视频</a-button></a-space>
-        </div>
-      </a-form-item>
+            <ArticleEditor ref="productBodyEditor" v-model="productDetailBlocks" :title="productForm.title" :allow-cards="false" :upload-image="file => uploadBodyMedia(file, 'image', 'products')" :preview-url="qrPreviewUrl" @uploading="productBodyEditorBusy = $event" :upload-video="file => uploadBodyMedia(file, 'video', 'products')" />
+          </a-form-item>
           </section>
         </main>
       </div>
@@ -3837,7 +3649,9 @@ function exportCsv(filename, rows) {
         <a-col :span="8"><a-form-item label="库存" required><a-input-number v-model="pointProductForm.stock" :min="0" :precision="0" style="width:100%" /></a-form-item></a-col>
         <a-col :span="8"><a-form-item label="每人限兑" required><a-input-number v-model="pointProductForm.limitPerUser" :min="1" :precision="0" style="width:100%" /></a-form-item></a-col>
       </a-row>
-      <a-form-item label="商品说明"><a-textarea v-model="pointProductForm.description" :auto-size="{ minRows: 3, maxRows: 8 }" placeholder="规格、材质、配送范围等说明" /></a-form-item>
+      <a-form-item label="商品说明">
+            <ArticleEditor ref="pointProductBodyEditor" v-model="pointProductForm.detailBlocks" :title="pointProductForm.title" :allow-cards="false" :upload-image="file => uploadBodyMedia(file, 'image', 'products')" :preview-url="qrPreviewUrl" @uploading="pointProductBodyEditorBusy = $event" :allow-video="false" />
+          </a-form-item>
       <a-form-item label="状态"><a-select v-model="pointProductForm.status" :options="publishOptions" /></a-form-item>
     </a-form>
     <template #footer><a-button @click="pointProductForm = null">取消</a-button><a-button type="primary" @click="savePointProduct">保存</a-button></template>
@@ -3918,13 +3732,8 @@ function exportCsv(filename, rows) {
         </div>
       </a-form-item>
       <a-form-item label="课程介绍">
-        <CourseDescriptionEditor
-          v-model="liveForm.detailBlocks"
-          :upload-image="uploadLiveDetailImage"
-          :preview-url="qrPreviewUrl"
-          @uploading="liveDetailUploading = $event"
-        />
-      </a-form-item>
+            <ArticleEditor ref="liveBodyEditor" v-model="liveForm.detailBlocks" :title="liveForm.title" :allow-cards="false" :upload-image="file => uploadBodyMedia(file, 'image', 'courses')" :preview-url="qrPreviewUrl" @uploading="liveBodyEditorBusy = $event" :allow-video="false" />
+          </a-form-item>
     </a-form>
     <template #footer><a-button @click="liveForm = null">取消</a-button><a-button type="primary" @click="saveLive">保存</a-button></template>
   </a-modal>
@@ -4189,53 +3998,11 @@ function exportCsv(filename, rows) {
         <div class="muted">支持 PNG、JPG、WebP，最大2MB。</div>
       </a-form-item>
       <a-form-item v-if="contentForm.type === 'video'" label="视频地址"><a-input v-model="contentForm.videoUrl" placeholder="HTTPS 视频或 m3u8 地址" /></a-form-item>
-      <a-form-item label="图文内容编辑器">
-        <div class="detail-block-editor">
-          <div v-if="!contentBlocks.length" class="schedule-empty">暂无正文内容，请添加文字、图片、视频或链接。</div>
-          <div v-for="(block, index) in contentBlocks" :key="editorBlockKey(block)" class="detail-block-row">
-            <div class="detail-block-head">
-              <a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : block.type === 'video' ? 'purple' : 'orange'">
-                {{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : block.type === 'video' ? '视频' : '链接' }}
-              </a-tag>
-              <a-space :size="4">
-                <a-button type="text" size="mini" :disabled="index === 0" @click="moveContentBlock(index, -1)">上移</a-button>
-                <a-button type="text" size="mini" :disabled="index === contentBlocks.length - 1" @click="moveContentBlock(index, 1)">下移</a-button>
-                <a-button type="text" size="mini" status="danger" @click="removeContentBlock(index)">删除</a-button>
-              </a-space>
-            </div>
-            <ParagraphImageInput
-              v-if="block.type === 'text'"
-              v-model="block.text"
-              :auto-size="{ minRows: 4, maxRows: 14 }"
-              placeholder="输入文章正文，每个文字区块可作为一个段落"
-              @insert-image="({ file, offset }) => insertContentParagraphImage(block, file, offset)"
-            />
-            <template v-else-if="block.type === 'image'">
-              <img v-if="block.src" class="detail-block-image" :src="qrPreviewUrl(block.src)" alt="正文图片预览" />
-              <a-input v-model="block.src" placeholder="图片地址，或点击上传图片" />
-              <a-input v-model="block.caption" placeholder="图片说明（可选）" />
-              <label class="detail-upload-button">
-                <input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadContentBlockImage($event, block)" />
-                <a-button type="outline" size="small" :loading="contentBlockUploading[editorBlockKey(block)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button>
-              </label>
-            </template>
-            <template v-else-if="block.type === 'video'">
-              <a-input v-model="block.url" placeholder="HTTPS 视频、m3u8 或已上传视频地址" />
-              <a-input v-model="block.caption" placeholder="视频说明（可选）" />
-            </template>
-            <template v-else>
-              <a-input v-model="block.title" placeholder="链接标题，例如：查看报名指南" />
-              <a-input v-model="block.description" placeholder="链接说明（可选）" />
-              <a-input v-model="block.url" placeholder="HTTPS 网址或 /pages/ 开头的小程序页面" />
-            </template>
-          </div>
-          <a-space wrap>
-            <a-button type="outline" @click="addContentBlock('text')">插入文字</a-button>
-            <a-button type="outline" @click="addContentBlock('image')">插入图片</a-button>
-            <a-button type="outline" @click="addContentBlock('video')">插入视频</a-button>
-            <a-button type="outline" @click="addContentBlock('link')">插入链接</a-button>
-          </a-space>
-        </div>
+      <a-form-item>
+        <ArticleEditor ref="articleEditor" v-model="contentBlocks" :upload-image="uploadArticleImage" :preview-url="qrPreviewUrl"
+          :title="contentForm.title" :source="contentForm.source" :published-at="contentForm.publishedAt"
+          :summary="contentForm.summary" :cover="contentForm.coverImage"
+          @uploading="contentImageUploading = $event" />
       </a-form-item>
       <a-form-item label="适用地区（可多选）"><a-select v-model="contentForm.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示全部地区" /></a-form-item>
       <a-row :gutter="12">

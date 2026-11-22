@@ -29,6 +29,7 @@ export function permissionForRequest(req) {
   if (under('/api/activities')) return 'activities.manage'
   if (under('/api/products') || under('/api/point-products') || under('/api/point-orders')) return 'products.manage'
   if (under('/api/lives')) return 'courses.manage'
+  if (path === '/api/uploads/video' && ['activities', 'products'].includes(req.query?.scope)) return `${req.query.scope}.manage`
   if (path === '/api/uploads/image') {
     const scope = req.query?.scope
     if (['activities', 'products', 'courses'].includes(scope)) return `${scope}.manage`

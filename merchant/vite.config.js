@@ -9,7 +9,7 @@ export default defineConfig(({ command }) => ({
     Components({ dts: false, resolvers: [ArcoResolver({ sideEffect: true })] })
   ],
   base: command === 'build' ? '/merchant/' : '/',
-  resolve: { dedupe: ['vue', '@arco-design/web-vue'] },
+  resolve: { preserveSymlinks: true, dedupe: ['vue', '@arco-design/web-vue'] },
   build: {
     rollupOptions: {
       output: {

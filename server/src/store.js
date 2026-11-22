@@ -14,6 +14,7 @@ import { normalizePaidOfferingPrices, requiredPaidPrice } from './lib/offering-p
 import { contentMediaUrl, normalizeContentPost } from './lib/content-posts.js'
 import { attempts, isImported, officialAccountName, publicationGroups, publicationView, recordKeys, withdrawn } from './lib/wechat-publication-state.js'
 import { httpError } from './lib/http.js'
+import { articleLayout } from './lib/article-layout.js'
 import { descriptionFields } from './lib/description-blocks.js'
 import { normalizeBalanceRechargeAmounts } from './lib/balance-config.js'
 import { fenToYuan, multiplyFen, yuanToFen } from './lib/money.js'
@@ -144,6 +145,19 @@ function normalizeConfig(db) {
 function normalizeContent(db) {
   if (!Array.isArray(db.contentPosts)) {
     db.contentPosts = clone(seed.contentPosts || [])
+  }
+  for (const [items, key] of [[db.activities, 'detailBlocks'], [db.products, 'detailBlocks'], [db.lives, 'detailBlocks'], [db.pointProducts, 'detailBlocks'], [db.contentPosts, 'contentBlocks']]) {
+    for (const item of items || []) {
+      if (!Array.isArray(item[key])) continue
+      item[key] = item[key].map(block => {
+        if (block?.type !== 'text' || !block.html) return block
+        try {
+          return articleLayout(block.html)
+        } catch {
+          return { type: 'text', text: String(block.text || '') }
+        }
+      })
+    }
   }
   db.contentPosts.forEach((post) => {
     const state = post.wechat
@@ -1217,6 +1231,7 @@ export function createActivity(data) {
     skus: [],
     schedules: [],
     ...(data || {}),
+    ...descriptionFields(data, {}, 'detail'),
     id: nextCatalogId(),
     ...ownership,
     regionIds: normalizeRegionIds(data && data.regionIds)
@@ -1234,6 +1249,7 @@ export function updateActivity(id, data, options = {}) {
     && (options.managerId == null || merchantOwned(a, options.managerId)))
   if (idx < 0) return null
   const next = { ...db.activities[idx], ...(data || {}), id: db.activities[idx].id }
+  Object.assign(next, descriptionFields(data, db.activities[idx], 'detail'))
   Object.assign(next, publisherOwnership(data, db.activities[idx]))
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   validateActivityScheduleDates(next)
@@ -4469,6 +4485,7 @@ export function createProduct(data) {
     stock: 0,
     status: 1,
     ...data,
+    ...descriptionFields(data, {}, 'detail'),
     id: nextCatalogId(),
     ...ownership,
     regionIds: normalizeRegionIds(data && data.regionIds)
@@ -4488,6 +4505,7 @@ export function updateProduct(id, data, options = {}) {
     && (options.managerId == null || merchantOwned(p, options.managerId)))
   if (idx < 0) return null
   const next = { ...db.products[idx], ...data, id: db.products[idx].id }
+  Object.assign(next, descriptionFields(data, db.products[idx], 'detail'))
   Object.assign(next, publisherOwnership(data, db.products[idx]))
   if (data && data.regionIds !== undefined) next.regionIds = normalizeRegionIds(data.regionIds)
   normalizePaidOfferingPrices(next, '商品')
@@ -4528,7 +4546,7 @@ function normalizePointProduct(data, current = {}) {
     ...data,
     title: String(data?.title ?? current.title ?? '').trim(),
     coverImage: String(data?.coverImage ?? current.coverImage ?? '').trim(),
-    description: String(data?.description ?? current.description ?? '').trim(),
+    ...descriptionFields(data, current),
     pointsCost: Number(data?.pointsCost ?? current.pointsCost ?? 0),
     stock: Number(data?.stock ?? current.stock ?? 0),
     soldCount: Number(data?.soldCount ?? current.soldCount ?? 0),
