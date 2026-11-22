@@ -37,7 +37,7 @@ export function isAuthed() {
 async function request(path, options = {}) {
   const { timeoutMs = REQUEST_TIMEOUT_MS, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeout = window.setTimeout(
+  const timeout = timeoutMs && window.setTimeout(
     () => controller.abort(),
     timeoutMs,
   );
@@ -82,6 +82,7 @@ export const api = {
   get: (p) => request(p),
   post: (p, body, options = {}) =>
     request(p, { ...options, method: "POST", body: JSON.stringify(body || {}) }),
+  uploadImage: (path, blob) => request(path, { method: "POST", timeoutMs: 0, body: blob, headers: { "Content-Type": blob.type } }),
   put: (p, body) =>
     request(p, { method: "PUT", body: JSON.stringify(body || {}) }),
   del: (p) => request(p, { method: "DELETE" }),

@@ -116,7 +116,7 @@ async function startServer(environment = {}, database = fixture()) {
   })
   return {
     async request(route, { method = 'GET', headers = {}, body } = {}) {
-      const response = await fetch(`http://127.0.0.1:${port}${route}`, { method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) })
+      const response = await fetch(`http://127.0.0.1:${port}${route}`, { method, headers: { 'content-type': 'application/json', ...headers }, body: Buffer.isBuffer(body) ? body : body === undefined ? undefined : JSON.stringify(body) })
       return { status: response.status, body: await response.json() }
     },
     calls: () => fs.readFileSync(callsFile, 'utf8').trim().split('\n').filter(Boolean),
@@ -195,6 +195,27 @@ test('商户登录后可上传活动封面和新增栅格格式，返回可读�
     const info = await sharp(output).metadata()
     assert.deepEqual([info.format, info.width, info.height, info.pages || 1], ['webp', 12, 8, 1])
   }
+})
+
+test('originals above the JSON and proxy limits can be streamed by an authorized editor', async t => {
+  const server = await startServer()
+  t.after(() => server.close())
+  const route = '/api/uploads/image/file?scope=courses'
+  const image = await sharp({ create: { width: 3600, height: 2600, channels: 3, background: 'skyblue' } })
+    .png({ compressionLevel: 0 }).toBuffer()
+  assert.ok(image.length > 25 * 1024 * 1024)
+  const upload = (endpoint, auth, body) => server.request(endpoint, {
+    method: 'POST', headers: { ...auth, 'content-type': 'image/png' }, body
+  })
+  assert.equal((await upload(route, {}, Buffer.from('x'))).status, 401)
+  assert.equal((await upload(route.replace('courses', 'products'), staff('staff-courses'), Buffer.from('x'))).status, 403)
+  assert.equal((await upload(route, staff('staff-courses'), Buffer.from('unreadable'))).status, 400)
+  const { url } = ok(await upload(route, staff('staff-courses'), image))
+  const output = path.join(serverRoot, 'uploads', path.basename(url))
+  t.after(() => fs.rmSync(output, { force: true }))
+  const info = await sharp(output).metadata()
+  assert.equal(info.format, 'webp')
+  assert.equal(info.width, 1600)
 })
 
 test('a course editor can upload course images but cannot use another publishing permission', async () => {

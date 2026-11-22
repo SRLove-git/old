@@ -1495,10 +1495,9 @@ async function uploadLiveCover(event) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
     return Message.error('课程封面仅支持 PNG、JPG 或 WebP 图片')
   }
-  if (file.size > 2 * 1024 * 1024) return Message.error('课程封面不能超过 2MB')
   liveCoverUploading.value = true
   try {
-    const result = await api.post('/uploads/image?scope=courses', { dataUrl: await fileDataUrl(file), fileName: file.name })
+    const result = await api.uploadImage('/uploads/image/file?scope=courses', file)
     liveForm.value.coverImage = result.url
     Message.success('课程封面上传成功，保存课程后生效')
   } catch (e) {
@@ -1999,12 +1998,12 @@ async function uploadBannerMedia(event) {
   const videoTypes = ['video/mp4', 'video/webm']
   if (mediaType === 'image' && !imageTypes.includes(file.type)) return Message.error('图片仅支持 PNG、JPG 或 WebP')
   if (mediaType === 'video' && !videoTypes.includes(file.type)) return Message.error('视频仅支持 MP4 或 WebM')
-  const maxSize = mediaType === 'video' ? 15 * 1024 * 1024 : 2 * 1024 * 1024
-  if (file.size > maxSize) return Message.error(mediaType === 'video' ? 'Banner 视频不能超过15MB' : 'Banner 图片不能超过2MB')
+  if (mediaType === 'video' && file.size > 15 * 1024 * 1024) return Message.error('Banner 视频不能超过15MB')
   bannerMediaUploading.value = true
   try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/banners/upload/media', { dataUrl, mediaType, fileName: file.name })
+    const result = mediaType === 'image'
+      ? await api.uploadImage('/uploads/image/file', file)
+      : await api.post('/banners/upload/media', { dataUrl: await fileDataUrl(file), mediaType, fileName: file.name })
     bannerForm.value.mediaType = mediaType
     bannerForm.value.mediaUrl = result.url
     Message.success(`${mediaType === 'video' ? '视频' : '图片'}上传成功，发布 Banner 后生效`)
@@ -2481,14 +2480,9 @@ async function uploadQr(event, field) {
     Message.error('仅支持 PNG、JPG 或 WebP 图片')
     return
   }
-  if (file.size > 2 * 1024 * 1024) {
-    Message.error('二维码图片不能超过2MB')
-    return
-  }
   qrUploading.value = { ...qrUploading.value, [field]: true }
   try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    const result = await api.uploadImage('/uploads/image/file', file)
     if (field === 'homeAssistant') config.value.homeAssistant.qrImage = result.url
     else config.value.socialQrs[field] = result.url
     Message.success('二维码上传成功，请点击“保存全部配置”使小程序生效')
@@ -2520,11 +2514,9 @@ async function uploadContentCover(event) {
   event.target.value = ''
   if (!file) return
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return Message.error('封面仅支持 PNG、JPG 或 WebP 图片')
-  if (file.size > 2 * 1024 * 1024) return Message.error('封面图片不能超过2MB')
   contentCoverUploading.value = true
   try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    const result = await api.uploadImage('/uploads/image/file', file)
     contentForm.value.coverImage = result.url
     Message.success('封面上传成功，保存内容后生效')
   } catch (e) {
@@ -2543,8 +2535,8 @@ async function uploadBodyMedia(file, kind, scope) {
 }
 
 async function uploadArticleImage(file, scope) {
-  const dataUrl = await fileDataUrl(await prepareUploadImage(file))
-  const result = await api.post(scope ? '/uploads/image?scope=' + scope : '/uploads/image', { dataUrl, fileName: file.name })
+  const path = scope ? '/uploads/image/file?scope=' + scope : '/uploads/image/file'
+  const result = await api.uploadImage(path, await prepareUploadImage(file))
   if (!result?.url) throw new Error('上传未返回图片地址，请重试')
   return result.url
 }
@@ -2557,14 +2549,9 @@ async function uploadPointCover(event) {
     Message.error('仅支持 PNG、JPG 或 WebP 图片')
     return
   }
-  if (file.size > 2 * 1024 * 1024) {
-    Message.error('商品图片不能超过2MB')
-    return
-  }
   pointCoverUploading.value = true
   try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image', { dataUrl, fileName: file.name })
+    const result = await api.uploadImage('/uploads/image/file?scope=products', file)
     pointProductForm.value.coverImage = result.url
     Message.success('商品图片上传成功，保存商品后生效')
   } catch (e) {
@@ -2582,14 +2569,9 @@ async function uploadActivityCover(event) {
     Message.error('仅支持 PNG、JPG 或 WebP 图片')
     return
   }
-  if (file.size > 2 * 1024 * 1024) {
-    Message.error('活动图片不能超过2MB')
-    return
-  }
   activityCoverUploading.value = true
   try {
-    const dataUrl = await fileDataUrl(file)
-    const result = await api.post('/uploads/image?scope=activities', { dataUrl, fileName: file.name })
+    const result = await api.uploadImage('/uploads/image/file?scope=activities', file)
     activityForm.value.coverImage = result.url
     Message.success('活动封面上传成功，保存活动后生效')
   } catch (e) {
@@ -2607,13 +2589,11 @@ async function uploadProductImages(event) {
   if (remaining <= 0) return Message.warning('商品展示图最多上传9张')
   if (files.length > remaining) return Message.warning(`还可以上传${remaining}张图片`)
   if (files.some((file) => !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))) return Message.error('仅支持 PNG、JPG 或 WebP 图片')
-  if (files.some((file) => file.size > 2 * 1024 * 1024)) return Message.error('每张商品图片不能超过2MB')
   productImagesUploading.value = true
   try {
     const uploaded = []
     for (const file of files) {
-      const dataUrl = await fileDataUrl(file)
-      const result = await api.post('/uploads/image?scope=products', { dataUrl, fileName: file.name })
+      const result = await api.uploadImage('/uploads/image/file?scope=products', file)
       uploaded.push({ id: `product-image-${Date.now()}-${uploaded.length}`, src: result.url, label: '' })
     }
     productImages.value = [...productImages.value, ...uploaded]
@@ -3353,7 +3333,7 @@ function exportCsv(filename, rows) {
             <a-button type="primary" :loading="activityCoverUploading" @click="chooseActivityCover">上传图片</a-button>
             <a-button v-if="activityForm.coverImage" @click="activityForm.coverImage = ''">恢复默认图</a-button>
           </a-space>
-          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，大小不超过 2MB，建议比例 16:9。</div>
+          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，建议比例 16:9。</div>
         </div>
       </a-form-item>
       <a-row :gutter="12">
@@ -3534,7 +3514,7 @@ function exportCsv(filename, rows) {
           </div>
           <input ref="productGalleryInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden @change="uploadProductImages" />
           <div class="product-gallery-tip"><span>第一张作为商品主图，可使用箭头调整顺序</span><strong>{{ productImages.length }}/9</strong></div>
-          <div class="muted activity-cover-tip">至少上传1张，最多9张；支持 PNG、JPG、WebP，每张不超过2MB。</div>
+          <div class="muted activity-cover-tip">至少上传1张，最多9张；支持 PNG、JPG、WebP。</div>
         </div>
       </a-form-item>
       <a-row :gutter="12">
@@ -3634,7 +3614,7 @@ function exportCsv(filename, rows) {
           <div v-else class="activity-cover-empty">请上传商品图片</div>
           <input ref="pointCoverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadPointCover" />
           <a-space><a-button type="primary" :loading="pointCoverUploading" @click="choosePointCover">上传图片</a-button><a-button v-if="pointProductForm.coverImage" @click="pointProductForm.coverImage = ''">移除图片</a-button></a-space>
-          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，不超过 2MB，建议使用正方形商品图。</div>
+          <div class="muted activity-cover-tip">支持 PNG、JPG、WebP，建议使用正方形商品图。</div>
         </div>
       </a-form-item>
       <a-row :gutter="12">
@@ -3685,7 +3665,7 @@ function exportCsv(filename, rows) {
             <a-button type="primary" :loading="liveCoverUploading" @click="chooseLiveCover">上传本地图片</a-button>
             <a-button v-if="liveForm.coverImage" @click="liveForm.coverImage = ''">移除封面</a-button>
           </a-space>
-          <div class="muted">支持 PNG、JPG、WebP，最大 2MB；建议使用 4:3 横图</div>
+          <div class="muted">支持 PNG、JPG、WebP；建议使用 4:3 横图</div>
         </div>
       </a-form-item>
       <a-form-item label="直播地址"><a-input v-model="liveForm.streamUrl" /></a-form-item>
@@ -3988,7 +3968,7 @@ function exportCsv(filename, rows) {
           <a-button type="primary" :loading="contentCoverUploading" @click="chooseContentCover">上传封面图片</a-button>
           <a-button v-if="contentForm.coverImage" @click="contentForm.coverImage = ''">移除</a-button>
         </a-space>
-        <div class="muted">支持 PNG、JPG、WebP，最大2MB。</div>
+        <div class="muted">支持 PNG、JPG、WebP。</div>
       </a-form-item>
       <a-form-item v-if="contentForm.type === 'video'" label="视频地址"><a-input v-model="contentForm.videoUrl" placeholder="HTTPS 视频或 m3u8 地址" /></a-form-item>
       <a-form-item>
@@ -4033,7 +4013,7 @@ function exportCsv(filename, rows) {
           <a-button type="primary" :loading="bannerMediaUploading" @click="chooseBannerMedia">上传{{ bannerForm.mediaType === 'video' ? '视频' : '图片' }}</a-button>
           <a-button v-if="bannerForm.mediaUrl" @click="bannerForm.mediaUrl = ''">移除媒体</a-button>
         </a-space>
-        <div class="muted">图片支持 PNG/JPG/WebP，最大2MB；视频支持 MP4/WebM，最大15MB。</div>
+        <div class="muted">图片支持 PNG/JPG/WebP；视频支持 MP4/WebM，最大15MB。</div>
       </a-form-item>
       <a-form-item label="点击后的行为" required>
         <a-radio-group v-model="bannerLinkMode" type="button" @change="markBannerLinkTouched">

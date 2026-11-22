@@ -7,7 +7,6 @@ const mimeByExtension = {
 }
 const mimeTypes = new Set(Object.values(mimeByExtension))
 export const imageAccept = [...mimeTypes, ...Object.keys(mimeByExtension).map(ext => '.' + ext)].join(',')
-const maxBytes = 2 * 1024 * 1024
 
 // Finder and Explorer may supply an extension without a MIME type.
 export function transferredImages(data) {
@@ -27,14 +26,13 @@ async function bitmapBlob(bitmap) {
     canvas.height = Math.max(1, Math.round(bitmap.height * scale))
     canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height)
     const output = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82))
-    if (!output || output.size > maxBytes) throw new Error('图片转换失败')
+    if (!output) throw new Error('图片转换失败')
     return output
   } finally { bitmap.close() }
 }
 
 export function uploadImageType(file) {
   if (!file.size) throw new Error('图片文件为空，请重新选择')
-  if (file.size > maxBytes) throw new Error('图片不能超过2MB')
   const extension = file.name.split('.').pop().toLowerCase()
   if (mimeTypes.has(file.type)) return file.type
   if (Object.hasOwn(mimeByExtension, extension)) return mimeByExtension[extension]

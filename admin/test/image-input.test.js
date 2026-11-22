@@ -14,3 +14,7 @@ test('image file lists keep order without duplicating the clipboard items', () =
   assert.equal(uploadImageType(screenshot), 'image/png')
   assert.throws(() => uploadImageType(note), /图片格式/)
 })
+
+test('image inputs accept original files above the former upload limits', () => {
+  assert.equal(uploadImageType({ name: '相机原图.JPG', type: '', size: 100 * 1024 * 1024 }), 'image/jpeg')
+})

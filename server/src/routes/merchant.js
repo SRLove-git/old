@@ -2,7 +2,7 @@ import { Router } from 'express'
 import * as store from '../store.js'
 import { httpError, wrap } from '../lib/http.js'
 import { encodeSession, passwordMatches, SESSION_TTL_SECONDS } from '../lib/session.js'
-import { saveCourseVideoDataUrl, saveImageDataUrl, saveVideoDataUrl } from '../lib/uploads.js'
+import { saveCourseVideoDataUrl, saveImageDataUrl, saveImageStream, saveVideoDataUrl } from '../lib/uploads.js'
 import { merchantAuth, merchantSession, requireMerchantResource } from '../middleware/auth.js'
 
 const router = Router()
@@ -83,6 +83,7 @@ router.delete('/courses/:id', merchantAuth, wrap((req) => {
   return store.deleteLive(req.params.id, { managerId: merchantSession(req).merchantId })
 }))
 
+router.post('/uploads/image/file', merchantAuth, wrap(async req => ({ url: await saveImageStream(req, `merchant-${merchantSession(req).merchantId}`) })))
 router.post('/uploads/image', merchantAuth, wrap(async (req) => {
   const merchantId = merchantSession(req).merchantId
   return { url: await saveImageDataUrl(req.body?.dataUrl, `merchant-${merchantId}`) }
