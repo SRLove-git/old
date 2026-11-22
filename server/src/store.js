@@ -4785,6 +4785,25 @@ function cardOperationsView(card) {
   }
 }
 
+export function listCourseCheckIns(page = 1) {
+  const members = new Map(db.customers.map(user => [String(user.id), user.name]))
+  const rows = (db.cards || []).flatMap(card => (card.attendanceRecords || [])
+    .filter(record => record.status === 'checked')
+    .map(record => ({
+      key: JSON.stringify([card.id, record.id]), cardId: card.id, recordId: record.id,
+      memberName: record.memberName || members.get(String(card.userId)) || '',
+      courseName: card.courseName || card.title || '', lesson: record.lesson || '',
+      date: record.date || '', checkedAt: record.checkedAt || '',
+      location: record.location || '', checkinType: record.checkinType || '',
+      remain: Number(card.remain || 0)
+    })))
+  const stamp = row => row.checkedAt || row.date
+  rows.sort((a, b) => stamp(b).localeCompare(stamp(a)) || b.key.localeCompare(a.key))
+  const pageSize = 20
+  const current = Math.min(Math.max(1, Math.trunc(Number(page)) || 1), Math.max(1, Math.ceil(rows.length / pageSize)))
+  return { items: rows.slice((current - 1) * pageSize, current * pageSize), total: rows.length, page: current, pageSize }
+}
+
 export function listCardCustomers(keyword = '') {
   const query = String(keyword || '').trim().toLowerCase()
   const owners = new Set((db.cards || []).map((card) => String(card.userId || '')).filter(Boolean))
@@ -4821,9 +4840,9 @@ function bindLogView(b) {
 }
 
 export function getUserProfile(userId) {
-  const raw = db.customers.find((c) => c.id === userId) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
+  const raw = db.customers.find((c) => String(c.id) === String(userId)) || { id: userId, name: '用户', member: true, balance: 0, points: 0, managerId: null, isManager: false }
   const user = { ...raw, ...memberIdentity(raw) }
-  const cards = db.cards.filter((c) => c.userId === userId)
+  const cards = db.cards.filter((c) => String(c.userId) === String(userId))
   const boundManager = user.managerId ? publicManager(findManager(user.managerId)) : null
   const addresses = db.addresses.filter((a) => a.userId === userId)
   const ownManagerRecord = findManagerByUser(userId)
@@ -5105,8 +5124,10 @@ export function selfCheckInCard(cardId, userId, data = {}) {
   const latitude = Number(data.latitude)
   const longitude = Number(data.longitude)
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw badRequest('请先获取签到位置')
-  const memberName = String(customer.name && customer.name !== '微信用户' ? customer.name : data.memberName || '').trim()
-  const memberPhone = normalizePhone(customer.phone || data.memberPhone)
+  const savedName = String(customer.name || '').trim()
+  const memberName = savedName && savedName !== '微信用户' ? savedName : String(data.memberName || '').trim()
+  const savedPhone = normalizePhone(customer.phone)
+  const memberPhone = /^1\d{10}$/.test(savedPhone) ? savedPhone : normalizePhone(data.memberPhone)
   if (!memberName) throw badRequest('请补充签到人姓名')
   if (!/^1\d{10}$/.test(memberPhone)) throw badRequest('请补充正确的手机号')
   return checkInCardRecord(cardId, {

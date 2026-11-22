@@ -220,6 +220,7 @@ app.post('/api/cards/:id/checkin', wrap((req) => {
   requireUser(req, userId)
   return store.selfCheckInCard(req.params.id, userId, req.body)
 }))
+app.get('/api/cards/checkins', adminAuth, wrap((req) => store.listCourseCheckIns(req.query.page)))
 app.get('/api/cards/customers', adminAuth, wrap((req) => store.listCardCustomers(req.query.keyword)))
 app.get('/api/cards/customers/:userId', adminAuth, wrap((req) => store.getCardCustomer(req.params.userId)))
 app.post('/api/cards/:id/makeup-checkin', adminAuth, wrap((req) => store.makeupCheckInCard(req.params.id, req.body, {

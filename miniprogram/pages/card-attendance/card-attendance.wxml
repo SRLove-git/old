@@ -12,7 +12,8 @@
     <view class="card-tab-row"><view wx:for="{{cards}}" wx:key="id" class="card-tab {{activeCardId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectCard">{{item.courseName || item.title}}</view></view>
   </scroll-view>
 
-  <block wx:if="{{currentCard}}">
+  <view wx:if="{{profileError}}" class="empty-card"><view>{{profileError}}</view><button bindtap="refreshProfile">重新读取课程</button></view>
+  <block wx:elif="{{currentCard}}">
     <view class="course-card">
       <view class="course-badge">本次签到</view>
       <view class="course-row">
@@ -28,7 +29,7 @@
     <view class="steps-card">
       <view class="step-heading">
         <view><view class="section-kicker">CHECK-IN STEPS</view><view class="section-title">完成签到</view></view>
-        <view class="step-progress">{{location && infoReady ? '2' : (infoReady ? '1' : '0')}} / 2 已完成</view>
+        <view class="step-progress">{{stepsDone}} / 2 已完成</view>
       </view>
 
       <view class="step-block">
@@ -37,7 +38,7 @@
           <view class="step-title-row"><text class="step-title">确认签到人</text><text class="step-state {{infoReady ? 'complete' : ''}}">{{infoReady ? '已完成' : '待完善'}}</text></view>
           <view class="identity-grid">
             <view class="identity-item"><view class="identity-label">姓名</view><input wx:if="{{needsName}}" class="identity-input" value="{{memberName}}" placeholder="请输入姓名" maxlength="20" bindinput="onNameInput" /><view wx:else class="identity-value">{{memberName}}</view></view>
-            <view class="identity-item"><view class="identity-label">手机号</view><input wx:if="{{needsPhone}}" class="identity-input" type="number" value="{{memberPhone}}" placeholder="请输入手机号" maxlength="11" bindinput="onPhoneInput" /><view wx:else class="identity-value">{{phoneDisplay}}</view></view>
+            <view class="identity-item"><view class="identity-label">手机号</view><input wx:if="{{needsPhone}}" class="identity-input" type="number" value="{{memberPhone}}" placeholder="请填11位手机号" maxlength="11" bindinput="onPhoneInput" /><view wx:else class="identity-value">{{phoneDisplay}}</view></view>
           </view>
         </view>
       </view>
@@ -75,5 +76,5 @@
     </view>
   </block>
 
-  <view wx:else class="empty-card"><view class="empty-mark">课</view><view class="empty-title">暂无可签到课程</view><view class="empty-sub">购买培训课程后，可在这里一键签到</view></view>
+  <view wx:elif="{{!profileLoading}}" class="empty-card"><view class="empty-mark">课</view><view class="empty-title">暂无可签到课程</view><view class="empty-sub">购买培训课程后，可在这里一键签到</view></view>
 </view>

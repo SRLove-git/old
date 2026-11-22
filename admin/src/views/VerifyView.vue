@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import CourseCheckins from "./CourseCheckins.vue";
 import { fmtMoney, orderChip } from "../utils/presentation.js";
 
 const props = defineProps({
@@ -88,7 +89,7 @@ const selectedCustomerLabel = computed(
 function changeMode(value) {
   mode.value = value;
   if (value === "verify") nextTick(focusCode);
-  else if (!customerModeLoaded) {
+  else if (value === "makeup" && !customerModeLoaded) {
     customerModeLoaded = true;
     emit("search-customer", "");
   }
@@ -144,7 +145,7 @@ onMounted(() => nextTick(focusCode));
   <section class="verify-workbench">
     <header class="workbench-head">
       <div>
-        <h2>{{ mode === "verify" ? "现场签到与核销" : "课程补签" }}</h2>
+        <h2>{{ mode === "verify" ? "现场签到与核销" : mode === "records" ? "课程签到记录" : "课程补签" }}</h2>
       </div>
       <a-radio-group
         :model-value="mode"
@@ -153,7 +154,8 @@ onMounted(() => nextTick(focusCode));
         @change="changeMode"
       >
         <a-radio value="verify">签到 / 核销</a-radio
-        ><a-radio value="makeup">课程补签</a-radio>
+        ><a-radio value="records">课程签到记录</a-radio>
+        <a-radio value="makeup">课程补签</a-radio>
       </a-radio-group>
     </header>
 
@@ -291,6 +293,7 @@ onMounted(() => nextTick(focusCode));
       </section>
     </div>
 
+    <CourseCheckins v-else-if="mode === 'records'" />
     <div v-else class="workflow-panel">
       <section class="step-card">
         <div class="step-heading">

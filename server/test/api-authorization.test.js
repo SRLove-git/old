@@ -7,6 +7,8 @@ import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import vm from 'node:vm'
+import phoneHelpers from '../../miniprogram/utils/store-helpers.js'
 import { seed } from '../src/seed.js'
 import { permissionForRequest } from '../src/lib/permissions.js'
 import { hasAdminPermission } from '../src/middleware/auth.js'
@@ -447,6 +449,76 @@ function attendanceFixture() {
 function assertClientError(response) {
   assert.ok(response.status >= 400 && response.status < 500, `预期客户端错误，实际为 ${response.status}: ${response.body.message}`)
 }
+
+test('脱敏会员选址并补填手机号，两端读到同一次扣次和签到，后台补签也回到小程序', async t => {
+  const data = attendanceFixture()
+  data.customers[0].phone = '138****0001'
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  t.after(() => server.close())
+  const headers = member('member-a')
+  const staffHeaders = staff('staff-orders')
+  const getProfile = async () => ok(await server.request('/api/users/member-a', { headers }))
+  const getBoard = async () => ok(await server.request('/api/cards/checkins', { headers: staffHeaders }))
+  for (const denied of [{}, headers, staff('staff-crm')]) {
+    assert.ok([401, 403].includes((await server.request('/api/cards/checkins', { headers: denied })).status))
+  }
+
+  const calls = []
+  let map
+  let page
+  const store = { ...phoneHelpers, getCurrentUserId: () => 'member-a', refreshUserProfile: getProfile }
+  const api = { post: async (path, body) => {
+    calls.push(body)
+    return ok(await server.request('/api' + path, { method: 'POST', headers, body }))
+  } }
+  vm.runInNewContext(fs.readFileSync(new URL('../../miniprogram/pages/card-attendance/card-attendance.js', import.meta.url), 'utf8'), {
+    require: path => path.endsWith('/store.js') ? store : { api },
+    Page: definition => { page = definition },
+    wx: { chooseLocation: opts => { map = opts }, showToast() {} }
+  })
+  page.setData = patch => Object.assign(page.data, patch)
+  await page.refreshProfile()
+  page.selectCard({ currentTarget: { dataset: { id: 'current-card' } } })
+  assert.equal(page.data.memberPhone, '')
+  assert.equal(page.data.needsPhone, true)
+  page.requestLocation()
+  map.success({ latitude: 23, longitude: 113, name: '签到测试教室', address: '测试路' })
+  assert.equal(page.data.stepsDone, 1)
+  assert.equal(page.data.canCheckIn, false)
+  page.onPhoneInput({ detail: { value: '13800000001' } })
+  page.requestLocation()
+  await page.refreshProfile()
+  map.fail({ errMsg: 'chooseLocation:fail cancel' })
+  assert.equal(page.data.stepsDone, 2)
+  assert.equal(page.data.canCheckIn, true)
+  const previous = page.data.currentCard.remain
+  await Promise.all([page.submitCheckIn(), page.submitCheckIn()])
+  assert.equal(calls.length, 1)
+  assert.match(page.data.successMessage, /签到成功/)
+  assert.equal(page.data.canCheckIn, false)
+  assert.equal(page.data.currentCard.remain, previous - 1)
+  const saved = (await getProfile()).cards.find(card => card.id === 'current-card')
+  assert.equal(saved.remain, page.data.currentCard.remain)
+  const [record] = saved.attendanceRecords
+  assert.equal(record.memberPhone, '13800000001')
+  assert.equal(page.data.records[0].id, record.id)
+  const board = await getBoard()
+  assert.equal(board.total, 1)
+  assert.deepEqual([board.items[0].recordId, board.items[0].checkedAt, board.items[0].location, board.items[0].checkinType, board.items[0].remain],
+    [record.id, record.checkedAt, '测试路 · 签到测试教室', 'self', saved.remain])
+  assert.equal(board.items[0].memberPhone, undefined)
+  const duplicate = await server.request('/api/cards/current-card/checkin', { method: 'POST', headers, body: calls[0] })
+  assertClientError(duplicate)
+  assert.equal((await getBoard()).total, 1)
+  const makeup = ok(await server.request('/api/cards/current-card/makeup-checkin', {
+    method: 'POST', headers: staffHeaders, body: { date: localDate(-1), reason: '测试补登' }
+  }))
+  await page.refreshProfile()
+  assert.equal(page.data.currentCard.remain, makeup.remain)
+  const makeupRecord = page.data.records.find(row => row.checkinType === 'makeup')
+  assert.ok((await getBoard()).items.some(row => row.recordId === makeupRecord.id))
+  assert.equal(server.data().cards.find(card => card.id === 'current-card').attendanceRecords.length, 2)
+})
 
 test('核销人员可按姓名和手机号检索持卡会员并查看计次卡，不需要 CRM 权限', async () => {
   const server = await startServer({ NODE_ENV: 'production' }, attendanceFixture())
