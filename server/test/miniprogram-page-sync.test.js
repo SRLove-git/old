@@ -382,3 +382,41 @@ test('member unload suppresses late load and pending canvas callbacks', async ()
   warm.selectors[0]({ width: 200 })
   assert.deepEqual(warm.drawn, [])
 })
+test('content detail renders cached card then loads the synced body on demand', async () => {
+  const fetched = []
+  const store = {
+    ready: async () => {},
+    getBrand: () => ({ chineseName: '岁悦里' }),
+    getContentPost: () => ({ id: 'WX1', type: 'news', title: '政策资讯', summary: '摘要', hasContent: true }),
+    refreshHome: async () => {},
+    fetchContentPost: async (id) => {
+      fetched.push(id)
+      return { id, type: 'news', title: '政策资讯', summary: '摘要', contentBlocks: [{ type: 'text', html: '<p>公众号正文</p>', text: '公众号正文' }] }
+    }
+  }
+  const { page } = loadPage('content-detail', store, { setNavigationBarTitle: () => {} })
+  await page.onLoad({ id: 'WX1' })
+  await tick()
+  await tick()
+  assert.deepEqual(fetched, ['WX1'])
+  assert.equal(page.data.post.contentBlocks.length, 1)
+  assert.equal(page.data.post.contentBlocks[0].text, '公众号正文')
+  assert.equal(page.data.bodyLoading, false)
+})
+
+test('content detail keeps the cached card when the body request fails', async () => {
+  const store = {
+    ready: async () => {},
+    getBrand: () => ({ chineseName: '岁悦里' }),
+    getContentPost: () => ({ id: 'WX2', type: 'news', title: '缓存卡片' }),
+    refreshHome: async () => {},
+    fetchContentPost: async () => { throw new Error('offline') }
+  }
+  const { page, calls } = loadPage('content-detail', store, { setNavigationBarTitle: () => {} })
+  await page.onLoad({ id: 'WX2' })
+  await tick()
+  await tick()
+  assert.equal(page.data.post.title, '缓存卡片')
+  assert.equal(page.data.bodyLoading, false)
+  assert.equal(calls.some(call => call.type === 'toast'), false)
+})

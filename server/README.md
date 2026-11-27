@@ -47,6 +47,40 @@ npm start
 
 `WECHAT_CODE_ENV_VERSION` 默认 `release`，仅可配置 `release`、`trial` 或 `develop`；只有正式版启用微信页面路径校验。正式版需已发布首页，体验版/开发版扫码权限遵循微信平台规则。`WECHAT_CODE_TIMEOUT_MS` 默认 8000（范围 1000–30000）。还需在微信公众平台配置服务器出口 IP 白名单。测试全部使用模拟微信响应，真实凭证、白名单及手机扫码效果需部署后验收。
 
+## 公众号发布联调
+
+`src/lib/wechat-mp.js` 封装了公众号发布链路所需的 `stable_token`、正文图片上传（`media/uploadimg`）、封面永久素材（`material/add_material?type=image`）、新增草稿（`draft/add`）、提交发布（`freepublish/submit`）和发布状态查询（`freepublish/get`）。公众号与小程序使用两套 AppID/AppSecret，不能混用。
+
+在服务端的 `.env.local` 配置岁悦里文化科技的公众号凭证：
+
+```bash
+WECHAT_MP_APPID=wx4ff9702f8188c0c0
+WECHAT_MP_APPSECRET=
+WECHAT_MP_TIMEOUT_MS=10000
+WECHAT_MP_AUTHOR=
+```
+
+公众号需为企业主体已认证账号，并在公众平台后台确认“草稿箱/发布能力”接口权限、把服务器出口 IP 加入白名单。先只建草稿，确认后台排版：
+
+```bash
+cd server
+npm run wechat-mp:spike
+```
+
+预览后使用同一个草稿 ID 提交：
+
+```bash
+npm run wechat-mp:spike -- --publish --media-id=已预览的草稿ID
+```
+
+脚本默认生成一张测试封面和正文图，也可以传 `--image=/absolute/path/to/cover.png`。真实 token、白名单、草稿和发布结果需用真实公众号验收；测试全部使用模拟微信响应。
+
+运营后台“资讯视频”中的政策资讯支持生成公众号草稿、提交发布和查询发布状态。封面与正文图片必须先上传到运营后台；服务端会将 WebP 安全转换为公众号支持的 JPEG。提交发布前必须先到公众号后台草稿箱预览，政策资讯在生成草稿后发生修改时会阻止发布，要求重新生成并预览。
+
+“资讯视频”支持生成图文或贴图，查看各次发表结果。有内容管理权限的人员可点“同步公众号发表记录”，将微信返回的标题、摘要和封面同步到小程序政策资讯。发表列表的更新时间与临时链接仅用于同步。小程序从发表成功回执或运营人员核对过的文章取得原文链接。已有记录可点“核对原文”，补上实际发表日期和已发表文章链接。微信返回 48001 时，可点“按文章链接导入”，打开原文核对发表账号为“岁悦里文化科技”，再填写原标题、日期和链接。
+
+获得发表列表权限后，可设置 `WECHAT_MP_SYNC_ENABLED=true` 在服务启动时及其后每 30 分钟同步。下架、删除和微信撤回会同步影响小程序的可见性。后台原创资讯在微信撤回后保留本地正文并移除对应的公众号阅读入口。首页的“查看全部”可进入资讯列表，卡片由运营勾选推荐。
+
 ## 微信支付 API v3
 
 项目已按真实小程序支付流程接入：服务端 JSAPI/小程序下单 → 小程序 `wx.requestPayment` → 微信支付通知验签、解密 → 更新订单和发放权益。小程序支付成功回调只表示收银台完成，业务到账状态只以服务端收到并验证通过的微信支付通知为准。
@@ -140,15 +174,20 @@ npm start        # 或 npm run dev（文件变化自动重启）
 - `GET/POST /api/manager-applications`，`POST /api/manager-applications/:id/{approve,reject}` 主理人审核
 - `GET /api/managers`，`POST /api/managers/:id/status` 主理人管理（冻结/清退）
 - `GET /api/customers`、`GET /api/bindings`、`POST /api/bindings/{unbind,rebind}` 客户归属
+- `POST /api/customers/:id/bind` 客户自助绑定。归属按首触固定：客户已有有效主理人时，
+  扫码/链接来源（`source` 1/2）静默保留原归属并返回原主理人，不会覆盖；主动输入其他邀请码（`source` 3）
+  返回“请先申请解绑”的明确错误。管理员变更归属仍使用 `/api/bindings/rebind`。
 - `GET /api/commissions`、`POST /api/commissions/settle`、`POST /api/commissions/:id/adjust` 佣金
 - `GET /api/commission-settlements` 结算流水（可按 `?managerId=` 过滤）
 - `GET /api/withdraws`、`POST /api/withdraws`、`POST /api/withdraws/:id/{approve,reject}` 提现
 - `POST /api/withdraws/:id/transfer/{sync,cancel,reset}` 微信转账查单、撤销与结果不明确时标记失败
 - `POST /api/transfers/wechat/notify` 商家转账终态通知（验签 + 解密，幂等更新提现单）
 - `GET/PUT /api/config` 全局分佣比例等配置
-- `GET/POST/PUT/DELETE /api/lives` 私域直播（`GET` 可选 `?userId=` 过滤该用户可见的私域直播）
+- `POST /api/content-posts/:id/wechat-{draft,publish,status}` 生成公众号草稿、提交发布和查询发布状态
+- `GET /api/lives` 公开学堂列表。管理员可通过 `POST /api/lives` 创建课程，通过 `PUT/DELETE /api/lives/:id` 编辑或删除。活动、商品和课程都支持 `publisherType: "platform"`、`managerId: null` 的自营发布；商家发布使用 `publisherType: "merchant"` 和对应的商家 ID。
 - `GET /api/stats/dashboard` 数据看板
-- `POST /api/merchant/login` 商户登录；商户账号由服务商申请审核通过后在运营后台开通
+- `POST /api/admin/merchant-accounts` 管理员按核实后的商户名称创建账号，可关联一条已通过的服务商申请
+- `POST /api/merchant/login` 使用运营后台开通的商户账号登录
 - `GET /api/merchant/me` 当前商户资料
 - `/api/merchant/activities`、`/api/merchant/products`、`/api/merchant/courses` 商户自有内容管理；服务端强制校验归属
 - `POST /api/merchant/uploads/image` 商户封面图片上传

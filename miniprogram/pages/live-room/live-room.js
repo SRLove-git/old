@@ -5,12 +5,22 @@ function decorateCourse(course) {
   const lessons = (Array.isArray(data.lessons) ? data.lessons : [])
     .filter((lesson) => Number(lesson.status) === 1)
     .map((lesson, index) => ({ ...lesson, order: index + 1, duration: lesson.duration || '时长待定' }))
+  const blocks = Array.isArray(data.detailBlocks) && data.detailBlocks.length
+    ? data.detailBlocks
+    : [{ type: 'text', text: data.description }]
+  const detailBlocks = blocks
+    .filter(block => block && (block.type === 'text' && (block.text || block.html) || block.type === 'image' && block.src))
+    .map((block, index) => ({
+      ...block, _key: `${block.type}-${index}`,
+      ...(block.type === 'image' ? { src: store.assetUrl(block.src) } : {})
+    }))
   return {
     ...data,
     memberPrice: Number(data.memberPrice || 0),
     originalPrice: Number(data.originalPrice || data.memberPrice || 0),
     lessonCount: lessons.length || Number(data.lessonCount || 0),
     lessons,
+    detailBlocks,
     duration: data.duration || '',
     coverImage: data.coverImage || '',
     courseType: data.status === 'live' ? '直播课' : (data.status === 'scheduled' ? '即将开课' : '视频课')

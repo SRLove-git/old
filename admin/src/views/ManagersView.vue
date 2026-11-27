@@ -22,6 +22,11 @@ const columns = [
 
 <template>
   <section>
+    <div class="list-create-toolbar">
+      <a-button type="primary" shape="round" @click="emit('create')"
+        ><template #icon><IconPlus /></template>新增主理人</a-button
+      >
+    </div>
     <a-card :bordered="false"
       ><a-table
         :columns="columns"
@@ -108,18 +113,5 @@ const columns = [
         >
       </a-table></a-card
     >
-    <a-button type="primary" shape="round" class="fab" @click="emit('create')"
-      ><template #icon><IconPlus /></template>新增主理人</a-button
-    >
   </section>
 </template>
-
-<style scoped>
-.fab {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 20;
-  box-shadow: 0 6px 20px rgba(29, 27, 22, 0.16);
-}
-</style>

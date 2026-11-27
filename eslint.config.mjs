@@ -48,7 +48,7 @@ export default [
     }
   },
   {
-    files: ['admin/**/*.js', 'admin/**/*.vue', 'merchant/**/*.js', 'merchant/**/*.vue'],
+    files: ['admin/**/*.js', 'admin/**/*.vue', 'merchant/**/*.js', 'merchant/**/*.vue', 'shared/**/*.js', 'shared/**/*.vue'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

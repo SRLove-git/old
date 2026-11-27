@@ -11,6 +11,7 @@
 .search-placeholder { font-size: 28rpx; }
 .hero { position: relative; height: 480rpx; margin: 0 24rpx; border-radius: 30rpx; overflow: hidden; background: #c6b096; box-shadow: 0 16rpx 38rpx rgba(46,53,49,.12); }
 .hero-slide { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.hero-video-link { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .hero-image, .hero-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .hero-shade { background: linear-gradient(90deg, rgba(33,42,39,.76) 0%, rgba(33,42,39,.3) 50%, rgba(33,42,39,.02) 75%); }
 .hero-copy { position: absolute; left: 34rpx; top: 56rpx; width: 390rpx; color: #fff; }
@@ -24,8 +25,6 @@
 .content-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; }
 .content-section-title { color: var(--color-ink); font-size: 35rpx; font-weight: 700; }
 .content-section-en { margin-top: 3rpx; color: #a0a5a2; font-size: 18rpx; font-weight: 700; letter-spacing: 2rpx; }
-.official-badge { padding: 8rpx 15rpx; border-radius: 999rpx; background: #edf3f8; color: #4d718b; font-size: 20rpx; font-weight: 700; }
-.content-head-actions { display: flex; align-items: center; gap: 12rpx; }
 .content-more { display: flex; align-items: center; min-height: 50rpx; padding: 0 15rpx; border-radius: 999rpx; background: #f1eee8; color: #786b5e; font-size: 22rpx; }
 .content-more-arrow { margin-left: 5rpx; font-size: 30rpx; line-height: 1; }
 .policy-list { overflow: hidden; border: 1rpx solid #ece9e3; border-radius: 24rpx; background: #fff; }
@@ -229,7 +228,6 @@
   color: #7f7468;
   font-size: 21rpx;
 }
-.official-badge { padding: 7rpx 13rpx; background: #edf3ef; color: #587269; font-size: 19rpx; }
 
 .policy-list { border: 0; border-radius: 0; }
 .policy-card { gap: 17rpx; padding: 17rpx 0; }

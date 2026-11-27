@@ -1,0 +1,13 @@
+.article-body { margin-top: 30rpx; }
+.content-body { display: block; margin-top: 26rpx; color: #303835; font-size: 30rpx; line-height: 1.9; white-space: pre-wrap; }
+.content-body:first-child { margin-top: 0; }
+.article-media-block { margin-top: 30rpx; }
+.article-image { display: block; width: 100%; border-radius: 22rpx; background: #eee; }
+.article-video { width: 100%; height: 390rpx; border-radius: 22rpx; overflow: hidden; background: #111; }
+.article-caption { margin-top: 12rpx; color: #8b928f; font-size: 23rpx; line-height: 1.55; text-align: center; }
+.article-link { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 28rpx; padding: 24rpx; border: 1rpx solid #e2e8e4; border-radius: 20rpx; background: #f7faf8; }
+.article-link-copy { min-width: 0; }
+.article-link-title { color: #365e53; font-size: 28rpx; font-weight: 700; }
+.article-link-description { margin-top: 7rpx; color: #818a87; font-size: 23rpx; line-height: 1.5; }
+.article-link-arrow { flex: none; color: #6f8b82; font-size: 42rpx; }
+.formatted-article { color: #333; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }

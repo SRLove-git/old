@@ -95,11 +95,11 @@ Page({
   },
 
   async onLoad(options) {
+    this.setData({ cat: options && options.cat ? String(options.cat) : 'all' })
     await store.ready()
     const cats = store.get().categories
     const categories = Object.keys(cats).map((id) => ({ id: Number(id), ...cats[id] }))
     this.setData({
-      cat: options && options.cat ? String(options.cat) : 'all',
       categories,
       cities: this.buildCities()
     })

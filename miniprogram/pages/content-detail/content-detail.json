@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "资讯详情",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "rich-body": "/components/rich-body/index"
+  }
 }

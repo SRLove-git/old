@@ -272,25 +272,27 @@ test('manager share retains the existing valid in-app referral path', () => {
 
 function appHarness() {
   const binds = []
-  let pending = null, initialized = 0, app
+  let pending = null, initialized = 0, syncs = 0, app
   const store = {
     init: () => { initialized += 1 },
     getPendingBind: () => pending,
-    setPendingBind: (id, source) => { pending = id; binds.push({ id, source }) }
+    setPendingBind: (id, source) => { pending = id; binds.push({ id, source }) },
+    syncReferralBinding: () => { syncs += 1; return Promise.resolve(null) }
   }
   vm.runInNewContext(fs.readFileSync(new URL('../../miniprogram/app.js', import.meta.url), 'utf8'), {
     App: (value) => { app = value }, require: (id) => id.includes('referral') ? referral : store
   })
-  return { app, binds, clearPending: () => { pending = null }, initialized: () => initialized }
+  return { app, binds, clearPending: () => { pending = null }, initialized: () => initialized, syncs: () => syncs }
 }
 
-test('cold scanning encoded scene captures once across onLaunch/onShow and never binds automatically', () => {
+test('cold scanning encoded scene captures first-touch referral once and triggers automatic binding check', () => {
   const h = appHarness()
   const options = { query: { scene: 'ref%3D101' } }
   h.app.onLaunch(options)
   h.app.onShow(options)
   assert.deepEqual(h.binds, [{ id: '101', source: 1 }])
   assert.equal(h.initialized(), 1)
+  assert.equal(h.syncs(), 1, '自动绑定在 store 中执行，app 只触发一次检查')
 })
 
 test('cold opening a shared ref link keeps link attribution and deduplicates launch/show', () => {

@@ -9,18 +9,26 @@ export const UPLOAD_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.ur
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
-const MAX_IMAGE_INPUT_BYTES = 2 * 1024 * 1024
+const IMAGE_STAGING_DIR = path.resolve(UPLOAD_DIR, '../.image-staging')
+const SPACE_CHECK_INTERVAL = 8 * 1024 * 1024
+const DISK_RESERVE = 256 * 1024 * 1024
+let stagingReady
+let nextStagingCleanup = 0
+let activeImageStreams = 0
 const TARGET_IMAGE_BYTES = 190_000
 const IMAGE_WIDTHS = [1600, 1280, 1024, 800, 640]
 const IMAGE_QUALITIES = [82, 74, 66, 58, 50]
 
-async function optimizeImage(buffer) {
+async function optimizeImage(input) {
+  const { data, info } = await sharp(input).rotate()
+    .resize({ width: IMAGE_WIDTHS[0], height: IMAGE_WIDTHS[0], fit: 'inside', withoutEnlargement: true })
+    .toColourspace('srgb').raw().toBuffer({ resolveWithObject: true })
+  const raw = { width: info.width, height: info.height, channels: info.channels }
   let smallest = null
 
   for (const width of IMAGE_WIDTHS) {
     for (const quality of IMAGE_QUALITIES) {
-      const output = await sharp(buffer)
-        .rotate()
+      const output = await sharp(data, { raw })
         .resize({ width, height: width, fit: 'inside', withoutEnlargement: true })
         .webp({ quality, effort: 5 })
         .toBuffer()
@@ -29,23 +37,27 @@ async function optimizeImage(buffer) {
       if (output.length <= TARGET_IMAGE_BYTES) return output
     }
   }
-
-  if (!smallest || smallest.length > TARGET_IMAGE_BYTES) {
-    throw httpError(400, '图片内容过于复杂，压缩后仍超过200KB，请降低分辨率后重试')
-  }
   return smallest
 }
 
 export async function saveImageDataUrl(dataUrl, filenamePrefix = 'image') {
-  const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/)
-  if (!match) throw httpError(400, '仅支持 PNG、JPG 或 WebP 图片')
+  const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg|webp|gif|tiff|avif));base64,([A-Za-z0-9+/=]+)$/)
+  if (!match) throw httpError(400, '仅支持 PNG、JPG、WebP、GIF、TIFF 或 AVIF 图片')
 
   const buffer = Buffer.from(match[2], 'base64')
-  if (!buffer.length || buffer.length > MAX_IMAGE_INPUT_BYTES) throw httpError(400, '图片大小不能超过2MB')
+  if (!buffer.length) throw httpError(400, '图片文件为空')
+  return saveImage(buffer, filenamePrefix)
+}
 
+async function saveImage(input, filenamePrefix) {
   let optimized
   try {
-    optimized = await optimizeImage(buffer)
+    const metadata = await sharp(input).metadata()
+    if (!['jpeg', 'png', 'webp', 'gif', 'tiff'].includes(metadata.format) &&
+        !(metadata.format === 'heif' && metadata.compression === 'av1')) {
+      throw httpError(400, '不支持该图片的实际编码')
+    }
+    optimized = await optimizeImage(input)
   } catch (error) {
     if (error?.status) throw error
     throw httpError(400, '图片文件无效或无法压缩')
@@ -54,6 +66,61 @@ export async function saveImageDataUrl(dataUrl, filenamePrefix = 'image') {
   const filename = `${filenamePrefix}-${Date.now()}-${crypto.randomBytes(5).toString('hex')}.webp`
   fs.writeFileSync(path.join(UPLOAD_DIR, filename), optimized)
   return `/api/uploads/files/${filename}`
+}
+
+async function prepareImageStaging() {
+  await fs.promises.mkdir(IMAGE_STAGING_DIR, { recursive: true, mode: 0o700 })
+  // Remove abandoned uploads left by an interrupted process, without touching recent transfers.
+  const staleBefore = Date.now() - 24 * 60 * 60 * 1000
+  for (const entry of await fs.promises.readdir(IMAGE_STAGING_DIR)) {
+    if (!/^[a-f0-9-]{36}\.part$/.test(entry)) continue
+    const file = path.join(IMAGE_STAGING_DIR, entry)
+    const stat = await fs.promises.stat(file).catch(() => null)
+    if (stat && stat.mtimeMs < staleBefore) await fs.promises.rm(file, { force: true })
+  }
+}
+
+async function ensureDiskSpace() {
+  const disk = await fs.promises.statfs(IMAGE_STAGING_DIR)
+  if (disk.bavail * disk.bsize < DISK_RESERVE) throw httpError(507, '服务器可用空间不足，请稍后重试')
+}
+
+export async function saveImageStream(req, filenamePrefix = 'image') {
+  if (!req.is(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/tiff', 'image/avif'])) {
+    throw httpError(400, '请选择支持的图片格式')
+  }
+  if (activeImageStreams >= 4) throw httpError(503, '当前图片上传较多，请稍后重试')
+  activeImageStreams++
+  const file = path.join(IMAGE_STAGING_DIR, crypto.randomUUID() + '.part')
+  try {
+    if (Date.now() >= nextStagingCleanup) {
+      nextStagingCleanup = Date.now() + 60 * 60 * 1000
+      stagingReady = prepareImageStaging().catch(error => { nextStagingCleanup = 0; throw error })
+    }
+    await stagingReady
+    await ensureDiskSpace()
+    const handle = await fs.promises.open(file, 'wx', 0o600)
+    try {
+      let sinceCheck = 0
+      async function* chunks() {
+        for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+          sinceCheck += chunk.length
+          if (sinceCheck >= SPACE_CHECK_INTERVAL) {
+            await ensureDiskSpace()
+            sinceCheck = 0
+          }
+          yield chunk
+        }
+      }
+      await handle.writeFile(chunks())
+    } finally {
+      await handle.close()
+    }
+    return await saveImage(file, filenamePrefix)
+  } finally {
+    activeImageStreams--
+    await fs.promises.rm(file, { force: true })
+  }
 }
 
 export async function saveBannerMediaDataUrl(dataUrl, mediaType = 'image') {

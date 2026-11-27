@@ -32,3 +32,9 @@ body {
 .num {
   font-variant-numeric: tabular-nums;
 }
+
+.list-create-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}

@@ -6,6 +6,7 @@ dist/
 # 运行时数据（后端重新生成）
 server/data.json
 server/data.json.bak
+server/.image-staging/
 
 # 小程序本地私有配置
 miniprogram/project.private.config.json

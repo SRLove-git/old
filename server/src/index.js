@@ -14,6 +14,7 @@ import {
   adminTokenConfigured,
   hasAdminPermission,
   isAdminRequest,
+  requireAdminPermission,
   requestUserId,
   requireUser
 } from './middleware/auth.js'
@@ -34,6 +35,8 @@ import {
   transferPublicConfig
 } from './services/transfers.js'
 import { transferClientConfig } from './lib/wechat-transfer.js'
+import { wechatContentPublisher } from './services/wechat-content.js'
+import { importPublicationLink, startPublicationSync, syncOfficialAccount } from './services/wechat-publications.js'
 import merchantRouter from './routes/merchant.js'
 import providerApplicationsRouter from './routes/provider-applications.js'
 import customersRouter from './routes/customers.js'
@@ -86,7 +89,7 @@ app.get('/api/home', (req, res, next) => {
     activities: store.listActivitiesForDisplay({ publishedOnly: true }),
     products: store.listProducts({ publishedOnly: true }),
     regions: store.listRegions({ enabledOnly: true }),
-    contentPosts: store.listContentPosts({ publishedOnly: true }),
+    contentPosts: store.listContentPosts({ publishedOnly: true, includeContent: false }),
     config: db.config
   }
 }))
@@ -103,15 +106,29 @@ app.post('/api/regions', adminAuth, wrap((req) => store.createRegion(req.body)))
 app.put('/api/regions/:id', adminAuth, wrap((req) => store.updateRegion(req.params.id, req.body)))
 
 // 政务资讯与视频内容
-app.get('/api/content-posts', wrap((req) => store.listContentPosts({
-  type: req.query.type,
-  publishedOnly: !isAdminRequest(req)
-})))
-app.get('/api/content-posts/:id', wrap((req) => store.listContentPosts({ publishedOnly: !isAdminRequest(req) })
-  .find((item) => String(item.id) === String(req.params.id))))
-app.post('/api/content-posts', adminAuth, wrap((req) => store.createContentPost(req.body)))
-app.put('/api/content-posts/:id', adminAuth, wrap((req) => store.updateContentPost(req.params.id, req.body)))
-app.delete('/api/content-posts/:id', adminAuth, wrap((req) => store.deleteContentPost(req.params.id)))
+const contentAdmin = [adminAuth, requireAdminPermission('content.manage')]
+app.get('/api/content-posts', wrap((req) => {
+  const admin = isAdminRequest(req, 'content.manage')
+  return store.listContentPosts({
+    type: req.query.type,
+    publishedOnly: !admin,
+    includeInternal: admin,
+    includeContent: admin
+  })
+}))
+app.get('/api/content-posts/:id', wrap((req) => store.listContentPosts({
+  publishedOnly: !isAdminRequest(req, 'content.manage'),
+  includeInternal: isAdminRequest(req, 'content.manage')
+})
+  .find((item) => String(item.id) === String(req.params.id) || item.aliasIds?.includes(req.params.id))))
+app.post('/api/content-posts', contentAdmin, wrap((req) => store.createContentPost(req.body)))
+app.post('/api/content-posts/wechat-sync', contentAdmin, wrap(() => syncOfficialAccount()))
+app.post('/api/content-posts/wechat-import', contentAdmin, wrap(req => importPublicationLink(req.body, req.admin)))
+app.put('/api/content-posts/:id', contentAdmin, wrap((req) => store.updateContentPost(req.params.id, req.body)))
+app.delete('/api/content-posts/:id', contentAdmin, wrap((req) => wechatContentPublisher.deletePost(req.params.id)))
+app.post('/api/content-posts/:id/wechat-draft', contentAdmin, wrap((req) => wechatContentPublisher.createDraft(req.params.id, req.body?.format, req.body?.replaceUncertainDraftId)))
+app.post('/api/content-posts/:id/wechat-publish', contentAdmin, wrap((req) => wechatContentPublisher.publishDraft(req.params.id, req.body?.draftMediaId)))
+app.post('/api/content-posts/:id/wechat-status', contentAdmin, wrap((req) => wechatContentPublisher.syncStatus(req.params.id)))
 
 // 活动/商品
 app.get('/api/activities', wrap((req) => store.searchActivities(req.query.keyword, req.query.category, { publishedOnly: !isAdminRequest(req) })))
@@ -207,7 +224,12 @@ app.post('/api/cards/:id/checkin', wrap((req) => {
   requireUser(req, userId)
   return store.selfCheckInCard(req.params.id, userId, req.body)
 }))
-app.post('/api/cards/:id/makeup-checkin', adminAuth, wrap((req) => store.makeupCheckInCard(req.params.id, req.body)))
+app.get('/api/cards/checkins', adminAuth, wrap((req) => store.listCourseCheckIns(req.query.page)))
+app.get('/api/cards/customers', adminAuth, wrap((req) => store.listCardCustomers(req.query.keyword)))
+app.get('/api/cards/customers/:userId', adminAuth, wrap((req) => store.getCardCustomer(req.params.userId)))
+app.post('/api/cards/:id/makeup-checkin', adminAuth, wrap((req) => store.makeupCheckInCard(req.params.id, req.body, {
+  operator: req.admin?.name || req.admin?.username || String(req.admin?.id || '后台管理员')
+})))
 app.post('/api/customers/:id/bind', wrap((req) => {
   requireUser(req, req.params.id)
   return store.bindCustomerByCodeOrId(req.params.id, req.body.code, req.body.managerId, req.body.source)
@@ -361,3 +383,4 @@ app.listen(PORT, () => {
 startLogisticsRefreshJob()
 startWechatPaymentJob()
 startWechatTransferJob()
+startPublicationSync()

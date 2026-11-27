@@ -38,7 +38,7 @@ function decorateBanner(banner) {
     ...banner,
     mediaType: banner.mediaType === 'video' ? 'video' : 'image',
     mediaUrl: store.assetUrl(banner.mediaUrl || banner.imageUrl),
-    linkUrl: String(banner.linkUrl || '')
+    linkUrl: String(banner.linkUrl || '').trim()
   }
 }
 
@@ -67,6 +67,7 @@ Page({
     copy: {},
     filing: {},
     newsPosts: [],
+    hasNews: false,
     videoPosts: []
   },
 
@@ -132,7 +133,18 @@ Page({
     this.buildGroups()
     this.buildContent()
     this.syncMemberState()
-    this.checkPendingBind()
+    this.applyReferralBinding()
+  },
+
+  // 首次通过主理人链接进入的会员自动建立归属；已绑定后其他主理人的链接不再改变。
+  async applyReferralBinding() {
+    try {
+      await store.syncReferralBinding()
+    } catch (error) {}
+    const manager = store.takeBindNotice()
+    if (!manager) return
+    this.setData({ boundManager: manager })
+    wx.showToast({ title: `已绑定主理人 ${manager.name}`, icon: 'none' })
   },
 
   // 入会后首页不再展示入会卡片：先用缓存立即生效，登录状态下再拉一次资料校准
@@ -205,6 +217,7 @@ Page({
     })
     const display = store.getHomeDisplay()
     this.setData({
+      hasNews: visible.some((item) => item.type === 'news'),
       newsPosts: visible.filter((item) => item.type === 'news' && item.featured).slice(0, display.newsLimit),
       videoPosts: visible.filter((item) => item.type === 'video' && item.featured).slice(0, display.videoLimit)
     })
@@ -278,44 +291,6 @@ Page({
     wx.navigateTo({ url: `/pages/content-list/content-list?type=${type}` })
   },
 
-  checkPendingBind() {
-    const managerId = store.getPendingBind()
-    if (!managerId) return
-    const manager = store.getManagers().find((m) => String(m.id) === String(managerId))
-    if (!manager) {
-      store.cancelPendingBind()
-      return
-    }
-    if (store.get().boundManager) {
-      store.cancelPendingBind()
-      return
-    }
-    wx.showModal({
-      title: '发现主理人推荐',
-      content: `您将绑定 ${manager.name} 为专属服务主理人。绑定后，这位主理人可获得您后续消费的部分服务佣金。`,
-      confirmText: '同意绑定',
-      cancelText: '暂不绑定',
-      confirmColor: '#b98555',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await store.requireLogin()
-            const bound = await store.confirmPendingBind()
-            this.setData({ boundManager: bound })
-            wx.showToast({ title: `已绑定${manager.name}`, icon: 'none' })
-          } catch (error) {
-            if (!error || error.code !== 'AUTH_REQUIRED') {
-              wx.showToast({ title: error.message || '绑定失败，请稍后重试', icon: 'none' })
-            }
-          }
-        } else {
-          store.cancelPendingBind()
-          wx.showToast({ title: '您仍可正常使用', icon: 'none' })
-        }
-      }
-    })
-  },
-
   goList() {
     wx.switchTab({ url: '/pages/list/list' })
   },
@@ -337,29 +312,52 @@ Page({
   },
 
   goBanner(e) {
-    const linkUrl = String(e.currentTarget.dataset.link || '')
+    const linkUrl = String(e.currentTarget.dataset.link || '').trim()
+    if (!linkUrl) return
+    const fail = () => wx.showToast({ title: '暂时无法打开该链接', icon: 'none' })
     if (linkUrl.startsWith('https://')) {
-      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(linkUrl)}` })
+      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(linkUrl)}`, fail })
       return
     }
-    if (linkUrl.startsWith('/pages/')) {
-      const path = linkUrl.split('?')[0]
-      const tabPages = ['/pages/index/index', '/pages/list/list', '/pages/lives/lives', '/pages/profile/profile']
-      if (path === '/pages/list/list') {
-        const category = linkUrl.match(/[?&](?:category|cat)=([^&]+)/)
-        if (category) wx.setStorageSync('pendingCat', Number(decodeURIComponent(category[1])))
+    if (!linkUrl.startsWith('/pages/')) {
+      fail()
+      return
+    }
+    const path = linkUrl.split('?')[0]
+    if (path === '/pages/list/list') {
+      const match = linkUrl.match(/[?&](?:category|cat)=([^&]*)/)
+      let category = 'all'
+      if (match && match[1]) {
+        try {
+          const value = decodeURIComponent(match[1])
+          if (value !== 'all') {
+            const id = Number(value)
+            if (!/^\d+$/.test(value) || !Number.isSafeInteger(id)) {
+              fail()
+              return
+            }
+            if (id > 0) category = id
+          }
+        } catch (error) {
+          fail()
+          return
+        }
       }
-      if (tabPages.includes(path)) wx.switchTab({ url: path })
-      else wx.navigateTo({ url: linkUrl })
+      wx.setStorageSync('pendingCat', category)
+      wx.switchTab({
+        url: path,
+        fail: () => {
+          if (wx.getStorageSync('pendingCat') === category) wx.removeStorageSync('pendingCat')
+          fail()
+        }
+      })
       return
     }
-    const cat = Number(e.currentTarget.dataset.cat)
-    if (!cat) {
-      wx.switchTab({ url: '/pages/profile/profile' })
+    if (['/pages/index/index', '/pages/lives/lives', '/pages/profile/profile'].includes(path)) {
+      wx.switchTab({ url: path, fail })
       return
     }
-    wx.setStorageSync('pendingCat', cat)
-    wx.switchTab({ url: '/pages/list/list' })
+    wx.navigateTo({ url: linkUrl, fail })
   },
 
   goDetail(e) {

@@ -53,7 +53,8 @@
 
         <view class="detail-section">
           <view class="detail-section-title">礼品详情</view>
-          <view class="detail-description">{{detailProduct.description || defaultDescription}}</view>
+          <rich-body wx:if="{{detailProduct.detailBlocks.length}}" blocks="{{detailProduct.detailBlocks}}" />
+          <view wx:else class="detail-description">{{detailProduct.description || defaultDescription}}</view>
         </view>
 
         <view class="detail-info-grid">

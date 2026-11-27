@@ -17,7 +17,7 @@ const GALLERY_BY_CATEGORY = {
 
 function decorateOffering(item) {
   const art = store.assetUrl(item.coverImage) || ART_BY_CATEGORY[item.category] || '/assets/event-local.jpg'
-  return { ...item, art, regionText: store.getActivityRegionNames(item).join('、') || item.city || '线上/全国' }
+  return { ...item, publisherType: item.publisherType || (item.managerId ? 'merchant' : 'platform'), art, regionText: store.getActivityRegionNames(item).join('、') || item.city || '线上/全国' }
 }
 
 function serviceTextOf(activity) {
@@ -83,6 +83,16 @@ Page({
     await store.ready()
     try { await Promise.all([store.refreshHome(), store.refreshReviews()]) } catch (e) {}
     if (this.data.id) this.loadActivity(this.data.id)
+    this.applyReferralBinding()
+  },
+
+  // 主理人分享的活动详情是常见首屏，登录后在此静默建立首触归属。
+  async applyReferralBinding() {
+    try {
+      await store.syncReferralBinding()
+    } catch (error) {}
+    const manager = store.takeBindNotice()
+    if (manager) wx.showToast({ title: `已绑定主理人 ${manager.name}`, icon: 'none' })
   },
 
   loadActivity(id) {
@@ -116,20 +126,25 @@ Page({
       url: b.type === 'video' ? store.assetUrl(b.url) : b.url,
       _key: `${activity.id}-${i}`
     }))
-    const merchant = store.getManagers().find((m) => String(m.id) === String(activity.managerId)) || null
+    const merchant = activity.publisherType === 'merchant' && activity.managerId
+      ? store.getManagers().find((m) => String(m.id) === String(activity.managerId)) || null
+      : null
     const reviews = store.getReviews(id)
     const reviewableOrder = (store.get().orders || []).find((order) => String(order.activityId) === String(id) && order.status === '待评价') || null
     const allOfferings = [...store.getActivities(), ...(store.get().products || [])].filter((item) => String(item.id) !== String(id))
+    const leaders = new Map()
+    for (const item of [activity, ...allOfferings]) {
+      const leader = leaders.get(item.category)
+      if (!leader || Number(item.soldCount || 0) > Number(leader.soldCount || 0)) leaders.set(item.category, item)
+    }
+    const salesRank = item => leaders.get(item.category)?.id === item.id ? '同类销量第1' : ''
     const recommend = allOfferings
       .sort((a, b) => Number(store.isActivityExpired(a)) - Number(store.isActivityExpired(b))
         || Number(b.category === activity.category) - Number(a.category === activity.category)
         || (b.soldCount || 0) - (a.soldCount || 0))
       .slice(0, 6)
-      .map((a, index) => ({ ...decorateOffering(a), rankLabel: index === 0 ? '本店销量榜第1' : '' }))
-    const rank = [activity, ...allOfferings]
-      .filter((a) => a.category === activity.category)
-      .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
-    const rankLabel = rank.length && String(rank[0].id) === String(id) ? '本店销量榜第1' : ''
+      .map(a => ({ ...decorateOffering(a), rankLabel: salesRank(a) }))
+    const rankLabel = salesRank(activity)
     const hasSku = activity.hasSku || activity.sellType === 'sku'
     const venues = (activity.skus || [])
       .filter((s) => s.address)
@@ -383,7 +398,12 @@ Page({
 
   onShareAppMessage() {
     const activity = this.data.activity
-    const ref = activity && activity.managerId ? `&ref=${activity.managerId}` : ''
+    // 主理人分享任意活动时以自己的身份作为推荐来源；普通用户分享商家内容时沿用内容归属。
+    const own = store.getOwnManager()
+    const ownRef = own && Number(own.status ?? 1) === 1 ? own.id : ''
+    const publisherRef = activity && activity.publisherType === 'merchant' && activity.managerId ? activity.managerId : ''
+    const managerId = ownRef || publisherRef
+    const ref = managerId ? `&ref=${managerId}` : ''
     return {
       title: activity ? activity.title : store.getBrand().chineseName,
       path: `/pages/detail/detail?id=${this.data.id}${ref}`

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
+import sharp from 'sharp'
+import { passwordRecord } from '../src/lib/session.js'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -7,7 +9,20 @@ import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+import vm from 'node:vm'
+import phoneHelpers from '../../miniprogram/utils/store-helpers.js'
 import { seed } from '../src/seed.js'
+import { permissionForRequest } from '../src/lib/permissions.js'
+import { hasAdminPermission } from '../src/middleware/auth.js'
+
+test('内容管理路由使用一致的权限，未映射功能默认关闭', () => {
+  const editor = { role: 'staff', permissions: ['content.manage'] }
+  const path = permissionForRequest({ method: 'GET', path: '/API/CONTENT-POSTS/' })
+  assert.equal(path, 'content.manage')
+  assert.equal(hasAdminPermission(editor, path), true)
+  assert.equal(hasAdminPermission(editor, permissionForRequest({ method: 'GET', path: '/api/unassigned' })), false)
+  assert.equal(hasAdminPermission(null, 'admin.self'), false)
+})
 
 const serverRoot = fileURLToPath(new URL('../', import.meta.url))
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'suiyueli-api-auth-'))
@@ -60,7 +75,8 @@ function fixture() {
   database.managerApplications = [{ id: 'MA-b', userId: 'member-b', name: '测试申请', phone: '13800000000', status: '待付款', paymentStatus: '待支付' }]
   database.adminAccounts = [
     { id: 'staff-dashboard', username: 'test_dashboard', role: 'staff', status: 1, permissions: ['dashboard.view'] },
-    { id: 'staff-orders', username: 'test_orders', role: 'staff', status: 1, permissions: ['orders.manage'] }
+    { id: 'staff-orders', username: 'test_orders', role: 'staff', status: 1, permissions: ['orders.manage'] },
+    { id: 'staff-courses', username: 'test_courses', role: 'staff', status: 1, permissions: ['courses.manage'] }
   ]
   database.addresses = [{ id: 'ADDR-b', userId: 'member-b', name: '测试收件人', phone: '13800000000' }]
   database.participants = []
@@ -77,11 +93,11 @@ function token(userId, extra = {}) {
 const member = id => ({ authorization: `Bearer ${token(id)}` })
 const staff = id => ({ 'x-admin-token': token(id, { role: 'admin', accountId: id }) })
 
-async function startServer(environment = {}) {
+async function startServer(environment = {}, database = fixture()) {
   const dir = fs.mkdtempSync(path.join(directory, 'server-'))
   const dataFile = path.join(dir, 'data.json')
   const callsFile = path.join(dir, 'external-calls.jsonl')
-  fs.writeFileSync(dataFile, JSON.stringify(fixture()))
+  fs.writeFileSync(dataFile, JSON.stringify(database))
   fs.writeFileSync(callsFile, '')
   const child = spawn(process.execPath, ['--import', mockPath, path.join(serverRoot, 'src/index.js')], {
     cwd: serverRoot,
@@ -100,7 +116,7 @@ async function startServer(environment = {}) {
   })
   return {
     async request(route, { method = 'GET', headers = {}, body } = {}) {
-      const response = await fetch(`http://127.0.0.1:${port}${route}`, { method, headers: { 'content-type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) })
+      const response = await fetch(`http://127.0.0.1:${port}${route}`, { method, headers: { 'content-type': 'application/json', ...headers }, body: Buffer.isBuffer(body) ? body : body === undefined ? undefined : JSON.stringify(body) })
       return { status: response.status, body: await response.json() }
     },
     calls: () => fs.readFileSync(callsFile, 'utf8').trim().split('\n').filter(Boolean),
@@ -124,6 +140,102 @@ test.after(async () => {
     await exited
   }))
   fs.rmSync(directory, { recursive: true, force: true })
+})
+
+test('管理端按链接导入后，小程序首页接口可读取原文，重复导入只产生一条资讯', async () => {
+  const db = fixture()
+  db.adminAccounts.push({ id: 'editor', username: 'editor', role: 'staff', status: 1, permissions: ['content.manage'] })
+  const server = await startServer({}, db)
+  try {
+    const route = '/api/content-posts/wechat-import'
+    const url = 'https://mp.weixin.qq.com/s/history-fixture'
+    const body = { title: '历史资讯', publishedAt: '2026-10-23', url, accountConfirmed: true }
+    const post = (headers, data = body) => server.request(route, { method: 'POST', headers, body: data })
+    assert.equal((await post({})).status, 401)
+    assert.equal((await post(staff('staff-dashboard'))).status, 403)
+    assert.equal((await post(staff('editor'), { ...body, url: 'https://example.com/' })).status, 400)
+    assert.equal((await post(staff('editor'), { ...body, accountConfirmed: false })).status, 400)
+    assert.equal((await post(staff('editor'), { ...body, url: url + '?tempkey=preview' })).status, 400)
+    assert.deepEqual((await post(staff('editor'))).body.data, { added: 1 })
+    assert.deepEqual((await post(staff('editor'), { ...body, url: url + '?scene=1' })).body.data, { added: 0 })
+    const home = await server.request('/api/home')
+    const articles = home.body.data.contentPosts.filter(row => row.officialArticleUrl === url)
+    assert.equal(articles.length, 1)
+    assert.equal(articles[0].publishedAt, '2026-10-23')
+    assert.equal(articles[0].wechat, undefined)
+    // 首页只下发卡片信息，正文由详情接口按需拉取。
+    assert.equal(articles[0].contentBlocks, undefined)
+    assert.equal(articles[0].hasContent, false)
+    const id = articles[0].id
+    const details = await server.request(`/api/content-posts/${id}`, { headers: staff('editor') })
+    assert.deepEqual(details.body.data.contentBlocks, [])
+    assert.equal(details.body.data.wechat.confirmedBy, 'editor')
+    assert.equal(details.body.data.wechat.sourceVerification, 'operator-confirmed')
+    assert.equal((await server.request('/api/admin/me', { headers: staff('staff-dashboard') })).status, 200)
+    assert.equal((await server.request(`/api/content-posts/${id}`, { headers: staff('staff-dashboard') })).body.data.wechat, undefined)
+    assert.equal(server.calls().length, 0)
+  } finally { await server.close() }
+})
+
+test('商户登录后可上传活动封面和新增栅格格式，返回可读取的静态 WebP', async t => {
+  const data = fixture()
+  const password = 'upload-fixture-only'
+  data.merchantAccounts = [{ id: 'upload-test-account', merchantId: 'upload-test', username: 'cover-test', status: 1,
+    permissions: ['merchant.activities'], ...passwordRecord(password) }]
+  const server = await startServer({}, data)
+  t.after(() => server.close())
+  const login = ok(await server.request('/api/merchant/login', { method: 'POST', body: { username: 'cover-test', password } }))
+  const headers = { authorization: 'Bearer ' + login.token }
+  const upload = (dataUrl, auth) => server.request('/api/merchant/uploads/image', { method: 'POST', headers: auth, body: { dataUrl } })
+  assert.equal((await upload('', {})).status, 401)
+  const invalid = await upload('data:image/gif;base64,YWJj', headers)
+  assert.equal(invalid.status, 400)
+  for (const type of ['png', 'jpeg', 'webp', 'gif', 'tiff', 'avif']) {
+    const input = await sharp({ create: { width: 12, height: 8, channels: 3, background: 'green' } }).toFormat(type).toBuffer()
+    const result = ok(await upload(`data:image/${type};base64,${input.toString('base64')}`, headers))
+    assert.match(result.url, /^\/api\/uploads\/files\/merchant-upload-test-[\w-]+\.webp$/)
+    const output = path.join(serverRoot, 'uploads', path.basename(result.url))
+    t.after(() => fs.rmSync(output, { force: true }))
+    const info = await sharp(output).metadata()
+    assert.deepEqual([info.format, info.width, info.height, info.pages || 1], ['webp', 12, 8, 1])
+  }
+})
+
+test('originals above the JSON and proxy limits can be streamed by an authorized editor', async t => {
+  const server = await startServer()
+  t.after(() => server.close())
+  const route = '/api/uploads/image/file?scope=courses'
+  const image = await sharp({ create: { width: 3600, height: 2600, channels: 3, background: 'skyblue' } })
+    .png({ compressionLevel: 0 }).toBuffer()
+  assert.ok(image.length > 25 * 1024 * 1024)
+  const upload = (endpoint, auth, body) => server.request(endpoint, {
+    method: 'POST', headers: { ...auth, 'content-type': 'image/png' }, body
+  })
+  assert.equal((await upload(route, {}, Buffer.from('x'))).status, 401)
+  assert.equal((await upload(route.replace('courses', 'products'), staff('staff-courses'), Buffer.from('x'))).status, 403)
+  assert.equal((await upload(route, staff('staff-courses'), Buffer.from('unreadable'))).status, 400)
+  const { url } = ok(await upload(route, staff('staff-courses'), image))
+  const output = path.join(serverRoot, 'uploads', path.basename(url))
+  t.after(() => fs.rmSync(output, { force: true }))
+  const info = await sharp(output).metadata()
+  assert.equal(info.format, 'webp')
+  assert.equal(info.width, 1600)
+})
+
+test('a course editor can upload course images but cannot use another publishing permission', async () => {
+  const server = await startServer()
+  try {
+    const upload = scope => server.request(`/api/uploads/image?scope=${scope}`, {
+      method: 'POST', headers: staff('staff-courses'), body: { dataUrl: 'invalid' }
+    })
+    const permitted = await upload('courses')
+    assert.equal(permitted.status, 400)
+    assert.match(permitted.body.message, /PNG/)
+    assert.equal((await upload('products')).status, 403)
+    assert.equal((await upload('accounts')).status, 403)
+  } finally {
+    await server.close()
+  }
 })
 
 for (const [label, environment] of [
@@ -220,5 +332,385 @@ test('logistics administration requires orders permission, including reads and p
     const exceptions = await server.request('/api/logistics/exceptions', { headers: staff('staff-orders') })
     assert.equal(exceptions.status, 200)
     assert.equal(exceptions.body.data[0].id, 'LOG-b')
+  } finally { await server.close() }
+})
+
+const publishingAreas = [
+  { path: 'activities', merchantPath: 'activities' },
+  { path: 'products', merchantPath: 'products' },
+  { path: 'lives', merchantPath: 'courses' }
+]
+const adminHeaders = { 'x-admin-token': 'test-only-admin' }
+function publicCatalogFixture() {
+  const data = fixture()
+  for (const key of ['managers', 'merchantAccounts', 'activities', 'products', 'lives', 'bindings', 'orders', 'cards', 'logisticsShipments']) data[key] = []
+  return data
+}
+function offering(path) {
+  return { title: `平台${path}`, memberPrice: 20, price: 20, coverImage: 'https://images.example.test/test.png', status: path === 'lives' ? 'scheduled' : 1 }
+}
+function ok(response) {
+  assert.equal(response.status, 200, JSON.stringify(response.body))
+  assert.equal(response.body.code, 0)
+  return response.body.data
+}
+function assertPlatform(record) {
+  assert.equal(record.publisherType, 'platform')
+  assert.equal(record.managerId, null)
+}
+
+test('没有商户、没有主理人时管理员仍能发布三类平台内容并编辑旧平台课程', async () => {
+  const data = publicCatalogFixture()
+  data.lives.push({ id: 'old-platform-live', title: '历史平台课', status: 'scheduled', memberPrice: 20, lessons: [] })
+  data.lives.push({ id: 'missing-shop', title: '原商家已删除', managerId: 9876, memberPrice: 20 })
+  data.lives.push({ id: 'unknown-shop', title: '商家归属待修复', publisherType: 'merchant', managerId: null, memberPrice: 20 })
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  try {
+    for (const { path } of publishingAreas) {
+      const published = ok(await server.request(`/api/${path}`, { method: 'POST', headers: adminHeaders, body: offering(path) }))
+      assertPlatform(published)
+      const publicRow = ok(await server.request(`/api/${path}`)).find(row => row.id === published.id)
+      assert.ok(publicRow, `${path} 应在小程序使用的公开列表可读`)
+      assertPlatform(publicRow)
+    }
+    const old = ok(await server.request('/api/lives/old-platform-live', { method: 'PUT', headers: adminHeaders, body: { title: '已编辑历史平台课' } }))
+    assertPlatform(old)
+    const courses = ok(await server.request('/api/lives'))
+    assert.equal(courses.find(row => row.id === old.id).title, old.title)
+    for (const [id, managerId] of [['missing-shop', 9876], ['unknown-shop', null]]) {
+      const course = courses.find(item => item.id === id)
+      assert.equal(course.publisherType, 'merchant')
+      assert.equal(course.managerId, managerId)
+    }
+    const corrected = ok(await server.request('/api/lives/unknown-shop', {
+      method: 'PUT', headers: adminHeaders, body: { publisherType: 'platform' }
+    }))
+    assertPlatform(corrected)
+    assert.deepEqual(server.data().managers, [])
+    assert.deepEqual(server.data().merchantAccounts, [])
+  } finally { await server.close() }
+})
+
+test('商户无法改删平台条目或用平台条目的 ID、发布来源及归属伪造商家内容', async () => {
+  const data = publicCatalogFixture()
+  const merchantId = 34
+  data.managers.push({ id: merchantId, status: 1, name: '测试商户' })
+  data.lives.push({ id: 'old-unassigned', title: '无归属旧课', hostName: '测试商户', memberPrice: 20 })
+  data.merchantAccounts.push({ id: 'merchant-34', merchantId, status: 1, permissions: ['merchant.activities', 'merchant.products', 'merchant.courses'] })
+  const merchantHeaders = { authorization: `Bearer ${token('merchant-34', { role: 'merchant', merchantId })}` }
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  try {
+    assertPlatform(ok(await server.request('/api/lives')).find(row => row.id === 'old-unassigned'))
+    assert.ok(!ok(await server.request('/api/merchant/courses', { headers: merchantHeaders })).some(row => row.id === 'old-unassigned'))
+    for (const { path, merchantPath } of publishingAreas) {
+      const platform = ok(await server.request(`/api/${path}`, { method: 'POST', headers: adminHeaders, body: { ...offering(path), publisherType: 'platform' } }))
+      const endpoint = `/api/merchant/${merchantPath}`
+      const attempt = { ...offering(path), id: platform.id, title: '商户创建', publisherType: 'platform', managerId: null }
+      const claimed = await server.request(endpoint, { method: 'POST', headers: merchantHeaders, body: attempt })
+      // 可以拒绝客户端提供的 ID，也可以忽略后分配新 ID；成功时必须绑定登录商户。
+      if (claimed.status === 200) {
+        const own = ok(claimed)
+        assert.notEqual(own.id, platform.id)
+        assert.equal(own.publisherType, 'merchant')
+        assert.equal(own.managerId, merchantId)
+        const changed = ok(await server.request(`${endpoint}/${own.id}`, { method: 'PUT', headers: merchantHeaders, body: { publisherType: 'platform', managerId: null, title: '仍为商户内容' } }))
+        assert.equal(changed.publisherType, 'merchant')
+        assert.equal(changed.managerId, merchantId)
+      } else assert.ok(claimed.status === 400 || claimed.status === 409)
+      assert.equal((await server.request(`${endpoint}/${platform.id}`, { method: 'PUT', headers: merchantHeaders, body: attempt })).status, 403)
+      assert.equal((await server.request(`${endpoint}/${platform.id}`, { method: 'DELETE', headers: merchantHeaders })).status, 403)
+      assert.ok(!ok(await server.request(endpoint, { headers: merchantHeaders })).some(row => row.id === platform.id))
+      const visible = ok(await server.request(`/api/${path}`)).filter(row => row.id === platform.id)
+      assert.equal(visible.length, 1)
+      assertPlatform(visible[0])
+      assert.equal(visible[0].title, platform.title)
+    }
+  } finally { await server.close() }
+})
+
+test('平台课程付款按购买会员当前绑定结佣，散客不生成佣金，两人均获得课程权益', async () => {
+  const data = publicCatalogFixture()
+  const promoterId = 61
+  data.managers = [{ id: promoterId, status: 1, name: '推广主理人', commissionRate: 10 }]
+  for (const customer of data.customers) {
+    customer.managerId = null
+    customer.balanceFen = 5000
+    customer.balance = 50
+  }
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  try {
+    const course = ok(await server.request('/api/lives', { method: 'POST', headers: adminHeaders, body: { ...offering('lives'), publisherType: 'platform' } }))
+    for (const customer of data.customers) {
+      const headers = member(customer.id)
+      const order = ok(await server.request(`/api/lives/${course.id}/purchase`, { method: 'POST', headers, body: { useBalance: true, managerId: 999 } }))
+      assert.equal(order.managerId, null)
+      assert.equal(order.publisherType, 'platform')
+      assert.equal(order.publisherManagerId, null)
+      const bound = customer.id === 'member-a'
+      if (bound) {
+        ok(await server.request('/api/bindings/rebind', { method: 'POST', headers: adminHeaders, body: { customerId: customer.id, managerId: promoterId, reason: '隔离测试' } }))
+      }
+      const payment = ok(await server.request(`/api/orders/${order.id}/pay`, { method: 'POST', headers, body: {} }))
+      assert.equal(payment.balanceOnly, true)
+      assert.equal(payment.order.paymentStatus, 'SUCCESS')
+      assert.equal(payment.order.managerId, bound ? promoterId : null)
+      assert.equal(payment.order.publisherManagerId, null)
+      const stored = server.data()
+      const commissions = stored.commissions.filter(row => row.orderId === order.id)
+      if (bound) {
+        const binding = stored.bindings.find(item => item.customerId === customer.id && item.status === 1)
+        assert.equal(payment.order.bindingId, binding.id)
+        assert.equal(commissions.length, 1)
+        assert.equal(commissions[0].managerId, promoterId)
+        assert.equal(commissions[0].bindingId, binding.id)
+        assert.equal(commissions[0].commissionAmount, 2)
+      } else assert.deepEqual(commissions, [])
+      assert.ok(stored.cards.some(card => card.orderId === order.id && card.userId === customer.id && card.liveId === course.id))
+      assertPlatform(stored.lives.find(row => row.id === course.id))
+    }
+    assert.equal(server.calls().length, 0)
+  } finally { await server.close() }
+})
+
+function localDate(offset) {
+  const day = new Date()
+  day.setDate(day.getDate() + offset)
+  return [day.getFullYear(), String(day.getMonth() + 1).padStart(2, '0'), String(day.getDate()).padStart(2, '0')].join('-')
+}
+
+function attendanceFixture() {
+  const data = fixture()
+  data.adminAccounts.push({ id: 'staff-crm', username: 'crm', status: 1, role: 'staff', permissions: ['customers.manage'] })
+  data.adminAccounts.find(account => account.id === 'staff-orders').name = '现场测试员'
+  data.customers = [
+    { id: 'member-a', name: '签到测试甲', phone: '13800000001', idCard: 'test-sensitive-id', wechatOpenId: 'test-sensitive-openid', balanceFen: 5000 },
+    { id: 'member-b', name: '签到测试乙', phone: '13800000002' },
+    { id: 'no-card-member', name: '签到无卡', phone: '13800000003' }
+  ]
+  data.cards = [
+    { id: 'expired-card', userId: 'member-a', title: '历史计次卡', validUntil: localDate(-2), remain: 1, total: 3, orderId: 'private-reference', attendanceRecords: [
+      { id: 'absent-session', date: localDate(-2), time: '14:00-15:00', status: 'absent', latitude: 12, longitude: 32 }
+    ] },
+    { id: 'current-card', userId: 'member-a', title: '当前计次卡', validUntil: localDate(20), remain: 2, total: 2, attendanceRecords: [] },
+    { id: 'other-card', userId: 'member-b', title: '他人计次卡', validUntil: localDate(20), remain: 1, total: 1, attendanceRecords: [] }
+  ]
+  return data
+}
+
+function assertClientError(response) {
+  assert.ok(response.status >= 400 && response.status < 500, `预期客户端错误，实际为 ${response.status}: ${response.body.message}`)
+}
+
+test('脱敏会员选址并补填手机号，两端读到同一次扣次和签到，后台补签也回到小程序', async t => {
+  const data = attendanceFixture()
+  data.customers[0].phone = '138****0001'
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  t.after(() => server.close())
+  const headers = member('member-a')
+  const staffHeaders = staff('staff-orders')
+  const getProfile = async () => ok(await server.request('/api/users/member-a', { headers }))
+  const getBoard = async () => ok(await server.request('/api/cards/checkins', { headers: staffHeaders }))
+  for (const denied of [{}, headers, staff('staff-crm')]) {
+    assert.ok([401, 403].includes((await server.request('/api/cards/checkins', { headers: denied })).status))
+  }
+
+  const calls = []
+  let map
+  let page
+  const store = { ...phoneHelpers, getCurrentUserId: () => 'member-a', refreshUserProfile: getProfile }
+  const api = { post: async (path, body) => {
+    calls.push(body)
+    return ok(await server.request('/api' + path, { method: 'POST', headers, body }))
+  } }
+  vm.runInNewContext(fs.readFileSync(new URL('../../miniprogram/pages/card-attendance/card-attendance.js', import.meta.url), 'utf8'), {
+    require: path => path.endsWith('/store.js') ? store : { api },
+    Page: definition => { page = definition },
+    wx: { chooseLocation: opts => { map = opts }, showToast() {} }
+  })
+  page.setData = patch => Object.assign(page.data, patch)
+  await page.refreshProfile()
+  page.selectCard({ currentTarget: { dataset: { id: 'current-card' } } })
+  assert.equal(page.data.memberPhone, '')
+  assert.equal(page.data.needsPhone, true)
+  page.requestLocation()
+  map.success({ latitude: 23, longitude: 113, name: '签到测试教室', address: '测试路' })
+  assert.equal(page.data.stepsDone, 1)
+  assert.equal(page.data.canCheckIn, false)
+  page.onPhoneInput({ detail: { value: '13800000001' } })
+  page.requestLocation()
+  await page.refreshProfile()
+  map.fail({ errMsg: 'chooseLocation:fail cancel' })
+  assert.equal(page.data.stepsDone, 2)
+  assert.equal(page.data.canCheckIn, true)
+  const previous = page.data.currentCard.remain
+  await Promise.all([page.submitCheckIn(), page.submitCheckIn()])
+  assert.equal(calls.length, 1)
+  assert.match(page.data.successMessage, /签到成功/)
+  assert.equal(page.data.canCheckIn, false)
+  assert.equal(page.data.currentCard.remain, previous - 1)
+  const saved = (await getProfile()).cards.find(card => card.id === 'current-card')
+  assert.equal(saved.remain, page.data.currentCard.remain)
+  const [record] = saved.attendanceRecords
+  assert.equal(record.memberPhone, '13800000001')
+  assert.equal(page.data.records[0].id, record.id)
+  const board = await getBoard()
+  assert.equal(board.total, 1)
+  assert.deepEqual([board.items[0].recordId, board.items[0].checkedAt, board.items[0].location, board.items[0].checkinType, board.items[0].remain],
+    [record.id, record.checkedAt, '测试路 · 签到测试教室', 'self', saved.remain])
+  assert.equal(board.items[0].memberPhone, undefined)
+  const duplicate = await server.request('/api/cards/current-card/checkin', { method: 'POST', headers, body: calls[0] })
+  assertClientError(duplicate)
+  assert.equal((await getBoard()).total, 1)
+  const makeup = ok(await server.request('/api/cards/current-card/makeup-checkin', {
+    method: 'POST', headers: staffHeaders, body: { date: localDate(-1), reason: '测试补登' }
+  }))
+  await page.refreshProfile()
+  assert.equal(page.data.currentCard.remain, makeup.remain)
+  const makeupRecord = page.data.records.find(row => row.checkinType === 'makeup')
+  assert.ok((await getBoard()).items.some(row => row.recordId === makeupRecord.id))
+  assert.equal(server.data().cards.find(card => card.id === 'current-card').attendanceRecords.length, 2)
+})
+
+test('核销人员可按姓名和手机号检索持卡会员并查看计次卡，不需要 CRM 权限', async () => {
+  const server = await startServer({ NODE_ENV: 'production' }, attendanceFixture())
+  try {
+    const orderStaff = staff('staff-orders')
+    const customer = { id: 'member-a', name: '签到测试甲', phone: '13800000001' }
+    for (const keyword of ['测试甲', '13800000001']) {
+      assert.deepEqual(ok(await server.request(`/api/cards/customers?keyword=${encodeURIComponent(keyword)}`, { headers: orderStaff })), [customer])
+    }
+    const all = ok(await server.request('/api/cards/customers', { headers: orderStaff }))
+    assert.deepEqual(all.map(item => item.id).sort(), ['member-a', 'member-b'])
+    const withoutCards = ok(await server.request(`/api/cards/customers?keyword=${encodeURIComponent('无卡')}`, { headers: orderStaff }))
+    assert.deepEqual(withoutCards.map(item => item.id), ['no-card-member'])
+    assert.deepEqual(ok(await server.request('/api/cards/customers/no-card-member', { headers: orderStaff })).cards, [])
+    const profile = ok(await server.request('/api/cards/customers/member-a', { headers: orderStaff }))
+    assert.deepEqual(profile.user, customer)
+    assert.equal(profile.orders, undefined)
+    assert.deepEqual(profile.cards.map(card => card.id).sort(), ['current-card', 'expired-card'])
+    const card = profile.cards.find(item => item.id === 'expired-card')
+    assert.equal(card.orderId, undefined)
+    assert.equal(card.absentCount, 1)
+    assert.equal(card.attendanceRecords[0].latitude, undefined)
+    assert.equal(card.attendanceRecords[0].longitude, undefined)
+    assertClientError(await server.request('/api/cards/customers/missing-user', { headers: orderStaff }))
+    assert.equal((await server.request('/api/customers/member-a', { headers: orderStaff })).status, 403)
+    assert.equal((await server.request('/api/customers/member-a', { headers: staff('staff-crm') })).status, 200)
+    for (const [headers, expected] of [[{}, 401], [member('member-a'), 401], [staff('staff-crm'), 403], [staff('staff-dashboard'), 403]]) {
+      for (const endpoint of ['/api/cards/customers?keyword=test', '/api/cards/customers/member-a']) {
+        assert.equal((await server.request(endpoint, { headers })).status, expected)
+      }
+      const rejected = await server.request('/api/cards/current-card/makeup-checkin', { method: 'POST', headers, body: { date: localDate(0), time: '10:30', reason: '未授权补签' } })
+      assert.equal(rejected.status, expected)
+    }
+    assert.equal(server.data().cards.find(item => item.id === 'current-card').remain, 2)
+  } finally { await server.close() }
+})
+
+test('补签校验日期、时间与原因；过期卡可补有效期内的缺席，并发重试只扣一次', async () => {
+  const server = await startServer({ NODE_ENV: 'production' }, attendanceFixture())
+  try {
+    const headers = staff('staff-orders')
+    const makeup = (id, body) => server.request(`/api/cards/${id}/makeup-checkin`, { method: 'POST', headers, body })
+    const booking = { date: localDate(-2), time: '14:00-15:00', reason: '当日现场签到遗漏', sessionId: 'absent-session' }
+    const before = server.data().cards
+    for (const input of [
+      { date: '' }, { date: '2025-02-29' }, { date: localDate(1) }, { time: '24:00' }, { time: '23:70' }, { reason: '  ' }
+    ]) assertClientError(await makeup('current-card', { ...booking, sessionId: '', ...input }))
+    assertClientError(await makeup('expired-card', { ...booking, date: localDate(-1), sessionId: '' }))
+    assertClientError(await makeup('expired-card', { ...booking, time: '19:00' }))
+    assertClientError(await makeup('expired-card', { ...booking, date: localDate(-3) }))
+    assertClientError(await makeup('expired-card', { ...booking, sessionId: 'forged-session' }))
+    assert.deepEqual(server.data().cards, before)
+    const spoof = { ...booking, operator: '伪造操作人', memberName: '伪造会员', memberPhone: '13800000009' }
+    const replies = await Promise.all([makeup('expired-card', spoof), makeup('expired-card', spoof)])
+    for (const reply of replies) assert.equal(ok(reply).remain, 0)
+    const duplicate = await makeup('expired-card', { ...booking, sessionId: '' })
+    assert.equal(ok(duplicate).remain, 0)
+    const card = server.data().cards.find(item => item.id === 'expired-card')
+    assert.equal(card.remain, 0)
+    assert.equal(card.attendanceRecords.length, 1)
+    const [record] = card.attendanceRecords
+    assert.equal(record.id, 'absent-session')
+    assert.equal(record.checkinType, 'makeup')
+    assert.equal(record.status, 'checked')
+    assert.equal(record.date, booking.date)
+    assert.equal(record.time, booking.time)
+    assert.equal(record.makeupReason, booking.reason)
+    assert.equal(record.operator, '现场测试员')
+    assert.equal(record.memberName, '签到测试甲')
+    assert.equal(record.memberPhone, '13800000001')
+    assert.ok(record.checkedAt)
+    assertClientError(await makeup('expired-card', { ...booking, date: localDate(-3), sessionId: '' }))
+    assert.deepEqual(server.data().cards.find(item => item.id === 'expired-card'), card)
+    const manual = ok(await makeup('current-card', { date: localDate(-1), time: '09:45', reason: '后台补登' }))
+    assert.equal(manual.remain, 1)
+    assert.equal(manual.attendanceRecords[0].time, '09:45')
+    assert.equal(manual.attendanceRecords[0].memberPhone, undefined)
+  } finally { await server.close() }
+})
+
+test('订单核销码只匹配唯一订单，重复核销不会重复推进状态或写入履约日志', async () => {
+  const data = fixture()
+  const order = (id, code, mode = 'verify_code') => ({ id, code, serviceMode: mode, status: mode === 'delivery' ? '待发货' : '待核销', paymentStatus: 'SUCCESS', userId: 'member-a', title: '测试订单', payAmount: 10 })
+  data.orders = [order('valid', '1234 5678'), order('dup-a', '8765 4321'), order('dup-b', '87654321'), order('unspecified', ''), order('delivery', '2222 3333', 'delivery')]
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  try {
+    const headers = staff('staff-orders')
+    const lookup = (code, identity = headers) => server.request(`/api/orders/code/${encodeURIComponent(code)}`, { headers: identity })
+    const verify = (id, identity = headers) => server.request(`/api/orders/${id}/verify`, { method: 'POST', headers: identity, body: {} })
+    const original = server.data().orders
+    assert.equal(ok(await lookup('12345678')).id, 'valid')
+    assert.equal(ok(await lookup('1234 5678')).id, 'valid')
+    for (const invalid of [' ', 'abc123', '00000000']) assertClientError(await lookup(invalid))
+    const conflict = await lookup('8765 4321')
+    assertClientError(conflict)
+    assert.match(conflict.body.message, /冲突|重复/)
+    assert.equal((await lookup('12345678', staff('staff-dashboard'))).status, 403)
+    assert.equal((await verify('valid', staff('staff-dashboard'))).status, 403)
+    assertClientError(await verify('delivery'))
+    assert.deepEqual(server.data().orders, original)
+    const results = await Promise.all([verify('valid'), verify('valid')])
+    assert.equal(results.filter(reply => reply.status === 200).length, 1)
+    assertClientError(results.find(reply => reply.status !== 200))
+    const completed = ok(results.find(reply => reply.status === 200))
+    assert.equal(completed.status, '待评价')
+    assert.equal(completed.fulfillmentStatus, '已核销')
+    assert.ok(completed.verifiedAt)
+    const snapshot = server.data()
+    assertClientError(await verify('valid'))
+    assert.deepEqual(server.data().orders, snapshot.orders)
+    assert.deepEqual(server.data().logs, snapshot.logs)
+    assert.equal(server.calls().length, 0)
+  } finally { await server.close() }
+})
+
+test('同卡同日多节课必须选定课次，省略时间时保留所选课次的排课时段', async () => {
+  const data = attendanceFixture()
+  const date = localDate(-1)
+  const scheduled = [
+    { id: 'morning', status: 'absent', date, time: '09:00-10:30' },
+    { id: 'afternoon', status: 'absent', date, time: '14:00-15:30' }
+  ]
+  data.cards.find(card => card.id === 'current-card').attendanceRecords = scheduled
+  const server = await startServer({ NODE_ENV: 'production' }, data)
+  try {
+    const submit = (extra = {}) => server.request('/api/cards/current-card/makeup-checkin', {
+      method: 'POST', headers: staff('staff-orders'), body: { date, reason: '课次签到遗漏', ...extra }
+    })
+    const ambiguous = await submit()
+    assertClientError(ambiguous)
+    assert.match(ambiguous.body.message, /选择.*课次/)
+    const first = ok(await submit({ sessionId: 'afternoon' }))
+    assert.equal(first.remain, 1)
+    assert.equal(first.checkedCount, 1)
+    assert.equal(first.absentCount, 1)
+    const afternoon = first.attendanceRecords.find(row => row.id === 'afternoon')
+    assert.equal(afternoon.status, 'checked')
+    assert.equal(afternoon.time, '14:00-15:30')
+    assert.equal(ok(await submit({ sessionId: 'afternoon' })).remain, 1)
+    const morning = ok(await submit({ sessionId: 'morning' }))
+    assert.equal(morning.remain, 0)
+    assert.equal(morning.checkedCount, 2)
   } finally { await server.close() }
 })

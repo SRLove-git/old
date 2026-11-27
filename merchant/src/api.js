@@ -8,11 +8,12 @@ export const token = () => localStorage.getItem(TOKEN_KEY) || ''
 export const setToken = (value) => value ? localStorage.setItem(TOKEN_KEY, value) : localStorage.removeItem(TOKEN_KEY)
 
 async function request(path, options = {}) {
+  const { timeoutMs = REQUEST_TIMEOUT_MS, ...fetchOptions } = options
   const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = timeoutMs && window.setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(BASE + path, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}`, ...(options.headers || {}) }
     })
@@ -42,6 +43,7 @@ async function request(path, options = {}) {
 export const api = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body || {}) }),
+  uploadImage: (blob) => request('/merchant/uploads/image/file', { method: 'POST', timeoutMs: 0, body: blob, headers: { 'Content-Type': blob.type } }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body || {}) }),
   del: (path) => request(path, { method: 'DELETE' })
 }

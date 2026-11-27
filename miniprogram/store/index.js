@@ -20,6 +20,8 @@ const {
 
 const COURSE_PURCHASE_KEY = 'suiyueli_course_purchases_v1'
 const CART_KEY = 'suiyueli_cart_v1'
+// 只记录第一次进入时的主理人来源；绑定成功后清除，之后其他主理人的链接不再改变归属。
+const FIRST_REFERRAL_KEY = 'suiyueli_first_referral_v1'
 
 function localDateKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -63,8 +65,8 @@ let managersRefreshPromise = null
 let profileRefreshPromise = null
 let reviewsRefreshPromise = null
 let ordersRefreshPromise = null
-let pendingBindManagerId = null
-let pendingBindSource = null
+let referralBindPromise = null
+let bindNoticeManager = null
 
 function getCategory(id) {
   return cache.categories[id] || { name: '全部', short: '全部', emoji: '📦', color: '#555555' }
@@ -188,6 +190,7 @@ function decorateLive(live) {
   }))
   return {
     ...live,
+    publisherType: live.publisherType || (live.managerId ? 'merchant' : 'platform'),
     coverImage: apiAssetUrl(live.coverImage),
     streamUrl: apiAssetUrl(live.streamUrl),
     replayUrl: apiAssetUrl(live.replayUrl),
@@ -196,10 +199,19 @@ function decorateLive(live) {
 }
 
 function applyHome(home) {
+  const previous = new Map((cache.contentPosts || []).map((post) => [String(post.id), post]))
   cache.activities = home.activities || []
   cache.products = home.products || []
   cache.regions = home.regions || []
-  cache.contentPosts = (home.contentPosts || []).map(decorateContentPost)
+  cache.contentPosts = (home.contentPosts || []).map((post) => {
+    const decorated = decorateContentPost(post)
+    const cached = previous.get(String(decorated.id))
+    // 首页只下发卡片信息，已经按需拉取过的正文不能被列表刷新覆盖。
+    if (cached && !(decorated.contentBlocks || []).length && (cached.contentBlocks || []).length) {
+      return { ...decorated, contentBlocks: cached.contentBlocks, content: decorated.content || cached.content }
+    }
+    return decorated
+  })
   cache.banners = home.banners || []
   cache.categories = home.categories || {}
   cache.config = home.config || {}
@@ -506,7 +518,20 @@ function getContentPosts() {
 }
 
 function getContentPost(id) {
-  return (cache.contentPosts || []).find((item) => String(item.id) === String(id)) || null
+  return (cache.contentPosts || []).find((item) => String(item.id) === String(id) ||
+    (item.aliasIds || []).includes(String(id))) || null
+}
+
+// 详情页按需拉取全文：列表/首页只有卡片信息，避免启动时下载所有文章正文。
+async function fetchContentPost(id) {
+  if (!id) return null
+  const post = await apiService.fetchContentPost(id)
+  if (!post || !post.id) return null
+  const decorated = decorateContentPost(post)
+  const index = (cache.contentPosts || []).findIndex((item) => String(item.id) === String(decorated.id))
+  if (index >= 0) cache.contentPosts[index] = { ...cache.contentPosts[index], ...decorated }
+  else cache.contentPosts.unshift(decorated)
+  return getContentPost(id)
 }
 
 function getOfferings(managerId) {
@@ -690,30 +715,107 @@ function getDefaultAddress() {
   return cache.addresses.find((a) => a.isDefault) || cache.addresses[0] || null
 }
 
+function normalizeReferralRecord(value) {
+  if (!value || typeof value !== 'object') return null
+  const managerId = normalizeManagerId(value.managerId)
+  if (!managerId) return null
+  return {
+    managerId,
+    source: [1, 2, 3].includes(Number(value.source)) ? Number(value.source) : 2,
+    capturedAt: Number(value.capturedAt) || 0
+  }
+}
+
+function readFirstReferral() {
+  try {
+    return normalizeReferralRecord(wx.getStorageSync(FIRST_REFERRAL_KEY))
+  } catch (error) {
+    return null
+  }
+}
+
 function setPendingBind(managerId, source) {
-  pendingBindManagerId = managerId
-  pendingBindSource = source
+  const id = normalizeManagerId(managerId)
+  if (!id) return null
+  const existing = readFirstReferral()
+  // 首触优先：已经记录过推荐来源时，后续主理人链接不覆盖。
+  if (existing) return existing
+  const record = {
+    managerId: id,
+    source: [1, 2, 3].includes(Number(source)) ? Number(source) : 2,
+    capturedAt: Date.now()
+  }
+  try {
+    wx.setStorageSync(FIRST_REFERRAL_KEY, record)
+  } catch (error) {
+    return null
+  }
+  return record
 }
 
 function getPendingBind() {
-  return pendingBindManagerId
+  const referral = readFirstReferral()
+  return referral ? referral.managerId : null
+}
+
+function clearFirstReferral() {
+  try {
+    wx.removeStorageSync(FIRST_REFERRAL_KEY)
+  } catch (error) {}
 }
 
 async function confirmPendingBind() {
-  if (!pendingBindManagerId) return null
+  const referral = readFirstReferral()
+  if (!referral) return null
   await ensureLogin()
-  const managerId = pendingBindManagerId
-  const source = pendingBindSource || 2
-  pendingBindManagerId = null
-  pendingBindSource = null
-  const manager = await apiService.bindByManagerId(managerId, source)
+  const manager = await apiService.bindByManagerId(referral.managerId, referral.source)
+  clearFirstReferral()
   cache.boundManager = manager
   return manager
 }
 
 function cancelPendingBind() {
-  pendingBindManagerId = null
-  pendingBindSource = null
+  clearFirstReferral()
+}
+
+function takeBindNotice() {
+  const manager = bindNoticeManager
+  bindNoticeManager = null
+  return manager
+}
+
+async function syncReferralBinding() {
+  if (!readFirstReferral() || !isLoggedIn()) return null
+  if (referralBindPromise) return referralBindPromise
+  referralBindPromise = (async () => {
+    // 等首屏资料加载完成，避免绑定结果随后被旧的“未绑定”资料覆盖。
+    try {
+      await ready()
+    } catch (error) {}
+    const referral = readFirstReferral()
+    if (!referral || !isLoggedIn()) return null
+    if (cache.boundManager) {
+      clearFirstReferral()
+      return null
+    }
+    let manager = null
+    try {
+      manager = await apiService.bindByManagerId(referral.managerId, referral.source)
+    } catch (error) {
+      const status = Number(error && error.statusCode)
+      // 链接失效、主理人不可绑定等明确拒绝不再重试；网络和登录问题保留首触来源。
+      if (status >= 400 && status < 500 && status !== 401) clearFirstReferral()
+      return null
+    }
+    clearFirstReferral()
+    if (!manager) return null
+    cache.boundManager = manager
+    if (String(manager.id) === String(referral.managerId)) bindNoticeManager = manager
+    return manager
+  })().finally(() => {
+    referralBindPromise = null
+  })
+  return referralBindPromise
 }
 
 async function bindByCode(code) {
@@ -1005,6 +1107,7 @@ module.exports = {
   getOrderCoverFallback,
   getContentPosts,
   getContentPost,
+  fetchContentPost,
   getOfferings,
   getReviews,
   getLives,
@@ -1038,6 +1141,8 @@ module.exports = {
   getPendingBind,
   confirmPendingBind,
   cancelPendingBind,
+  syncReferralBinding,
+  takeBindNotice,
   bindByCode,
   unbindManager,
   createOrder,

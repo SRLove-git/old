@@ -12,8 +12,10 @@
 
     <swiper class="hero" autoplay interval="5000" duration="500" circular indicator-dots indicator-color="rgba(255,255,255,.5)" indicator-active-color="#ffffff">
       <swiper-item wx:for="{{banners}}" wx:key="id">
-        <view class="hero-slide" data-link="{{item.linkUrl}}" data-cat="{{item.cat}}" bindtap="goBanner" style="background: {{item.tone}}">
-          <video wx:if="{{item.mediaType === 'video' && item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" autoplay="{{index === 0}}" muted loop controls="{{false}}" object-fit="cover" />
+        <view class="hero-slide" data-link="{{item.linkUrl}}" bindtap="goBanner" style="background: {{item.tone}}">
+          <video wx:if="{{item.mediaType === 'video' && item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" autoplay="{{index === 0}}" muted loop controls="{{false}}" object-fit="cover">
+            <cover-view wx:if="{{item.linkUrl}}" class="hero-video-link" data-link="{{item.linkUrl}}" catchtap="goBanner" aria-label="{{item.title}}，查看详情"></cover-view>
+          </video>
           <image webp="{{true}}" wx:elif="{{item.mediaUrl}}" class="hero-image" src="{{item.mediaUrl}}" mode="aspectFill" />
           <image webp="{{true}}" wx:else class="hero-image" src="/assets/home-hero.jpg" mode="aspectFill" />
           <view class="hero-shade"></view>
@@ -21,18 +23,18 @@
             <text class="hero-kicker">{{copy.homeHeroKicker}}</text>
             <view class="hero-title">{{item.title}}</view>
             <view class="hero-sub">{{item.sub}}</view>
-            <view class="hero-action">查看详情 <view class="arrow-line"></view></view>
+            <view wx:if="{{item.linkUrl}}" class="hero-action">查看详情 <view class="arrow-line"></view></view>
           </view>
         </view>
       </swiper-item>
     </swiper>
   </view>
 
-  <view wx:if="{{newsPosts.length}}" class="home-content-section policy-section">
-    <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><view class="content-head-actions"><text class="official-badge">权威来源</text><view class="content-more" data-type="news" bindtap="goContentList">查看全部 <text class="content-more-arrow">›</text></view></view></view>
-    <view class="policy-list">
+  <view wx:if="{{hasNews}}" class="home-content-section policy-section">
+    <view class="content-section-head"><view><view class="content-section-title">政策资讯</view><view class="content-section-en">GOVERNMENT NEWS</view></view><view class="content-more" data-type="news" bindtap="goContentList">查看全部 <text class="content-more-arrow">›</text></view></view>
+    <view wx:if="{{newsPosts.length}}" class="policy-list">
       <view wx:for="{{newsPosts}}" wx:key="id" class="policy-card" data-id="{{item.id}}" bindtap="goContent">
-        <image webp="{{true}}" class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        <image wx:if="{{item.coverImage}}" webp="{{true}}" class="policy-cover" src="{{item.coverImage}}" mode="aspectFill" />
         <view class="policy-copy"><view class="policy-title">{{item.title}}</view><view class="policy-summary">{{item.summary}}</view><view class="policy-meta"><text>{{item.source}}</text><text>{{item.publishedAt}}</text></view></view>
       </view>
     </view>

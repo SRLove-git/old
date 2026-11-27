@@ -64,6 +64,8 @@ Page({
     try {
       const auth = await login()
       await store.refresh()
+      // 登录成功后先完成首触绑定，确保本次进入产生的订单归属正确。
+      await store.syncReferralBinding().catch(() => {})
       this.finishLogin(auth)
     } catch (error) {
       wx.showToast({
@@ -81,6 +83,8 @@ Page({
     try {
       const auth = await login()
       await store.refresh()
+      // 登录成功后先完成首触绑定，确保本次进入产生的订单归属正确。
+      await store.syncReferralBinding().catch(() => {})
       this.finishLogin(auth)
     } catch (error) {
       this.setData({ loading: false })

@@ -5,6 +5,11 @@ function fetchHome() {
   return publicApi.get('/home')
 }
 
+// 首页列表只带卡片信息，正文进详情页再按 id 拉取，避免启动时下载全部正文。
+function fetchContentPost(id) {
+  return publicApi.get(`/content-posts/${encodeURIComponent(id)}`)
+}
+
 function fetchReviews() {
   return publicApi.get('/reviews')
 }
@@ -199,6 +204,7 @@ function getManagerApplication(id) {
 
 module.exports = {
   fetchHome,
+  fetchContentPost,
   fetchReviews,
   fetchManagers,
   fetchLives,

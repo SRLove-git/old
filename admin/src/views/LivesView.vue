@@ -1,19 +1,31 @@
 <script setup>
 import { computed } from "vue";
+import { isPlatformPublisher, isOrphanedMerchantPublisher, matchesPublisher } from "../utils/catalog-publisher.js";
 import { IconPlus } from "@arco-design/web-vue/es/icon";
 import { fmtMoney } from "../utils/presentation.js";
 
 const props = defineProps({
   lives: { type: Array, default: () => [] },
-  merchant: { type: Object, default: null },
-  merchantOptions: { type: Array, default: () => [] },
+  publisherOptions: { type: Array, default: () => [] },
+  publisherOptionsLoading: { type: Boolean, default: false },
+  publisherOptionsError: { type: String, default: "" },
+  publisherName: { type: Function, required: true },
 });
 
-const merchantId = defineModel("merchantId", { type: String, default: "" });
-const emit = defineEmits(["edit", "remove"]);
+const publisherId = defineModel("publisherId", {
+  type: [String, Number],
+  default: "platform",
+});
+const emit = defineEmits(["edit", "remove", "retry-publishers"]);
+const selectedPublisher = computed(() =>
+  props.publisherOptions.find(
+    (option) => String(option.value) === String(publisherId.value),
+  ),
+);
 
 const columns = [
   { title: "课程名称", dataIndex: "title", ellipsis: true, tooltip: true },
+  { title: "发布归属", slotName: "publisher", width: 150 },
   { title: "讲师", dataIndex: "hostName", width: 120 },
   { title: "分类", dataIndex: "category", width: 120 },
   { title: "会员价", slotName: "price", width: 100, align: "right" },
@@ -22,12 +34,8 @@ const columns = [
   { title: "操作", slotName: "actions", width: 140 },
 ];
 
-const merchantLives = computed(() =>
-  merchantId.value
-    ? props.lives.filter(
-        (item) => String(item.managerId) === String(merchantId.value),
-      )
-    : [],
+const visibleLives = computed(() =>
+  props.lives.filter(item => matchesPublisher(item, publisherId.value)),
 );
 
 function statusMeta(status) {
@@ -40,33 +48,70 @@ function statusMeta(status) {
 <template>
   <section>
     <a-card
-      title="第一步：选择商家"
+      title="选择发布归属"
       :bordered="false"
       class="merchant-scope-card"
     >
       <a-select
-        v-model="merchantId"
-        :options="merchantOptions"
+        v-model="publisherId"
+        :options="publisherOptions"
+        :loading="publisherOptionsLoading"
         allow-search
-        allow-clear
-        placeholder="请选择要管理的商家"
+        placeholder="请选择平台或商家"
         class="merchant-select"
       />
-      <span v-if="merchant" class="muted"
-        >当前正在管理：{{ merchant.shopName || merchant.name }}</span
-      >
+      <span class="muted">
+        当前正在管理：{{
+          publisherId === "platform"
+            ? "平台自营"
+            : publisherId === "orphaned"
+              ? "归属异常（待修复）"
+            : publisherName({ managerId: publisherId })
+        }}
+      </span>
+      <a-button
+        v-if="publisherOptionsError"
+        type="text"
+        size="small"
+        status="warning"
+        @click="emit('retry-publishers')"
+      >{{ publisherOptionsError }} 点击重试</a-button>
     </a-card>
     <a-alert type="info" class="toolbar"
-      >选择商家后，可维护该商家的直播课、视频课和配套学堂内容。</a-alert
+      >平台可直接发布自营课程；选择商家后，也可维护该商家的直播课、视频课和配套学堂内容。</a-alert
     >
+    <div class="list-create-toolbar">
+      <a-button
+        type="primary"
+        shape="round"
+        :disabled="selectedPublisher?.historical"
+        @click="emit('edit', null)"
+      >
+        <template #icon><IconPlus /></template>
+        {{ selectedPublisher?.historical ? "该归属不可新建" : publisherId === "platform" ? "新建平台课程" : "为该商家新建课程" }}
+      </a-button>
+    </div>
     <a-card :bordered="false">
       <a-table
         :columns="columns"
-        :data="merchantLives"
+        :data="visibleLives"
         :pagination="false"
         row-key="id"
         size="middle"
       >
+        <template #publisher="{ record }">
+          <a-tag
+            :color="
+              isPlatformPublisher(record)
+                ? 'purple'
+                : isOrphanedMerchantPublisher(record)
+                  ? 'orange'
+                  : 'green'
+            "
+          >
+            {{ publisherName(record) }}
+          </a-tag>
+        </template>
         <template #price="{ record }"
           ><span>¥{{ fmtMoney(record.memberPrice) }}</span></template
         >
@@ -91,16 +136,6 @@ function statusMeta(status) {
         </template>
       </a-table>
     </a-card>
-    <a-button
-      type="primary"
-      shape="round"
-      class="fab"
-      :disabled="!merchantId"
-      @click="emit('edit', null)"
-    >
-      <template #icon><IconPlus /></template>
-      新建课程
-    </a-button>
   </section>
 </template>
 
@@ -126,13 +161,5 @@ function statusMeta(status) {
 .muted {
   color: var(--color-text-3);
   font-size: 13px;
-}
-
-.fab {
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
-  z-index: 20;
-  box-shadow: 0 6px 20px rgba(29, 27, 22, 0.16);
 }
 </style>

@@ -9,7 +9,7 @@ const props = defineProps({
 
 const keyword = defineModel("keyword", { type: String, default: "" });
 const status = defineModel("status", { type: String, default: "all" });
-const emit = defineEmits(["edit", "reset-password"]);
+const emit = defineEmits(["create", "edit", "reset-password"]);
 
 const columns = [
   { title: "商户账号", dataIndex: "username", width: 150 },
@@ -68,6 +68,7 @@ const filteredAccounts = computed(() => {
     </a-row>
     <div class="toolbar spaced-toolbar">
       <a-space wrap>
+        <a-button type="primary" @click="emit('create')">新建商户</a-button>
         <a-input-search
           v-model="keyword"
           placeholder="搜索商户账号、商家、联系人或手机号"

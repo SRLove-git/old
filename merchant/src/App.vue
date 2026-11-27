@@ -1,9 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import Message from '@arco-design/web-vue/es/message'
 import Modal from '@arco-design/web-vue/es/modal'
 import { IconArchive, IconCalendar, IconFile, IconMenuFold, IconMenuUnfold, IconPlus } from '@arco-design/web-vue/es/icon'
 import { api, setToken, token } from './api.js'
+import { imageAccept, imageFormats, prepareUploadImage } from '@suiyueli/rich-editor/upload-image'
+import { hasDetailContent, incompleteImage } from '../../shared/editor-blocks.js'
+
+const ArticleEditor = defineAsyncComponent(() => import('@suiyueli/rich-editor'))
 
 const auth = ref({ username: '', password: '' })
 const merchant = ref(null)
@@ -12,7 +16,8 @@ const rows = ref([])
 const loading = ref(false)
 const error = ref('')
 const form = ref(null)
-const uploading = ref(false)
+const coverUploads = ref(new Set())
+const uploading = computed(() => coverUploads.value.has(form.value))
 const collapsed = ref(false)
 const keyword = ref('')
 const coverInput = ref(null)
@@ -20,10 +25,12 @@ const categories = ref({})
 const regions = ref([])
 const activitySchedules = ref([])
 const activitySkus = ref([])
-const activityDetailBlocks = ref([])
 const activityRefundLadder = ref([])
-const activityDetailUploading = ref({})
-const courseVideoUploading = ref({})
+const detailEditor = ref(null)
+const detailBusy = ref(false)
+const courseVideoUploading = ref(new Set())
+const hasPendingUploads = computed(() => uploading.value || detailBusy.value
+  || form.value?.lessons?.some(lesson => courseVideoUploading.value.has(lesson)))
 const isPaidPrice = (value) => Number.isFinite(Number(value)) && Number(value) >= 0.01
 
 const sections = [
@@ -119,7 +126,11 @@ function emptyForm() {
 
 function openEditor(item = null) {
   form.value = item ? JSON.parse(JSON.stringify(item)) : emptyForm()
-  courseVideoUploading.value = {}
+  detailBusy.value = false
+  const legacyText = view.value === 'courses' ? form.value.description : form.value.detail
+  if (!Array.isArray(form.value.detailBlocks) || !form.value.detailBlocks.length) {
+    form.value.detailBlocks = [{ type: 'text', text: legacyText || '' }]
+  }
   if (view.value === 'courses' && !Array.isArray(form.value.lessons)) form.value.lessons = []
   if (view.value !== 'courses') {
     form.value.refundRule ||= { type: 'day', fullDays: view.value === 'products' ? 7 : 2, partialDays: 0, partialRate: 0 }
@@ -135,9 +146,6 @@ function openEditor(item = null) {
     form.value.minGroup ||= 0
     activitySchedules.value = (form.value.schedules || []).map(scheduleEditorRow)
     activitySkus.value = (form.value.skus || []).map((sku) => ({ ...sku }))
-    activityDetailBlocks.value = Array.isArray(form.value.detailBlocks) && form.value.detailBlocks.length
-      ? form.value.detailBlocks.map((block) => ({ ...block }))
-      : [{ type: 'text', text: form.value.detail || '' }]
     const rule = form.value.refundRule || { type: 'day', fullDays: 2, partialDays: 0, partialRate: 0 }
     form.value.refundRule = { ...rule, partialRatePercent: Math.round(Number(rule.partialRate || 0) * 100) }
     activityRefundLadder.value = (rule.ladder || []).map((item) => ({ days: Number(item.days || 0), ratePercent: Math.round(Number(item.rate || 0) * 100) }))
@@ -149,9 +157,7 @@ function listingSectionDone(key) {
   if (key === 'basic') return Boolean(String(value.title || '').trim() && value.coverImage && value.category)
   if (key === 'sales') return isPaidPrice(value.memberPrice) && isPaidPrice(value.price) && value.status !== undefined && (view.value !== 'products' || Number(value.stock) >= 0)
   if (key === 'fulfillment') return Boolean(value.serviceMode && (view.value !== 'activities' || (value.sellType === 'date' ? activitySchedules.value.length : activitySkus.value.length)))
-  if (key === 'detail') return view.value === 'activities'
-    ? activityDetailBlocks.value.some((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.url)
-    : Boolean(String(value.detail || '').trim())
+  if (key === 'detail') return value.detailBlocks?.some(hasDetailContent)
   return false
 }
 
@@ -169,10 +175,6 @@ function moveLesson(index, direction) {
   form.value.lessons = lessons
 }
 
-function lessonUploadKey(lesson, index) {
-  return lesson.id || `lesson-${index}`
-}
-
 async function uploadCourseVideo(event, lesson, index) {
   const file = event.target.files?.[0]
   event.target.value = ''
@@ -180,16 +182,17 @@ async function uploadCourseVideo(event, lesson, index) {
   const extension = String(file.name || '').split('.').pop().toLowerCase()
   const validType = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'].includes(file.type)
   if (!validType && !['mp4', 'webm', 'mov', 'm4v'].includes(extension)) return Message.warning('课程视频仅支持 MP4、WebM、MOV 或 M4V 格式')
-  const key = lessonUploadKey(lesson, index)
-  courseVideoUploading.value = { ...courseVideoUploading.value, [key]: true }
+  if (courseVideoUploading.value.has(lesson)) return
+  courseVideoUploading.value.add(lesson)
   try {
     const result = await api.post('/merchant/uploads/course-video', { dataUrl: await fileDataUrl(file), fileName: file.name })
+    if (!form.value?.lessons?.includes(lesson)) return
     lesson.videoUrl = result.url
     Message.success(`第 ${index + 1} 节视频上传成功`)
   } catch (e) {
     Message.error(e.message || '视频上传失败')
   } finally {
-    courseVideoUploading.value = { ...courseVideoUploading.value, [key]: false }
+    courseVideoUploading.value.delete(lesson)
   }
 }
 
@@ -231,35 +234,23 @@ function addActivitySku() { activitySkus.value.push({ id: `sku-${Date.now()}`, n
 function removeActivitySku(index) { activitySkus.value.splice(index, 1) }
 function addRefundLadderRow() { activityRefundLadder.value.push({ days: 0, ratePercent: 0 }) }
 function removeRefundLadderRow(index) { activityRefundLadder.value.splice(index, 1) }
-function addActivityDetailBlock(type) {
-  activityDetailBlocks.value.push(type === 'text' ? { type, text: '' } : type === 'image' ? { type, src: '', caption: '' } : { type, url: '', caption: '' })
-}
-function removeActivityDetailBlock(index) { activityDetailBlocks.value.splice(index, 1) }
-function moveActivityDetailBlock(index, direction) {
-  const target = index + direction
-  if (target < 0 || target >= activityDetailBlocks.value.length) return
-  const blocks = [...activityDetailBlocks.value]
-  ;[blocks[index], blocks[target]] = [blocks[target], blocks[index]]
-  activityDetailBlocks.value = blocks
+
+async function uploadAsset(file, type = 'image') {
+  let result
+  if (type === 'image') {
+    result = await api.uploadImage(await prepareUploadImage(file))
+  } else {
+    if (!['video/mp4', 'video/webm'].includes(file.type)) throw new Error('视频仅支持 MP4 或 WebM')
+    if (file.size > 15 * 1024 * 1024) throw new Error('视频不能超过15MB')
+    result = await api.post('/merchant/uploads/video', { dataUrl: await fileDataUrl(file), fileName: file.name })
+  }
+  if (!result?.url) throw new Error('上传未返回文件地址，请重试')
+  return result.url
 }
 
-async function uploadActivityDetailAsset(event, index, type) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  const isVideo = type === 'video'
-  const valid = isVideo ? ['video/mp4', 'video/webm'].includes(file.type) : ['image/png', 'image/jpeg', 'image/webp'].includes(file.type)
-  if (!valid) return Message.warning(isVideo ? '视频仅支持 MP4 或 WebM' : '图片仅支持 PNG、JPG 或 WebP')
-  if (file.size > (isVideo ? 15 : 2) * 1024 * 1024) return Message.warning(isVideo ? '视频不能超过15MB' : '图片不能超过2MB')
-  activityDetailUploading.value = { ...activityDetailUploading.value, [index]: true }
-  try {
-    const result = await api.post(`/merchant/uploads/${isVideo ? 'video' : 'image'}`, { dataUrl: await fileDataUrl(file), fileName: file.name })
-    if (isVideo) activityDetailBlocks.value[index].url = result.url
-    else activityDetailBlocks.value[index].src = result.url
-    Message.success(`${isVideo ? '视频' : '图片'}上传成功`)
-  } catch (e) { Message.error(e.message || '上传失败') } finally {
-    activityDetailUploading.value = { ...activityDetailUploading.value, [index]: false }
-  }
+function serializeDetails(payload, textField) {
+  payload.detailBlocks = payload.detailBlocks.filter(hasDetailContent)
+  payload[textField] = payload.detailBlocks.filter(block => block.type === 'text').map(block => block.text).join('\n\n')
 }
 
 function prepareActivityPayload() {
@@ -270,8 +261,6 @@ function prepareActivityPayload() {
   payload.schedules = serializeActivitySchedules()
   payload.skus = activitySkus.value.map((sku, index) => ({ ...sku, id: sku.id || `sku-${Date.now()}-${index + 1}`, name: String(sku.name || '').trim() })).filter((sku) => sku.name)
   payload.hasSku = payload.sellType === 'sku' || payload.skus.length > 0
-  payload.detailBlocks = activityDetailBlocks.value.map((block) => ({ ...block })).filter((block) => block.type === 'text' ? String(block.text || '').trim() : block.type === 'image' ? block.src : block.url)
-  payload.detail = payload.detailBlocks.filter((block) => block.type === 'text').map((block) => block.text).join('\n\n')
   const refundType = payload.refundRule?.type || 'never'
   payload.refundRule = refundType === 'day'
     ? { type: 'day', fullDays: Number(payload.refundRule.fullDays || 0), partialDays: Number(payload.refundRule.partialDays || 0), partialRate: Number(payload.refundRule.partialRatePercent || 0) / 100 }
@@ -283,6 +272,10 @@ function prepareActivityPayload() {
 }
 
 async function save() {
+  if (!detailEditor.value) return Message.info('编辑器加载中，请稍后保存')
+  if (!detailEditor.value.finishPanel()) return
+  if (hasPendingUploads.value) return Message.warning('请等待文件上传完成后再保存')
+  if (form.value.detailBlocks.some(incompleteImage)) return Message.warning('请上传详情图片，或删除空图片块')
   if (!String(form.value.title || '').trim()) return Message.warning(`请填写${current.value.singular}名称`)
   if (!isPaidPrice(form.value.memberPrice)) return Message.warning(`${current.value.singular}会员价最低为0.01元，不能为0元`)
   if (view.value !== 'courses' && !isPaidPrice(form.value.price)) return Message.warning(`${current.value.singular}非会员价最低为0.01元，不能为0元`)
@@ -296,7 +289,7 @@ async function save() {
     if (invalid >= 0) return Message.warning(`请填写第 ${invalid + 1} 节标题`)
     form.value.lessonCount = form.value.lessons.length || Number(form.value.lessonCount || 1)
   }
-  let payload = form.value
+  let payload
   if (view.value === 'activities') {
     try { payload = prepareActivityPayload() } catch (e) { return Message.warning(e.message) }
     if (payload.skus.some((sku) => !isPaidPrice(sku.memberPrice) || !isPaidPrice(sku.price))) return Message.warning('每个活动规格的会员价和非会员价最低为0.01元')
@@ -306,14 +299,18 @@ async function save() {
     // 商户端只编辑封面；轮播图由后端保留，避免把读取时的旧首图一并覆盖回去。
     delete payload.images
     if (payload.refundRule?.type === 'day') payload.refundRule.partialRate = Number(payload.refundRule.partialRatePercent || 0) / 100
+  } else {
+    payload = JSON.parse(JSON.stringify(form.value))
   }
+  serializeDetails(payload, view.value === 'courses' ? 'description' : 'detail')
   loading.value = true
   error.value = ''
+  const draft = form.value
   try {
-    if (form.value.id) await api.put(`/merchant/${view.value}/${form.value.id}`, payload)
+    if (draft.id) await api.put(`/merchant/${view.value}/${draft.id}`, payload)
     else await api.post(`/merchant/${view.value}`, payload)
-    form.value = null
     await loadRows()
+    if (form.value === draft) form.value = null
     Message.success('已保存')
   } catch (e) { error.value = e.message; Message.error(e.message) } finally { loading.value = false }
 }
@@ -334,10 +331,15 @@ async function uploadCover(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
   if (!file) return
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) return Message.warning('仅支持不超过2MB的 PNG、JPG、WebP 图片')
-  uploading.value = true
-  try { const dataUrl = await fileDataUrl(file); const result = await api.post('/merchant/uploads/image', { dataUrl, fileName: file.name }); form.value.coverImage = result.url }
-  catch (e) { error.value = e.message; Message.error(e.message) } finally { uploading.value = false }
+  const draft = form.value
+  if (coverUploads.value.has(draft)) return
+  coverUploads.value.add(draft)
+  try {
+    const url = await uploadAsset(file)
+    if (form.value === draft) draft.coverImage = url
+  } catch (e) {
+    if (form.value === draft) Message.error(e.message)
+  } finally { coverUploads.value.delete(draft) }
 }
 
 function coverUrl(value) { if (!value || /^(https?:|data:)/.test(value)) return value; return `${import.meta.env.BASE_URL.replace(/\/$/, '')}${value}` }
@@ -363,7 +365,7 @@ onMounted(restore)
       <a-form :model="auth" layout="vertical">
         <a-form-item label="登录账号"><a-input v-model="auth.username" size="large" placeholder="请输入商户账号" allow-clear @press-enter="authenticate" /></a-form-item>
         <a-form-item label="密码"><a-input-password v-model="auth.password" size="large" placeholder="请输入密码" @press-enter="authenticate" /></a-form-item>
-        <a-alert type="info" class="login-tip">商户账号由运营后台审核并开通。</a-alert>
+        <a-alert type="info" class="login-tip">请使用运营人员为您开通的商户账号登录。</a-alert>
         <div v-if="error" class="login-error">{{ error }}</div>
         <a-button type="primary" size="large" long :loading="loading" @click="authenticate">登录商户端</a-button>
       </a-form>
@@ -429,7 +431,7 @@ onMounted(restore)
             <section id="merchant-editor-basic" class="listing-section">
               <div class="listing-section-head"><div><span class="listing-section-index">01</span><strong>基础信息</strong></div><p>设置用户第一眼看到的标题、封面与分类</p></div>
               <a-form-item :label="`${current.singular}名称`" required><a-input v-model="form.title" :max-length="60" show-word-limit :placeholder="view === 'products' ? '建议填写品牌、品名、规格与核心卖点' : '建议填写活动主题、亮点与适用人群'" /></a-form-item>
-              <a-form-item label="封面图片" required><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadCover" /><a-space><a-button type="primary" :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 PNG、JPG、WebP，最大 2MB；建议使用 4:3 横图</div></div></a-form-item>
+              <a-form-item label="封面图片" required><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" :accept="imageAccept" hidden @change="uploadCover" /><a-space><a-button type="primary" :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 {{ imageFormats }}。建议使用 4:3 横图，动图取首帧。</div></div></a-form-item>
               <a-row :gutter="12">
                 <a-col :span="12"><a-form-item label="分类"><a-select v-model="form.category" :options="categoryOptions" /></a-form-item></a-col>
                 <a-col v-if="view === 'activities'" :span="12"><a-form-item label="适用地区（可多选）"><a-select v-model="form.regionIds" :options="enabledRegionOptions" multiple allow-search allow-clear placeholder="不选表示线上/全国" /></a-form-item></a-col>
@@ -465,23 +467,26 @@ onMounted(restore)
 
             <section id="merchant-editor-detail" class="listing-section">
               <div class="listing-section-head"><div><span class="listing-section-index">04</span><strong>{{ current.singular }}详情</strong></div><p>补充亮点、适用人群、使用方法和注意事项</p></div>
-              <a-form-item v-if="view === 'activities'" label="活动详情编辑器"><div class="detail-block-editor"><div v-if="!activityDetailBlocks.length" class="schedule-empty">暂无详情内容，请添加文字、图片或视频。</div><div v-for="(block, index) in activityDetailBlocks" :key="index" class="detail-block-row"><div class="detail-block-head"><a-tag :color="block.type === 'text' ? 'arcoblue' : block.type === 'image' ? 'green' : 'purple'">{{ block.type === 'text' ? '文字' : block.type === 'image' ? '图片' : '视频' }}</a-tag><a-space :size="4"><a-button type="text" size="mini" :disabled="index === 0" @click="moveActivityDetailBlock(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === activityDetailBlocks.length - 1" @click="moveActivityDetailBlock(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeActivityDetailBlock(index)">删除</a-button></a-space></div><a-textarea v-if="block.type === 'text'" v-model="block.text" :auto-size="{ minRows: 3, maxRows: 10 }" placeholder="输入活动介绍文字" /><template v-else-if="block.type === 'image'"><img v-if="block.src" class="detail-block-image" :src="coverUrl(block.src)" alt="详情图片预览" /><a-input v-model="block.src" placeholder="图片地址，或使用下方按钮上传" /><a-input v-model="block.caption" placeholder="图片说明（可选）" /><label class="detail-upload-button"><input type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadActivityDetailAsset($event, index, 'image')" /><a-button type="outline" size="small" :loading="activityDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传图片</a-button></label></template><template v-else><video v-if="block.url" class="detail-block-video" :src="coverUrl(block.url)" controls preload="metadata"></video><a-input v-model="block.url" placeholder="视频地址，或上传本地视频" /><a-input v-model="block.caption" placeholder="视频说明（可选）" /><label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm" hidden @change="uploadActivityDetailAsset($event, index, 'video')" /><a-button type="outline" size="small" :loading="activityDetailUploading[index]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label></template></div><a-space><a-button type="outline" @click="addActivityDetailBlock('text')">添加文字</a-button><a-button type="outline" @click="addActivityDetailBlock('image')">添加图片</a-button><a-button type="outline" @click="addActivityDetailBlock('video')">添加视频</a-button></a-space></div></a-form-item>
-              <a-form-item v-else label="详情内容"><a-textarea v-model="form.detail" :auto-size="{ minRows: 8, maxRows: 16 }" placeholder="请完整介绍内容亮点、规格、使用方式和注意事项" /></a-form-item>
+              <a-form-item :label="`${current.singular}详情编辑器`">
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :preview-url="coverUrl" @uploading="detailBusy = $event" :upload-video="file => uploadAsset(file, 'video')" />
+          </a-form-item>
             </section>
           </main>
         </div>
 
         <template v-if="view === 'courses'">
           <a-form-item :label="`${current.singular}名称`" required><a-input v-model="form.title" /></a-form-item>
-          <a-form-item label="封面图片"><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="uploadCover" /><a-space><a-button :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" type="text" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 PNG、JPG、WebP，最大 2MB</div></div></a-form-item>
+          <a-form-item label="封面图片"><div class="cover-uploader"><img v-if="form.coverImage" class="cover-preview" :src="coverUrl(form.coverImage)" alt="封面预览" /><div v-else class="cover-preview cover-empty">暂无封面</div><input ref="coverInput" type="file" :accept="imageAccept" hidden @change="uploadCover" /><a-space><a-button :loading="uploading" @click="coverInput?.click()">上传封面</a-button><a-button v-if="form.coverImage" type="text" @click="form.coverImage = ''">移除</a-button></a-space><div class="muted">支持 {{ imageFormats }}。动图取首帧。</div></div></a-form-item>
           <a-row :gutter="12"><a-col :span="12"><a-form-item label="讲师"><a-input v-model="form.hostName" /></a-form-item></a-col><a-col :span="12"><a-form-item label="课程分类"><a-input v-model="form.category" /></a-form-item></a-col></a-row>
           <a-row :gutter="12"><a-col :span="8"><a-form-item label="会员价"><a-input-number v-model="form.memberPrice" :min="0.01" :step="0.01" :precision="2" style="width: 100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="开始时间" required><a-date-picker v-model="form.startAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择开始日期和时间" style="width:100%" /></a-form-item></a-col><a-col :span="8"><a-form-item label="结束时间" required><a-date-picker v-model="form.endAt" show-time format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束日期和时间" style="width:100%" /></a-form-item></a-col></a-row>
           <a-form-item label="直播地址"><a-input v-model="form.streamUrl" placeholder="https://" /></a-form-item><a-form-item label="回放地址"><a-input v-model="form.replayUrl" placeholder="https://" /></a-form-item>
-          <a-form-item label="课程章节"><div class="lesson-editor"><div class="lesson-editor-head"><span class="muted">按顺序编排每一节课，可填写外链或上传本地视频</span><a-button type="outline" size="small" @click="addLesson"><template #icon><IconPlus /></template>新增课节</a-button></div><a-empty v-if="!form.lessons.length" description="暂无章节" /><div v-for="(lesson, index) in form.lessons" :key="lesson.id || index" class="lesson-row"><div class="lesson-row-head"><strong>第 {{ index + 1 }} 节</strong><a-space :size="0"><a-button type="text" size="mini" :disabled="index === 0" @click="moveLesson(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === form.lessons.length - 1" @click="moveLesson(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeLesson(index)">删除</a-button></a-space></div><a-row :gutter="10"><a-col :span="16"><a-input v-model="lesson.title" placeholder="课节标题" /></a-col><a-col :span="8"><a-input v-model="lesson.duration" placeholder="时长，如 18:40" /></a-col></a-row><video v-if="lesson.videoUrl" class="detail-block-video" :src="coverUrl(lesson.videoUrl)" controls preload="metadata"></video><a-input v-model="lesson.videoUrl" placeholder="HTTPS 视频、MP4、WebM、MOV、M4V 或 M3U8 地址" /><div class="lesson-video-actions"><label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov,.m4v" hidden @change="uploadCourseVideo($event, lesson, index)" /><a-button type="outline" size="small" :loading="courseVideoUploading[lessonUploadKey(lesson, index)]" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label><a-button v-if="lesson.videoUrl" type="text" size="small" status="danger" @click="lesson.videoUrl = ''">移除视频</a-button><span class="muted">支持 MP4、WebM、MOV、M4V，暂不限制文件大小</span></div><div class="lesson-options"><a-checkbox v-model="lesson.isPreview">允许试看</a-checkbox><a-switch v-model="lesson.status" :checked-value="1" :unchecked-value="0" checked-text="上架" unchecked-text="下架" /></div></div></div></a-form-item>
-          <a-form-item label="课程介绍"><a-textarea v-model="form.description" :auto-size="{ minRows: 5, maxRows: 10 }" /></a-form-item>
+          <a-form-item label="课程章节"><div class="lesson-editor"><div class="lesson-editor-head"><span class="muted">按顺序编排每一节课，可填写外链或上传本地视频</span><a-button type="outline" size="small" @click="addLesson"><template #icon><IconPlus /></template>新增课节</a-button></div><a-empty v-if="!form.lessons.length" description="暂无章节" /><div v-for="(lesson, index) in form.lessons" :key="lesson.id || index" class="lesson-row"><div class="lesson-row-head"><strong>第 {{ index + 1 }} 节</strong><a-space :size="0"><a-button type="text" size="mini" :disabled="index === 0" @click="moveLesson(index, -1)">上移</a-button><a-button type="text" size="mini" :disabled="index === form.lessons.length - 1" @click="moveLesson(index, 1)">下移</a-button><a-button type="text" size="mini" status="danger" @click="removeLesson(index)">删除</a-button></a-space></div><a-row :gutter="10"><a-col :span="16"><a-input v-model="lesson.title" placeholder="课节标题" /></a-col><a-col :span="8"><a-input v-model="lesson.duration" placeholder="时长，如 18:40" /></a-col></a-row><video v-if="lesson.videoUrl" class="detail-block-video" :src="coverUrl(lesson.videoUrl)" controls preload="metadata"></video><a-input v-model="lesson.videoUrl" placeholder="HTTPS 视频、MP4、WebM、MOV、M4V 或 M3U8 地址" /><div class="lesson-video-actions"><label class="detail-upload-button"><input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mov,.m4v" hidden @change="uploadCourseVideo($event, lesson, index)" /><a-button type="outline" size="small" :loading="courseVideoUploading.has(lesson)" @click.prevent="$event.currentTarget.parentElement.querySelector('input').click()">上传本地视频</a-button></label><a-button v-if="lesson.videoUrl" type="text" size="small" status="danger" @click="lesson.videoUrl = ''">移除视频</a-button><span class="muted">支持 MP4、WebM、MOV、M4V，暂不限制文件大小</span></div><div class="lesson-options"><a-checkbox v-model="lesson.isPreview">允许试看</a-checkbox><a-switch v-model="lesson.status" :checked-value="1" :unchecked-value="0" checked-text="上架" unchecked-text="下架" /></div></div></div></a-form-item>
+          <a-form-item label="课程介绍">
+            <ArticleEditor ref="detailEditor" v-model="form.detailBlocks" :title="form.title" :allow-cards="false" :upload-image="uploadAsset" :preview-url="coverUrl" @uploading="detailBusy = $event" :allow-video="false" />
+          </a-form-item>
         </template>
       </a-form>
-      <template #footer><a-button @click="form = null">取消</a-button><a-button type="primary" :loading="loading" @click="save">保存并发布</a-button></template>
+      <template #footer><a-button @click="form = null">取消</a-button><a-button type="primary" :loading="loading" :disabled="hasPendingUploads" @click="save">保存并发布</a-button></template>
     </a-modal>
   </a-layout>
 </template>

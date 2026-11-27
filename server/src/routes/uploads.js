@@ -1,11 +1,12 @@
 import { Router } from 'express'
 import { wrap } from '../lib/http.js'
-import { saveCourseVideoDataUrl, saveImageDataUrl, saveVideoDataUrl } from '../lib/uploads.js'
+import { saveCourseVideoDataUrl, saveImageDataUrl, saveImageStream, saveVideoDataUrl } from '../lib/uploads.js'
 import { adminAuth } from '../middleware/auth.js'
 
 const router = Router()
 
 router.use(adminAuth)
+router.post('/image/file', wrap(async req => ({ url: await saveImageStream(req) })))
 router.post('/image', wrap(async (req) => ({ url: await saveImageDataUrl(req.body?.dataUrl) })))
 router.post('/video', wrap((req) => ({ url: saveVideoDataUrl(req.body?.dataUrl) })))
 router.post('/course-video', wrap((req) => ({

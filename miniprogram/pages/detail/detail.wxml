@@ -16,7 +16,7 @@
     <view class="price-line"><text class="currency">¥</text><text class="price">{{activity.memberPrice}}</text><text wx:if="{{activity.originalPrice > activity.memberPrice}}" class="original">¥{{activity.originalPrice}}</text></view>
     <view class="member-banner" bindtap="goProfile"><view><text class="member-mark">会员</text><text>{{copy.detailMemberOffer}}</text><text class="member-save">¥{{memberSaving}}</text></view><text class="member-link">立即入会 ›</text></view>
     <view class="title-share-row"><view class="product-title">{{activity.title}}</view><view class="share-slot"><button class="share-button" open-type="share" aria-label="分享{{contentName}}"><view class="detail-share-circle"><view class="detail-share-mark"><text class="detail-share-node detail-node-top"></text><text class="detail-share-node detail-node-left"></text><text class="detail-share-node detail-node-right"></text></view></view></button></view></view>
-    <view class="product-sub"><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
+    <view class="product-sub"><text wx:if="{{activity.publisherType === 'platform'}}">平台自营 · </text><text>{{activity.regionText}}</text><text wx:if="{{activity.time}}"> · {{activity.time}}</text></view>
     <view wx:if="{{rankLabel}}" class="rank-label">{{rankLabel}}</view>
     <view class="info-row" bindtap="showService"><text class="info-label">服务</text><text class="info-value">{{serviceText}}</text><text class="row-arrow">›</text></view>
     <view wx:if="{{refundText}}" class="info-row"><text class="info-label">退改</text><text class="info-value">{{refundText}}</text></view>
@@ -58,11 +58,7 @@
   <view wx:elif="{{tab === 'detail'}}" class="tab-panel detail-rich">
     <view class="section-heading"><text class="heading-cn">{{detailTitle}}</text></view>
     <view wx:if="{{merchant}}" class="merchant-card" bindtap="goShop"><view class="merchant-logo">岁</view><view class="merchant-copy"><view class="merchant-name">{{merchant.shopName || merchant.name}}</view><view class="merchant-cert">企业认证</view></view><button class="merchant-enter btn btn-secondary btn-pill">进店逛逛</button></view>
-    <block wx:for="{{activity.detailBlocks}}" wx:key="_key" wx:for-item="block">
-      <text wx:if="{{block.type === 'text'}}" class="detail-text">{{block.text}}</text>
-      <view wx:elif="{{block.type === 'image'}}" class="detail-media detail-image-media"><image webp="{{true}}" class="detail-rich-image" src="{{block.src || activity.art}}" mode="widthFix" /><text wx:if="{{block.caption}}" class="detail-media-caption">{{block.caption}}</text></view>
-      <view wx:elif="{{block.type === 'video'}}" class="detail-media detail-video"><video wx:if="{{block.url}}" src="{{block.url}}" class="detail-video-player" controls></video><view wx:else class="video-placeholder"><text class="video-play">▶</text><text>{{block.caption}}</text></view></view>
-    </block>
+    <rich-body blocks="{{activity.detailBlocks}}" fallback-image="{{activity.art}}" />
   </view>
 
   <view wx:else class="tab-panel recommend-panel">
@@ -74,7 +70,7 @@
   <view class="fixed-bottom product-bottom">
     <view class="quick-actions">
       <button class="bottom-icon" bindtap="showService"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/support.png" mode="aspectFit" /><text>客服</text></button>
-      <button class="bottom-icon" bindtap="goShop" disabled="{{!merchant}}"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
+      <button wx:if="{{merchant}}" class="bottom-icon" bindtap="goShop"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/merchant.png" mode="aspectFit" /><text>店铺</text></button>
       <button class="bottom-icon cart-entry" bindtap="goCart"><view class="bi-image-wrap"><image webp="{{true}}" class="bi-image" src="/assets/profile-icons/cart.png" mode="aspectFit" /><text wx:if="{{cartCount}}" class="cart-badge">{{cartCount > 99 ? '99+' : cartCount}}</text></view><text>购物车</text></button>
     </view>
     <view class="purchase-actions">

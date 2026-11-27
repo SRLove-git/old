@@ -1,0 +1,22 @@
+{
+  "name": "@suiyueli/rich-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./ArticleEditor.vue",
+    "./selection": "./article-selection.js",
+    "./upload-image": "./upload-image.js"
+  },
+  "peerDependencies": {
+    "@arco-design/web-vue": "^2.58.0",
+    "@tiptap/core": "3.35.0",
+    "@tiptap/extension-bubble-menu": "3.35.0",
+    "@tiptap/extension-text-align": "3.35.0",
+    "@tiptap/extension-text-style": "3.35.0",
+    "@tiptap/pm": "3.35.0",
+    "@tiptap/starter-kit": "3.35.0",
+    "vue": "^3.4.38",
+    "heic-to": "1.6.7"
+  }
+}

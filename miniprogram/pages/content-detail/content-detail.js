@@ -1,26 +1,57 @@
+const { openContentLink } = require('../../utils/content-link.js')
 const store = require('../../utils/store.js')
 
 Page({
-  data: { id: '', post: null, brandName: '' },
+  data: { id: '', post: null, brandName: '', bodyLoading: false },
 
   async onLoad(options) {
     await store.ready()
     this.setData({ id: String(options.id || '') })
     this.loadPost()
+    this.loadBody()
   },
 
-  loadPost() {
-    const post = store.getContentPost(this.data.id)
+  applyPost(post) {
     if (!post) {
-      wx.showToast({ title: '内容不存在或已下架', icon: 'none' })
-      this.setData({ post: null })
+      this.setData({ post: null, bodyLoading: false })
       return
     }
     const contentBlocks = Array.isArray(post.contentBlocks) && post.contentBlocks.length
       ? post.contentBlocks.map((block, index) => ({ ...block, _key: `${block.type}-${index}` }))
       : (post.content ? [{ type: 'text', text: post.content, _key: 'legacy-text' }] : [])
-    this.setData({ post: { ...post, contentBlocks }, brandName: store.getBrand().chineseName })
+    this.setData({ post: { ...post, contentBlocks }, brandName: store.getBrand().chineseName, bodyLoading: false })
     wx.setNavigationBarTitle({ title: post.type === 'video' ? '视频详情' : '政策资讯' })
+  },
+
+  loadPost() {
+    const post = store.getContentPost(this.data.id)
+    if (post) this.applyPost(post)
+    return post
+  },
+
+  // 首页接口只返回卡片信息，正文在这里按需拉取；拉取过就会进缓存，再次进入秒开。
+  async loadBody() {
+    const id = this.data.id
+    if (!id) return
+    this.setData({ bodyLoading: true })
+    let post = null
+    let failed = false
+    try {
+      post = await store.fetchContentPost(id)
+    } catch (error) {
+      failed = true
+    }
+    if (this.data.id !== id) return
+    if (post) {
+      this.applyPost(post)
+      return
+    }
+    if (this.data.post) {
+      this.setData({ bodyLoading: false })
+      return
+    }
+    this.setData({ post: null, bodyLoading: false })
+    wx.showToast({ title: failed ? '内容加载失败，请稍后重试' : '内容不存在或已下架', icon: 'none' })
   },
 
   async onShow() {
@@ -40,20 +71,7 @@ Page({
     wx.setClipboardData({ data: url })
   },
 
-  openContentLink(e) {
-    const url = String(e.currentTarget.dataset.url || '').trim()
-    if (!url) return
-    if (/^https:\/\//.test(url)) {
-      wx.navigateTo({ url: `/pages/webview/webview?url=${encodeURIComponent(url)}` })
-      return
-    }
-    if (url.startsWith('/pages/')) {
-      const pagePath = url.split('?')[0]
-      const tabPages = ['/pages/index/index', '/pages/list/list', '/pages/lives/lives', '/pages/profile/profile']
-      if (tabPages.includes(pagePath)) wx.switchTab({ url: pagePath })
-      else wx.navigateTo({ url })
-    }
-  },
+  openContentLink,
 
   onShareAppMessage() {
     const post = this.data.post || {}

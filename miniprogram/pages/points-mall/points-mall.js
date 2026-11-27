@@ -49,7 +49,11 @@ Page({
   openDetail(e) {
     const product = this.data.products.find((item) => String(item.id) === String(e.currentTarget.dataset.id))
     if (!product) return
-    this.setData({ detailProduct: product })
+    const detailBlocks = (product.detailBlocks || []).map((block, index) => ({
+      ...block, _key: `${block.type}-${index}`,
+      ...(block.type === 'image' ? { src: store.assetUrl(block.src) } : {})
+    }))
+    this.setData({ detailProduct: { ...product, detailBlocks } })
   },
 
   closeDetail() {

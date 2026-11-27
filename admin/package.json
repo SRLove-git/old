@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --preserve-symlinks --test",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -12,7 +13,15 @@
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.58.0",
+    "@suiyueli/rich-editor": "file:../shared/rich-editor",
+    "@tiptap/core": "3.35.0",
+    "@tiptap/extension-bubble-menu": "3.35.0",
+    "@tiptap/extension-text-align": "3.35.0",
+    "@tiptap/extension-text-style": "3.35.0",
+    "@tiptap/pm": "3.35.0",
+    "@tiptap/starter-kit": "3.35.0",
     "china-area-data": "^5.0.1",
+    "heic-to": "1.6.7",
     "vue": "^3.4.38"
   },
   "devDependencies": {
